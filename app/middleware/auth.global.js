@@ -7,7 +7,8 @@ export default defineNuxtRouteMiddleware((to) => {
     "/auth/signin",
     "/auth/signup",
     "/auth/signout",
-    "/auth/reset",
+    "/auth/password/reset",
+    "/auth/password/reset/request",
   ];
 
   if (publicPaths.includes(to.path)) {

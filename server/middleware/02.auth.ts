@@ -56,6 +56,7 @@ function isPublicRoute(path: string): boolean {
     "/api/v1/auth/email/confirm",
     "/api/v1/auth/password/reset/request",
     "/api/v1/auth/password/reset",
+    "/api/_nuxt_icon/", // nuxt icon endpoint
     "/api/_auth/session", // nuxt-auth-utils session endpoint
   ];
 

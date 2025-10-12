@@ -211,7 +211,7 @@ export class IdentityService {
     const user = await this.userRepo.findByEmail(email);
     if (!user) {
       // Don't reveal if email exists or not
-      return { success: true };
+      return { resetToken: null };
     }
 
     const tenantId = this.event.context.tenantId;
@@ -219,7 +219,7 @@ export class IdentityService {
       throw new InternalServerError("Tenant context not available");
     }
 
-    const resetToken = generatePasswordResetToken(
+    const resetToken = await generatePasswordResetToken(
       user.id,
       user.email,
       tenantId,
@@ -233,7 +233,7 @@ export class IdentityService {
 
     // TODO: Send password reset email
 
-    return { success: true, resetToken };
+    return { resetToken };
   }
 
   /**
@@ -257,6 +257,12 @@ export class IdentityService {
     const user = await this.userRepo.findById(userId);
     if (!user || user.email !== email) {
       throw new ValidationError("Invalid reset token");
+    }
+
+    // Check if new password is same as old password
+    const isSamePassword = await verifyPassword(user.passwordHash, newPassword);
+    if (isSamePassword) {
+      throw new ValidationError("New password cannot be the same as your current password");
     }
 
     // Hash new password

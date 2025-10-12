@@ -46,10 +46,17 @@ function getJWTSecret(event?: H3Event): Uint8Array {
   // Get secret from runtime config
   const config = event ? useRuntimeConfig(event) : useRuntimeConfig();
   const secret = config.jwtSecret;
+  const isDev = config.public.environment === "development";
 
-  if (!secret || secret === "overwrite-this-with-environment-in-production") {
-    throw new Error("JWT_SECRET is not configured. Set NUXT_JWT_SECRET environment variable.");
+  if (
+    !secret ||
+    (!isDev && secret === "overwrite-this-with-environment-in-production")
+  ) {
+    throw new Error(
+      "JWT_SECRET is not configured. Set NUXT_JWT_SECRET environment variable."
+    );
   }
+
   return new TextEncoder().encode(secret);
 }
 
@@ -91,7 +98,7 @@ export async function generatePasswordResetToken(
 ): Promise<string> {
   const secret = getJWTSecret(event);
   const now = Math.floor(Date.now() / 1000);
-  const expiresIn = 60 * 60; // 1 hour
+  const expiresIn = 10 * 60; // 10 minutes
 
   return await new SignJWT({
     userId,

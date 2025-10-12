@@ -33,13 +33,12 @@
                 :placeholder="t('auth.signin.password.placeholder')" v-bind="field" />
             </FormControl>
             <FormDescription class="text-right text-sm">
-              <Button variant="link" @click="onForgotPassword" class="hover:cursor-pointer">
+              <Button variant="link" @click.prevent="onForgotPassword" class="hover:cursor-pointer">
                 {{ t('auth.signin.forgotPasswordButton') }}
               </Button>
             </FormDescription>
           </FormItem>
         </FormField>
-
       </CardContent>
 
       <CardFooter class="flex flex-col gap-2">
@@ -122,7 +121,7 @@ const onSubmit = handleSubmit(async (values) => {
 });
 
 const onGoToSignup = () => navigateTo('/auth/signup');
-const onForgotPassword = () => navigateTo('/auth/password/reset');
+const onForgotPassword = () => navigateTo('/auth/password/reset/request');
 
 
 onMounted(() => {

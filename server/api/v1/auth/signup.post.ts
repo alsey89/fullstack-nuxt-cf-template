@@ -15,7 +15,7 @@ export default defineEventHandler(async (event) => {
   // Parse request body
   const body = await readBody(event);
 
-  // Validate with Zod schema
+  // Validate with Zod schema (includes password confirmation check)
   const validated = signupSchema.parse(body);
 
   // Sanitize inputs

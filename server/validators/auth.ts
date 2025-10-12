@@ -37,6 +37,9 @@ export const signupSchema = z.object({
     .email('Invalid email format')
     .max(255, 'Email must be less than 255 characters'),
   password: passwordSchema,
+  passwordConfirmation: z
+    .string()
+    .min(1, 'Password confirmation is required'),
   firstName: z
     .string()
     .min(1, 'First name is required')
@@ -46,6 +49,9 @@ export const signupSchema = z.object({
     .min(1, 'Last name is required')
     .max(100, 'Last name must be less than 100 characters'),
   turnstileToken: z.string().optional(), // TODO: Turnstile - see docs/ROADMAP.md
+}).refine((data) => data.password === data.passwordConfirmation, {
+  message: 'Passwords must match',
+  path: ['passwordConfirmation'],
 })
 
 /**
@@ -68,6 +74,12 @@ export const passwordResetRequestSchema = z.object({
 export const passwordResetSchema = z.object({
   token: z.string().min(1, 'Reset token is required'),
   newPassword: passwordSchema,
+  newPasswordConfirmation: z
+    .string()
+    .min(1, 'Password confirmation is required'),
+}).refine((data) => data.newPassword === data.newPasswordConfirmation, {
+  message: 'Passwords must match',
+  path: ['newPasswordConfirmation'],
 })
 
 /**

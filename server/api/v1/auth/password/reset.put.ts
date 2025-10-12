@@ -13,7 +13,7 @@ import { passwordResetSchema } from "../../../../validators/auth";
 export default defineEventHandler(async (event) => {
   const body = await readBody(event);
 
-  // Validate with Zod schema
+  // Validate with Zod schema (includes password confirmation check)
   const validated = passwordResetSchema.parse(body);
 
   const identityService = createIdentityService(event);

@@ -54,7 +54,7 @@ export const useUserStore = defineStore("user-store", {
       }
     },
 
-    async signup({ firstName, lastName, email, password } = {}) {
+    async signup({ firstName, lastName, email, password, passwordConfirmation } = {}) {
       this.isLoading = true;
       const showToast = useShowToast();
       const { extendedFetch } = useExtendedFetch();
@@ -66,6 +66,7 @@ export const useUserStore = defineStore("user-store", {
           lastName,
           email,
           password,
+          passwordConfirmation,
         },
       });
 
@@ -141,6 +142,60 @@ export const useUserStore = defineStore("user-store", {
       });
 
       return navigateTo(redirectTo);
+    },
+
+    async requestPasswordReset({ email } = {}) {
+      this.isLoading = true;
+      const showToast = useShowToast();
+      const { extendedFetch } = useExtendedFetch();
+
+      const { status } = await extendedFetch("/v1/auth/password/reset/request", {
+        method: "POST",
+        body: {
+          email,
+        },
+      });
+
+      if (status === 200) {
+        showToast({
+          title: "Reset Email Sent",
+          description: "Please check your email for password reset instructions.",
+        });
+
+        this.isLoading = false;
+        return navigateTo('/auth/signin');
+      } else {
+        this.isLoading = false;
+        return false;
+      }
+    },
+
+    async resetPassword({ token, newPassword, newPasswordConfirmation } = {}) {
+      this.isLoading = true;
+      const showToast = useShowToast();
+      const { extendedFetch } = useExtendedFetch();
+
+      const { status } = await extendedFetch("/v1/auth/password/reset", {
+        method: "PUT",
+        body: {
+          token,
+          newPassword,
+          newPasswordConfirmation,
+        },
+      });
+
+      if (status === 200) {
+        showToast({
+          title: "Password Reset Successfully",
+          description: "You can now sign in with your new password.",
+        });
+
+        this.isLoading = false;
+        return navigateTo('/auth/signin');
+      } else {
+        this.isLoading = false;
+        return false;
+      }
     },
   },
   persist: {

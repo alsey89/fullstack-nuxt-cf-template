@@ -89,7 +89,7 @@
           </div>
         </Button>
         <!-- Go to Signin -->
-        <Button variant="link" class="hover:cursor-pointer" @click="onGoToSignin">
+        <Button variant="link" type="button" class="hover:cursor-pointer" @click="onGoToSignin">
           {{ t('auth.signup.haveAccountButton') }}
         </Button>
       </CardFooter>
@@ -158,6 +158,7 @@ const onSubmit = handleSubmit(async (values) => {
     lastName: values.lastName,
     email: values.email,
     password: values.password,
+    passwordConfirmation: values.confirmPassword,
   });
 });
 
