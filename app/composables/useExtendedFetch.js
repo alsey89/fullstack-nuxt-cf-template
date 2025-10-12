@@ -1,4 +1,5 @@
 // composables/useExtendedFetch.js
+import { handleApiError } from "./useErrorHandler";
 
 /**
  ** A composable for making API requests with extended functionality.
@@ -6,13 +7,12 @@
  ** Authentication is handled automatically by nuxt-auth-utils via session cookies.
  ** It also provides a simple fetch that does not handle errors.
  * @module useExtendedFetch
- * @requires useErrorHandler - For centralized error handling
+ * @requires handleApiError - For centralized error handling
  * @requires useSubdomain - For tenant identification
  * @requires useRuntimeConfig - For accessing runtime configuration like API URL
  **/
 export function useExtendedFetch() {
   const baseUrl = useRuntimeConfig().public.apiUrl;
-  const { handleApiError } = useErrorHandler();
 
   /**
    ** A simple $fetch wrapper that includes request ID and tenant ID headers.
@@ -61,10 +61,7 @@ export function useExtendedFetch() {
       /////////////////////////////////////////////////////////////////////
       // Central Error Handler
       /////////////////////////////////////////////////////////////////////
-      handleApiError({
-        error,
-        blockRedirect: blockRedirect,
-      });
+      handleApiError(error, { blockRedirect });
     }
   }
 

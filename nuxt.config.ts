@@ -1,12 +1,12 @@
 // https://nuxt.com/docs/api/configuration/nuxt-config
 import tailwindcss from "@tailwindcss/vite";
-import { fileURLToPath } from 'node:url'
+import { fileURLToPath } from "node:url";
 
 export default defineNuxtConfig({
   compatibilityDate: "2025-07-15",
   devtools: { enabled: true },
   alias: {
-    "#server": fileURLToPath(new URL('./server', import.meta.url)),
+    "#server": fileURLToPath(new URL("./server", import.meta.url)),
   },
   runtimeConfig: {
     // Multitenancy Configuration
