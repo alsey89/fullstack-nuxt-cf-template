@@ -1,0 +1,40 @@
+meta {
+  name: Update User Profile
+  type: http
+  seq: 2
+}
+
+put {
+  url: {{baseUrl}}/api/v1/user/profile
+  body: json
+  auth: none
+}
+
+body:json {
+  {
+    "firstName": "Michael",
+    "lastName": "Chen",
+    "dateOfBirth": "1990-01-15",
+    "phone": "+886963611510",
+    "address": "No. 19, 17F, Zhuangyuan Street",
+    "city": "New Taipei",
+    "state": "New Taipei",
+    "country": "TW",
+    "postalCode": "213",
+    "ecFirstName": "Emily",
+    "ecLastName": "Xie",
+    "ecRelationship": "Spouse",
+    "ecEmail": "emilyxie@example.com",
+    "ecPhone": "+886963611510",
+    "ecAddress": "No. 19, 17F, Zhuangyuan Street",
+    "ecCity": "New Taipei",
+    "ecState": "New Taipei",
+    "ecCountry": "TW",
+    "ecPostalCode": "213"
+  }
+
+}
+
+vars:pre-request {
+  userId: cfa26bd8-6cf2-4b4b-989b-bae9f14488d6
+}

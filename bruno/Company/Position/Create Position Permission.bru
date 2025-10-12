@@ -1,0 +1,17 @@
+meta {
+  name: Create Position Permission
+  type: http
+  seq: 6
+}
+
+post {
+  url: {{baseUrl}}/api/v1/company/position/f28c526f-d130-4460-b90f-bb2f03de4099/permission
+  body: json
+  auth: none
+}
+
+body:json {
+  {
+    "permissionID":  "baa8efcb-1a3a-4e45-b473-743646d77b1c"
+  }
+}

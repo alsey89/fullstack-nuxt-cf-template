@@ -1,0 +1,38 @@
+meta {
+  name: List Users
+  type: http
+  seq: 3
+}
+
+get {
+  url: {{baseUrl}}/api/v1/user?page=1&perPage=20
+  body: none
+  auth: none
+}
+
+params:query {
+  page: 1
+  perPage: 20
+}
+
+docs {
+  # List Users
+
+  Lists active users with optional search and pagination.
+
+  ## Query Parameters
+  - `q` (optional): Search query string
+  - `page` (optional): Page number (default: 1)
+  - `perPage` (optional): Items per page (default: all if not specified)
+
+  ## Examples
+
+  ### List all users
+  GET /api/v1/user
+
+  ### Search users
+  GET /api/v1/user?q=john
+
+  ### Paginated list
+  GET /api/v1/user?page=1&perPage=20
+}

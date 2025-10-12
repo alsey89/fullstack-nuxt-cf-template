@@ -1,0 +1,120 @@
+{
+  // TODO: Update "name" to your project name (e.g., "my-app-staging")
+  "name": "cf-fullstack-template-staging",
+  "main": ".output/server/index.mjs",
+  "compatibility_date": "2025-10-01",
+  "compatibility_flags": ["nodejs_compat"],
+
+  // Static Assets
+  "assets": {
+    "directory": ".output/public",
+    "binding": "ASSETS"
+  },
+
+  // D1 Database (SQLite)
+  // Single-Tenant Mode (Default):
+  // - One database for all data
+  // TODO: After creating your database with `wrangler d1 create <name>`:
+  //       1. Update "database_name" to match your project
+  //       2. Replace "YOUR_STAGING_DATABASE_ID" with the returned database_id
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "template-staging",
+      "database_id": "YOUR_STAGING_DATABASE_ID",
+      "preview_database_id": "local",
+      "migrations_dir": "./server/database/migrations"
+    }
+  ],
+
+  // Multi-Tenant Mode (Optional):
+  // - Each tenant has separate database (per-tenant isolation)
+  // - Uncomment and add one entry per tenant
+  // "d1_databases": [
+  //   {
+  //     "binding": "DB",
+  //     "database_name": "template-default-staging",
+  //     "database_id": "YOUR_DEFAULT_DATABASE_ID",
+  //     "preview_database_id": "local",
+  //     "migrations_dir": "./server/database/migrations"
+  //   },
+  //   {
+  //     "binding": "DB_ACME",
+  //     "database_name": "template-acme-staging",
+  //     "database_id": "YOUR_ACME_DATABASE_ID",
+  //     "migrations_dir": "./server/database/migrations"
+  //   },
+  //   {
+  //     "binding": "DB_CONTOSO",
+  //     "database_name": "template-contoso-staging",
+  //     "database_id": "YOUR_CONTOSO_DATABASE_ID",
+  //     "migrations_dir": "./server/database/migrations"
+  //   }
+  // ],
+  // Note: Binding naming convention: DB_{TENANT_ID_UPPERCASE}
+  // Tenant resolution: subdomain (acme.app.com) or x-tenant-id header
+
+  // KV Namespace (Cache & JWT deny list)
+  // "kv_namespaces": [
+  //   {
+  //     "binding": "KV",
+  //     "id": "paste-production-kv-id-here",
+  //     "preview_id": "local"
+  //   }
+  // ],
+
+  // R2 Bucket (Document storage)
+  // "r2_buckets": [
+  //   {
+  //     "binding": "R2",
+  //     "bucket_name": "template-documents",
+  //     "preview_bucket_name": "template-documents-preview"
+  //   }
+  // ],
+
+  // Public environment variables
+  "vars": {
+    "NODE_ENV": "staging",
+    "NUXT_PUBLIC_ENVIRONMENT": "staging"
+  }
+
+  // ========================================
+  // SECRETS CONFIGURATION
+  // ========================================
+  // Add secrets via Wrangler CLI (recommended):
+  //   wrangler secret put <KEY> --env staging
+  //
+  // See docs/SECRETS.md for complete reference
+  //
+  // REQUIRED SECRETS:
+  // -----------------
+  // wrangler secret put NUXT_SESSION_PASSWORD --env staging
+  //   → Session encryption (min 32 chars)
+  //   → Generate: openssl rand -base64 64
+  //
+  // wrangler secret put NUXT_JWT_SECRET --env staging
+  //   → JWT token signing (email confirm, password reset)
+  //   → Generate: openssl rand -base64 64
+  //
+  // OPTIONAL SECRETS:
+  // -----------------
+  // Email Configuration:
+  //   wrangler secret put NUXT_EMAIL_PROVIDER --env staging
+  //   wrangler secret put NUXT_EMAIL_API_KEY --env staging
+  //   wrangler secret put NUXT_EMAIL_FROM --env staging
+  //
+  // Cloudflare Turnstile (bot protection):
+  //   wrangler secret put NUXT_PUBLIC_TURNSTILE_SITE_KEY --env staging
+  //   wrangler secret put NUXT_TURNSTILE_SECRET_KEY --env staging
+  //
+  // Database Seeding:
+  //   wrangler secret put NUXT_SEED_SECRET --env staging
+  //
+  // CONFIGURATION OVERRIDES:
+  // ------------------------
+  // Override runtime config via environment variables:
+  //   wrangler secret put NUXT_MULTITENANCY_ENABLED --env staging  (true/false)
+  //   wrangler secret put NUXT_PUBLIC_MULTITENANCY_ENABLED --env staging
+  //   wrangler secret put NUXT_RBAC_ENABLED --env staging  (true/false)
+}
+

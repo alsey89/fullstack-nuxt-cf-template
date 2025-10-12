@@ -1,0 +1,31 @@
+meta {
+  name: Update Position
+  type: http
+  seq: 4
+}
+
+put {
+  url: {{baseUrl}}/api/v1/company/position/:pid
+  body: json
+  auth: inherit
+}
+
+params:path {
+  pid: 01a53620-cc33-4b72-96a8-4bceaee44e9a
+}
+
+body:json {
+  {
+    "name": "CFO",
+    "description": "Financial Head",
+    "departmentId": "f57274b0-f157-44d3-bd9e-31802f158bdb",
+    "managerId": null, //do not change this here
+    "compRangeMin": 1000,
+    "compRangeMax": 10000,
+    "compRangeCurrency": "USD",
+    "compRangeInterval": "monthly",
+    "desiredSkills": ["1"],
+    "responsibilities": ["1"],
+    "IsActive": true
+  }
+}

@@ -1,0 +1,13 @@
+headers {
+  X-Request-ID: {{X-Request-ID}}
+  X-Tenant-ID: staging
+}
+
+auth {
+  mode: none
+}
+
+script:pre-request {
+  bru.setVar('X-Request-ID', require("uuid").v4());
+  
+}

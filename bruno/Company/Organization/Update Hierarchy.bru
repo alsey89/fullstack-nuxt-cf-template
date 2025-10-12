@@ -1,0 +1,17 @@
+meta {
+  name: Update Hierarchy
+  type: http
+  seq: 2
+}
+
+put {
+  url: {{baseUrl}}/api/v1/company/position/8f6039cd-5d49-4e84-b16d-f80125267204
+  body: json
+  auth: inherit
+}
+
+body:json {
+  {
+    "managerId": "f28c526f-d130-4460-b90f-bb2f03de4099"
+  }
+}

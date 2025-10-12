@@ -1,0 +1,55 @@
+meta {
+  name: List Users
+  type: http
+  seq: 2
+}
+
+get {
+  url: {{baseUrl}}/api/v1/user?page=1
+  body: none
+  auth: none
+}
+
+params:query {
+  page: 1
+  ~perPage: 10
+}
+
+docs {
+  #### Pagination Parameters
+  
+  * **`page`** (integer, optional)
+    1-indexed page number. Defaults to 1 if omitted or invalid.
+  
+  * **`perPage`** (integer, optional)
+    Number of items per page. If `perPage > 0`, the query applies:
+  
+    ```
+    LIMIT perPage
+    OFFSET (page − 1) * perPage
+    ```
+  
+    If `perPage` is omitted, null, or 0, no `LIMIT`/`OFFSET` is applied and all records are returned.
+  
+  ---
+  
+  ##### Example Usage
+  
+  * **Paginated request**
+  
+    ```
+    GET /users?page=2&perPage=10
+    ```
+  
+    → returns users 11–20.
+  
+  * **Full-set request** (no pagination)
+  
+    ```
+    GET /users
+    GET /users?perPage=0
+    ```
+  
+    → returns all users (no LIMIT or OFFSET).
+  
+}

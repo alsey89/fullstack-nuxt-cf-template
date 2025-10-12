@@ -1,0 +1,51 @@
+meta {
+  name: Reset and Seed
+  type: http
+  seq: 1
+}
+
+post {
+  url: {{baseUrl}}/api/reset-and-seed
+  body: none
+  auth: none
+}
+
+headers {
+  x-seed-secret: {{seedSecret}}
+}
+
+docs {
+  # Seed Database
+  - Seeds the database with test data
+  - Creates company, users, permissions, locations, departments, positions, and assignments
+  - **Development**: No secret required
+  - **Production**: Requires `x-seed-secret` header
+  
+  ## Test Accounts Created
+  
+  ### John Gilbert (CEO)
+  - Email: john@toursmatter.com
+  - Password: testtesttest
+  - Permissions: ALL (14)
+  
+  ### Michael Chen (Operations Manager)
+  - Email: michael@toursmatter.com
+  - Password: testtesttest
+  - Permissions: View only (6)
+  
+  ## Response
+  ```json
+  {
+    "message": "Database seeded successfully",
+    "data": {
+      "environment": "development"
+    }
+  }
+  ```
+  
+  ## Notes
+  - ⚠️ This clears ALL existing data before seeding
+  - For local development: No x-seed-secret header needed
+  - For production: Set x-seed-secret to match SEED_SECRET environment variable
+  - Use after running migrations: `npm run db:migrate:local`
+}

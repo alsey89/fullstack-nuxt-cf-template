@@ -1,0 +1,26 @@
+meta {
+  name: Create Position
+  type: http
+  seq: 3
+}
+
+post {
+  url: {{baseUrl}}/api/v1/company/position
+  body: json
+  auth: inherit
+}
+
+body:json {
+  {
+    "name": "CEO 2",
+    "description": "just testing",
+    "departmentId": "f57274b0-f157-44d3-bd9e-31802f158bdb",
+    "managerId": null,
+    "compRangeMin": 150000,
+    "compRangeMax": 200000,
+    "compRangeCurrency": "USD",
+    "compRangeInterval": "MONTHLY",
+    "desiredSkills": ["Leadership", "Strategic Planning"],
+    "responsibilities": ["Company strategy", "Executive decisions"]
+  }
+}

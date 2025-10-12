@@ -1,0 +1,45 @@
+meta {
+  name: Update Position Permissions
+  type: http
+  seq: 8
+}
+
+put {
+  url: {{baseUrl}}/api/v1/company/position/f28c526f-d130-4460-b90f-bb2f03de4099/permission
+  body: json
+  auth: none
+}
+
+body:json {
+  {
+    "permissionIds": [
+      "37e62a00-4aa7-46e0-9cc3-71324fc657bb",
+      "f2be6fa1-5147-44f8-b9d0-4d99fcb4abf0",
+      "2461f83a-c8c5-4710-b54b-c7bdbb6b693b",
+      "f5d26da9-3782-41ef-bca7-918621b09616",
+      "402bdf24-c6d8-47b6-ab9d-e30720f4cd5e",
+      "3dca09d0-d862-4ad3-94d1-588fd5d607b6",
+      "fcee5168-1b37-472c-ad4e-96860484fa53",
+      "d86a9a43-414a-4d20-b250-316c7947f8cd",
+      "a1cb2233-8a0a-43e0-b322-66a97d71450c",
+      "df130297-4429-4a1b-9855-9f44872b853e",
+      "22b54b20-cd54-4c94-81e4-96618f33ee96",
+      "7466370c-ebad-4985-9f9d-71ddb2ff8e51",
+      "96f1a1cb-e510-4ea2-9ece-f3b8f8d4b653",
+      "a2e6cd10-e961-4dbf-bc93-170acb300bf7",
+      "efc9266c-0626-4ed5-aa17-7179c401600d",
+      "c753d141-5b13-4661-ac63-321c473c6e16",
+      "aecef92c-8a28-4000-a6ae-8e1c142fa492",
+      "a6d6beda-c3ed-4a6c-be3b-543a117d8c35",
+      "61772391-aa0c-4489-baa6-711c1baee966",
+      "7086449c-f043-4fd8-9b14-b861508886a9",
+      "cf73bd83-3810-4a52-82fd-d1d8b4d89dca",
+      "f92cdc0b-bc28-450e-a8c0-71d1f3ec4d28",
+      "70353605-8b8e-445f-8953-2dc1ec59d280",
+      "ef0a11ab-a7c7-488d-9a2f-b95e7008a703",
+      "328bc187-a1b8-4553-adcc-1cf78532e963",
+      "23700d41-e16e-4fd8-8014-bc88a24b61c0",
+  "baa8efcb-1a3a-4e45-b473-743646d77b1c"
+    ]
+  }
+}

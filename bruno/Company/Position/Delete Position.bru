@@ -1,0 +1,15 @@
+meta {
+  name: Delete Position
+  type: http
+  seq: 5
+}
+
+delete {
+  url: {{baseUrl}}/api/v1/company/position/:pid
+  body: json
+  auth: inherit
+}
+
+params:path {
+  pid: 01a53620-cc33-4b72-96a8-4bceaee44e9a
+}

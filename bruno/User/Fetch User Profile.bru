@@ -1,0 +1,50 @@
+meta {
+  name: Fetch User Profile
+  type: http
+  seq: 1
+}
+
+get {
+  url: {{baseUrl}}/api/v1/user/profile
+  body: none
+  auth: none
+}
+
+docs {
+  #### Pagination Parameters
+  
+  * **`page`** (integer, optional)
+    1-indexed page number. Defaults to 1 if omitted or invalid.
+  
+  * **`perPage`** (integer, optional)
+    Number of items per page. If `perPage > 0`, the query applies:
+  
+    ```
+    LIMIT perPage
+    OFFSET (page − 1) * perPage
+    ```
+  
+    If `perPage` is omitted, null, or 0, no `LIMIT`/`OFFSET` is applied and all records are returned.
+  
+  ---
+  
+  ##### Example Usage
+  
+  * **Paginated request**
+  
+    ```
+    GET /users?page=2&perPage=10
+    ```
+  
+    → returns users 11–20.
+  
+  * **Full-set request** (no pagination)
+  
+    ```
+    GET /users
+    GET /users?perPage=0
+    ```
+  
+    → returns all users (no LIMIT or OFFSET).
+  
+}

@@ -1,0 +1,25 @@
+meta {
+  name: Sign In
+  type: http
+  seq: 3
+}
+
+post {
+  url: {{baseUrl}}/api/v1/auth/signin
+  body: json
+  auth: none
+}
+
+body:json {
+  {
+    "email": "michael@toursmatter.com",
+    "password": "testtesttest"
+  }
+}
+
+docs {
+  # Sign In
+  - call this endpoint to authenticate the user
+  - authentication is now handled via HTTP-only cookies (nuxt-auth-utils)
+  - no need to manually store tokens
+}

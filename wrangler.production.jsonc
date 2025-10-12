@@ -1,0 +1,115 @@
+{
+  // TODO: Update "name" to your project name (e.g., "my-app-production")
+  "name": "cf-fullstack-template-production",
+  "main": ".output/server/index.mjs",
+  "compatibility_date": "2025-10-01",
+  "compatibility_flags": ["nodejs_compat"],
+
+  // Static Assets
+  "assets": {
+    "directory": ".output/public",
+    "binding": "ASSETS"
+  },
+
+  // D1 Database (SQLite)
+  // Single-Tenant Mode (Default):
+  // - One database for all data
+  // TODO: After creating your database with `wrangler d1 create <name>`:
+  //       1. Update "database_name" to match your project
+  //       2. Replace "YOUR_PRODUCTION_DATABASE_ID" with the returned database_id
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "template-production",
+      "database_id": "YOUR_PRODUCTION_DATABASE_ID",
+      "migrations_dir": "./server/database/migrations"
+    }
+  ],
+
+  // Multi-Tenant Mode (Optional):
+  // - Each tenant has separate database (per-tenant isolation)
+  // - Uncomment and add one entry per tenant
+  // "d1_databases": [
+  //   {
+  //     "binding": "DB",
+  //     "database_name": "template-default-production",
+  //     "database_id": "YOUR_DEFAULT_DATABASE_ID",
+  //     "migrations_dir": "./server/database/migrations"
+  //   },
+  //   {
+  //     "binding": "DB_ACME",
+  //     "database_name": "template-acme-production",
+  //     "database_id": "YOUR_ACME_DATABASE_ID",
+  //     "migrations_dir": "./server/database/migrations"
+  //   },
+  //   {
+  //     "binding": "DB_CONTOSO",
+  //     "database_name": "template-contoso-production",
+  //     "database_id": "YOUR_CONTOSO_DATABASE_ID",
+  //     "migrations_dir": "./server/database/migrations"
+  //   }
+  // ],
+  // Note: Binding naming convention: DB_{TENANT_ID_UPPERCASE}
+  // Tenant resolution: subdomain (acme.app.com) or x-tenant-id header
+
+  // KV Namespace (Cache & JWT deny list)
+  // "kv_namespaces": [
+  //   {
+  //     "binding": "KV",
+  //     "id": "paste-production-kv-id-here"
+  //   }
+  // ],
+
+  // R2 Bucket (Document storage)
+  // "r2_buckets": [
+  //   {
+  //     "binding": "R2",
+  //     "bucket_name": "template-documents-production"
+  //   }
+  // ],
+
+  // Public environment variables
+  "vars": {
+    "NODE_ENV": "production",
+    "NUXT_PUBLIC_ENVIRONMENT": "production"
+  }
+
+  // ========================================
+  // SECRETS CONFIGURATION
+  // ========================================
+  // Add secrets via Wrangler CLI (recommended):
+  //   wrangler secret put <KEY> --env production
+  //
+  // See docs/SECRETS.md for complete reference
+  //
+  // REQUIRED SECRETS:
+  // -----------------
+  // wrangler secret put NUXT_SESSION_PASSWORD --env production
+  //   → Session encryption (min 32 chars)
+  //   → Generate: openssl rand -base64 64
+  //
+  // wrangler secret put NUXT_JWT_SECRET --env production
+  //   → JWT token signing (email confirm, password reset)
+  //   → Generate: openssl rand -base64 64
+  //
+  // OPTIONAL SECRETS:
+  // -----------------
+  // Email Configuration:
+  //   wrangler secret put NUXT_EMAIL_PROVIDER --env production
+  //   wrangler secret put NUXT_EMAIL_API_KEY --env production
+  //   wrangler secret put NUXT_EMAIL_FROM --env production
+  //
+  // Cloudflare Turnstile (bot protection):
+  //   wrangler secret put NUXT_PUBLIC_TURNSTILE_SITE_KEY --env production
+  //   wrangler secret put NUXT_TURNSTILE_SECRET_KEY --env production
+  //
+  // Database Seeding:
+  //   wrangler secret put NUXT_SEED_SECRET --env production
+  //
+  // CONFIGURATION OVERRIDES:
+  // ------------------------
+  // Override runtime config via environment variables:
+  //   wrangler secret put NUXT_MULTITENANCY_ENABLED --env production  (true/false)
+  //   wrangler secret put NUXT_PUBLIC_MULTITENANCY_ENABLED --env production
+  //   wrangler secret put NUXT_RBAC_ENABLED --env production  (true/false)
+}

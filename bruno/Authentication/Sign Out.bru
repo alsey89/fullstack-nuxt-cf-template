@@ -1,0 +1,32 @@
+meta {
+  name: Sign Out
+  type: http
+  seq: 4
+}
+
+post {
+  url: {{baseUrl}}/api/v1/auth/signout
+  body: none
+  auth: none
+}
+
+docs {
+  # Sign Out
+  - Clears the user session and signs out
+  - Removes the HTTP-only session cookie
+  - No request body required
+  - Returns success message
+
+  ## Response
+  ```json
+  {
+    "message": "Signed out successfully",
+    "data": null
+  }
+  ```
+
+  ## Note
+  - This endpoint requires an active session (must be signed in)
+  - After sign out, the session cookie is cleared
+  - Subsequent requests will require sign in again
+}

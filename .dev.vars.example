@@ -1,0 +1,66 @@
+# Development environment variables for Cloudflare Workers
+# Copy this file to .dev.vars and update with your values
+# These are loaded by wrangler during local development
+# DO NOT COMMIT PRODUCTION SECRETS HERE
+
+# ========================================
+# ENVIRONMENT
+# ========================================
+NODE_ENV="development"
+NUXT_PUBLIC_ENVIRONMENT="development"
+
+# ========================================
+# SESSION CONFIGURATION (REQUIRED)
+# ========================================
+# Session password must be at least 32 characters
+# Generate with: openssl rand -base64 64
+NUXT_SESSION_PASSWORD="your-64-character-random-string-here-change-this-in-production"
+
+# ========================================
+# JWT SECRET (REQUIRED)
+# ========================================
+# Used for email confirmation and password reset tokens
+# Generate with: openssl rand -base64 64
+NUXT_JWT_SECRET="your-64-character-random-jwt-secret-change-this-in-production"
+
+# ========================================
+# EMAIL CONFIGURATION (OPTIONAL)
+# ========================================
+# Email provider: "none" | "resend" | "postmark"
+# Set to "none" to skip email sending in development
+NUXT_EMAIL_PROVIDER="none"
+NUXT_EMAIL_API_KEY=""
+NUXT_EMAIL_FROM="noreply@localhost"
+
+# For production, use real email provider:
+# NUXT_EMAIL_PROVIDER="resend"  # or "postmark"
+# NUXT_EMAIL_API_KEY="your-email-api-key"
+# NUXT_EMAIL_FROM="noreply@yourdomain.com"
+
+# ========================================
+# MULTITENANCY (OPTIONAL)
+# ========================================
+# Defaults to false for single-tenant mode
+# Set to true to enable multi-tenant mode with manual DB provisioning per tenant
+# NUXT_MULTITENANCY_ENABLED=false
+# NUXT_PUBLIC_MULTITENANCY_ENABLED=false
+
+# ========================================
+# RBAC (OPTIONAL)
+# ========================================
+# Defaults to true for role-based access control
+# Set to false to disable RBAC enforcement (allow all actions)
+# NUXT_RBAC_ENABLED=true
+
+# ========================================
+# CLOUDFLARE TURNSTILE (OPTIONAL)
+# ========================================
+# Bot protection - get keys from: https://dash.cloudflare.com/turnstile
+# NUXT_PUBLIC_TURNSTILE_SITE_KEY="your-turnstile-site-key"
+# NUXT_TURNSTILE_SECRET_KEY="your-turnstile-secret-key"
+
+# ========================================
+# SEED SECRET (OPTIONAL)
+# ========================================
+# Only needed if you want to seed production database via API
+# NUXT_SEED_SECRET="your-secret-for-production-seeding"

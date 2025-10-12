@@ -1,0 +1,15 @@
+meta {
+  name: Delete Department
+  type: http
+  seq: 5
+}
+
+delete {
+  url: {{baseUrl}}/api/v1/company/department/:did
+  body: none
+  auth: none
+}
+
+params:path {
+  did: c7881ab0-31ec-42f4-81ec-e18298a9931f
+}

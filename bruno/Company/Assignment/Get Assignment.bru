@@ -1,0 +1,19 @@
+meta {
+  name: Get Assignment
+  type: http
+  seq: 2
+}
+
+get {
+  url: {{baseUrl}}/api/v1/company/assignment/:aid
+  body: none
+  auth: none
+}
+
+params:path {
+  aid: c5f24057-6ee3-4a48-9e88-fba584814b65
+}
+
+vars:pre-request {
+  assignmentId: a49bd716-73d7-4b8c-8c58-22ac6f5f1571
+}

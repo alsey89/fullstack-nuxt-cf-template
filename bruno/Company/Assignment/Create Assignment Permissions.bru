@@ -1,0 +1,22 @@
+meta {
+  name: Create Assignment Permissions
+  type: http
+  seq: 7
+}
+
+post {
+  url: {{baseUrl}}/api/v1/company/assignment/{{assignmentId}}/permission
+  body: json
+  auth: none
+}
+
+body:json {
+  {
+        "permissionId": "37e62a00-4aa7-46e0-9cc3-71324fc657bb",
+        "isGranted": true
+  }
+}
+
+vars:pre-request {
+  assignmentId: a49bd716-73d7-4b8c-8c58-22ac6f5f1571
+}

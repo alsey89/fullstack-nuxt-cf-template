@@ -1,0 +1,27 @@
+meta {
+  name: Get User By ID
+  type: http
+  seq: 4
+}
+
+get {
+  url: {{baseUrl}}/api/v1/user/{{userId}}
+  body: none
+  auth: none
+}
+
+vars:pre-request {
+  userId: cfa26bd8-6cf2-4b4b-989b-bae9f14488d6
+}
+
+docs {
+  # Get User By ID
+
+  Retrieves a specific user by their ID.
+
+  ## Path Parameters
+  - `id`: User ID (UUID)
+
+  ## Response
+  Returns sanitized user object (excludes passwordHash).
+}

@@ -1,0 +1,49 @@
+meta {
+  name: Create Location
+  type: http
+  seq: 3
+}
+
+post {
+  url: {{baseUrl}}/api/v1/company/location
+  body: json
+  auth: inherit
+}
+
+body:json {
+  {
+    "name": "HQ 2",
+    "description": "just testing",
+    "isHQ": true,
+    "timezone": "Asia/Taipei",
+    "email": "location22222@mailnesia.com",
+    "phone": "+886963611510",
+    "address": "No. 19, Central Street",
+    "city": "Taipei",
+    "state": "Taipei",
+    "country": "Taiwan",
+    "postalCode": "200"
+  }
+}
+
+docs {
+  # Create Location
+  
+  Creates a new location (branch/office) for the company.
+  
+  ## Timezone Field
+  The `timezone` field is required for shift scheduling. It uses IANA timezone identifiers.
+  
+  **Common US Timezones:**
+  - `America/New_York` - Eastern Time
+  - `America/Chicago` - Central Time
+  - `America/Denver` - Mountain Time
+  - `America/Phoenix` - Arizona (no DST)
+  - `America/Los_Angeles` - Pacific Time
+  - `America/Anchorage` - Alaska Time
+  - `Pacific/Honolulu` - Hawaii Time
+  
+  **Default:** `America/New_York`
+  
+  This timezone is used when generating shifts from templates to ensure shifts are created at the correct local time.
+}
