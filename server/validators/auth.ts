@@ -1,5 +1,5 @@
 import { z } from 'zod'
-import { passwordSchema } from './password'
+import { passwordSchema } from '#server/validators/password'
 
 // ========================================
 // AUTHENTICATION VALIDATORS

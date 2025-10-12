@@ -1,8 +1,8 @@
-import { createIdentityService } from "../../../services/identity";
-import { ValidationError } from "../../../error/errors";
-import { createSuccessResponse } from "../../../lib/response";
-import { signupSchema } from "../../../validators/auth";
-import { sanitizeEmail, sanitizeHtml } from "../../../lib/sanitize";
+import { createIdentityService } from "#server/services/identity";
+import { ValidationError } from "#server/error/errors";
+import { createSuccessResponse } from "#server/lib/response";
+import { signupSchema } from "#server/validators/auth";
+import { sanitizeEmail, sanitizeHtml } from "#server/lib/sanitize";
 
 // ========================================
 // POST /api/v1/auth/signup

@@ -1,5 +1,5 @@
-import type { ApiResponse, ApiError, Pagination } from '../types/api';
-import { MAX_PER_PAGE } from '../types/api';
+import type { ApiResponse, ApiError, Pagination } from '#server/types/api';
+import { MAX_PER_PAGE } from '#server/types/api';
 
 /**
  * Normalize returns the normalized pagination values and

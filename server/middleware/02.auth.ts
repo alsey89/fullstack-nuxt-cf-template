@@ -1,4 +1,4 @@
-import { AuthenticationError, TenantMismatchError } from "../error/errors";
+import { AuthenticationError, TenantMismatchError } from "#server/error/errors";
 
 // ========================================
 // AUTHENTICATION MIDDLEWARE

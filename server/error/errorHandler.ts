@@ -1,8 +1,8 @@
 import type { H3Error } from "h3";
 import { setResponseStatus, setResponseHeader, send } from "h3";
 import { ZodError } from "zod";
-import type { AppError } from "./errors";
-import { logError, ValidationError } from "./errors";
+import type { AppError } from "#server/error/errors";
+import { logError, ValidationError } from "#server/error/errors";
 
 // ========================================
 // NITRO ERROR HANDLER

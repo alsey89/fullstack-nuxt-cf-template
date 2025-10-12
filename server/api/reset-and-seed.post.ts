@@ -1,7 +1,7 @@
 import { getHeader, defineEventHandler } from "h3";
-import { seedDatabase, clearDatabase } from "../database/seed";
-import { createSuccessResponse } from "../lib/response";
-import { AuthorizationError } from "../error/errors";
+import { seedDatabase, clearDatabase } from "#server/database/seed";
+import { createSuccessResponse } from "#server/lib/response";
+import { AuthorizationError } from "#server/error/errors";
 
 // ========================================
 // POST /api/seed

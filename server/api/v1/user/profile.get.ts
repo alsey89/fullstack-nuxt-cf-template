@@ -1,5 +1,5 @@
-import { createIdentityService } from '../../../services/identity'
-import { createSuccessResponse } from '../../../lib/response'
+import { createIdentityService } from '#server/services/identity'
+import { createSuccessResponse } from '#server/lib/response'
 
 // ========================================
 // GET /api/v1/user/profile

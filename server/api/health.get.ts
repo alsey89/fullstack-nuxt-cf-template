@@ -1,8 +1,8 @@
 import { defineEventHandler } from "h3";
-import { getDatabase } from "../database/utils";
+import { getDatabase } from "#server/database/utils";
 import { drizzle } from "drizzle-orm/d1";
-import { users, roles } from "../database/schema";
-import * as schema from "../database/schema";
+import { users, roles } from "#server/database/schema";
+import * as schema from "#server/database/schema";
 
 /**
  * Health check endpoint to verify D1 connection

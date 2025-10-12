@@ -1,5 +1,5 @@
 import type { H3Event } from "h3";
-import type { PermissionCode } from "../database/schema/identity";
+import type { PermissionCode } from "#server/database/schema/identity";
 
 // ========================================
 // RBAC UTILITY HELPERS

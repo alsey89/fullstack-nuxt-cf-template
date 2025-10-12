@@ -1,7 +1,7 @@
-import { createIdentityService } from "../../../../services/identity";
-import { ValidationError } from "../../../../error/errors";
-import { createSuccessResponse } from "../../../../lib/response";
-import { emailConfirmSchema } from "../../../../validators/auth";
+import { createIdentityService } from "#server/services/identity";
+import { ValidationError } from "#server/error/errors";
+import { createSuccessResponse } from "#server/lib/response";
+import { emailConfirmSchema } from "#server/validators/auth";
 
 // ========================================
 // POST /api/v1/auth/email/confirm

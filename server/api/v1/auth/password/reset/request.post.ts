@@ -1,12 +1,12 @@
 import { getHeader } from "h3";
-import { createIdentityService } from "../../../../../services/identity";
+import { createIdentityService } from "#server/services/identity";
 import {
   ValidationError,
   AuthenticationError,
-} from "../../../../../error/errors";
-import { createSuccessResponse } from "../../../../../lib/response";
-import { passwordResetRequestSchema } from "../../../../../validators/auth";
-import { sanitizeEmail } from "../../../../../lib/sanitize";
+} from "#server/error/errors";
+import { createSuccessResponse } from "#server/lib/response";
+import { passwordResetRequestSchema } from "#server/validators/auth";
+import { sanitizeEmail } from "#server/lib/sanitize";
 
 // ========================================
 // POST /api/v1/auth/password/reset/request

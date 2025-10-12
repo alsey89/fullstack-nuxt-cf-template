@@ -1,8 +1,8 @@
 import { getRouterParam } from "h3";
-import { createIdentityService } from "../../../services/identity";
-import { createSuccessResponse } from "../../../lib/response";
-import { MissingFieldError } from "../../../error/errors";
-import { requirePermission } from "../../../services/rbac";
+import { createIdentityService } from "#server/services/identity";
+import { createSuccessResponse } from "#server/lib/response";
+import { MissingFieldError } from "#server/error/errors";
+import { requirePermission } from "#server/services/rbac";
 
 // ========================================
 // GET /api/v1/user/:id

@@ -1,5 +1,5 @@
 // Type definitions for nuxt-auth-utils
-import type { PermissionCode } from '../database/schema/identity'
+import type { PermissionCode } from '#server/database/schema/identity'
 
 declare module '#auth-utils' {
   interface User {

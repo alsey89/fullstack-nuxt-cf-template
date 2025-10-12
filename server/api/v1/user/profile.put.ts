@@ -1,8 +1,8 @@
-import { createIdentityService } from "../../../services/identity";
-import { createSuccessResponse } from "../../../lib/response";
-import { AuthenticationError } from "../../../error/errors";
-import { updateProfileSchema } from "../../../validators/user";
-import { sanitizeHtml, sanitizeEmail, sanitizePhone, sanitizePostalCode } from "../../../lib/sanitize";
+import { createIdentityService } from "#server/services/identity";
+import { createSuccessResponse } from "#server/lib/response";
+import { AuthenticationError } from "#server/error/errors";
+import { updateProfileSchema } from "#server/validators/user";
+import { sanitizeHtml, sanitizeEmail, sanitizePhone, sanitizePostalCode } from "#server/lib/sanitize";
 
 // ========================================
 // PUT /api/v1/user/profile

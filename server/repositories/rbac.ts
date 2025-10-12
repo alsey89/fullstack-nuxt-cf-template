@@ -1,7 +1,7 @@
 import { eq, and, desc, inArray } from "drizzle-orm";
-import * as schema from "../database/schema";
-import type { PermissionCode } from "../database/schema/identity";
-import { BaseRepository } from "./base";
+import * as schema from "#server/database/schema";
+import type { PermissionCode } from "#server/database/schema/identity";
+import { BaseRepository } from "#server/repositories/base";
 
 // ========================================
 // RBAC REPOSITORIES

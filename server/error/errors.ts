@@ -6,7 +6,7 @@
 // Error codes are imported from codes.ts for FE/BE consistency
 // ========================================
 
-import { ERROR_CODES } from './codes';
+import { ERROR_CODES } from '#server/error/codes';
 
 /**
  * Base application error

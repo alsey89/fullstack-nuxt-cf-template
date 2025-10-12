@@ -1,6 +1,6 @@
 import { sqliteTable, text, integer, index, unique } from 'drizzle-orm/sqlite-core'
 import { relations } from 'drizzle-orm'
-import { baseFields } from './base'
+import { baseFields } from '#server/database/schema/base'
 
 // ============================================================================
 // IDENTITY DOMAIN - Simplified User Management

@@ -1,6 +1,6 @@
 import { drizzle } from "drizzle-orm/d1";
 import { isNull, SQL } from "drizzle-orm";
-import * as schema from "../database/schema";
+import * as schema from "#server/database/schema";
 
 /**
  * Base repository class with soft delete support

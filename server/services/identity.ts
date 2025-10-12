@@ -3,14 +3,14 @@ import {
   UserRepository,
   UserSettingsRepository,
   AuditLogRepository,
-} from "../repositories/identity";
+} from "#server/repositories/identity";
 import {
   generateEmailConfirmToken,
   generatePasswordResetToken,
   verifyEmailConfirmToken,
   verifyPasswordResetToken,
-} from "../lib/auth";
-import { validatePasswordStrength } from "../validators/password";
+} from "#server/lib/auth";
+import { validatePasswordStrength } from "#server/validators/password";
 import {
   InvalidCredentialsError,
   EmailAlreadyExistsError,
@@ -20,9 +20,9 @@ import {
   AuthenticationError,
   InternalServerError,
   PasswordSameAsOldError,
-} from "../error/errors";
-import type { User } from "../database/schema/identity";
-import { getDatabase } from "../database/utils";
+} from "#server/error/errors";
+import type { User } from "#server/database/schema/identity";
+import { getDatabase } from "#server/database/utils";
 
 // Note: hashPassword, verifyPassword are auto-imported by nuxt-auth-utils
 

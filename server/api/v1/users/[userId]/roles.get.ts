@@ -1,7 +1,7 @@
 import { defineEventHandler, getRouterParam } from "h3";
-import { getRBACService, requirePermission } from "../../../../services/rbac";
-import { createSuccessResponse } from "../../../../lib/response";
-import { MissingFieldError } from "../../../../error/errors";
+import { getRBACService, requirePermission } from "#server/services/rbac";
+import { createSuccessResponse } from "#server/lib/response";
+import { MissingFieldError } from "#server/error/errors";
 
 // ========================================
 // GET /api/v1/users/:userId/roles

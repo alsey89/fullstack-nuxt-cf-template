@@ -1,5 +1,5 @@
 import { drizzle } from 'drizzle-orm/d1'
-import * as schema from './schema'
+import * as schema from '#server/database/schema'
 
 /**
  * Get Drizzle ORM instance from raw D1Database

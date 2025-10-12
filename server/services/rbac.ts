@@ -3,11 +3,11 @@ import {
   RoleRepository,
   UserRoleRepository,
   PermissionRepository,
-} from "../repositories/rbac";
-import { UserRepository } from "../repositories/identity";
-import type { PermissionCode } from "../database/schema/identity";
-import { getDatabase } from "../database/utils";
-import { AuthorizationError, PermissionDeniedError } from "../error/errors";
+} from "#server/repositories/rbac";
+import { UserRepository } from "#server/repositories/identity";
+import type { PermissionCode } from "#server/database/schema/identity";
+import { getDatabase } from "#server/database/utils";
+import { AuthorizationError, PermissionDeniedError } from "#server/error/errors";
 
 // ========================================
 // RBAC SERVICE

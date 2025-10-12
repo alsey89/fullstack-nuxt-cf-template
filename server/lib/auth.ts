@@ -1,6 +1,6 @@
 import { SignJWT, jwtVerify } from "jose";
 import type { H3Event } from "h3";
-import { InvalidTokenError, TokenExpiredError, InvalidTokenPurposeError } from "../error/errors";
+import { InvalidTokenError, TokenExpiredError, InvalidTokenPurposeError } from "#server/error/errors";
 
 // ========================================
 // AUTHENTICATION LIBRARY

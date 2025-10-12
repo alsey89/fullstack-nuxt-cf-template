@@ -1,7 +1,7 @@
 import { defineEventHandler, getRouterParam, readBody } from "h3";
-import { getRBACService, requirePermission } from "../../../../services/rbac";
-import { createSuccessResponse } from "../../../../lib/response";
-import { MissingFieldError } from "../../../../error/errors";
+import { getRBACService, requirePermission } from "#server/services/rbac";
+import { createSuccessResponse } from "#server/lib/response";
+import { MissingFieldError } from "#server/error/errors";
 import { z } from "zod";
 
 // ========================================

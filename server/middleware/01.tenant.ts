@@ -1,5 +1,5 @@
 import { getHeader } from "h3";
-import { AuthenticationError } from "../error/errors";
+import { AuthenticationError } from "#server/error/errors";
 
 // ========================================
 // DATABASE SELECTION MIDDLEWARE

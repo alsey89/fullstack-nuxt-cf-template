@@ -1,4 +1,4 @@
-import { createSuccessResponse } from "../../../lib/response";
+import { createSuccessResponse } from "#server/lib/response";
 
 // ========================================
 // POST /api/v1/auth/signout

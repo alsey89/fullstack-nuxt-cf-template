@@ -1,8 +1,8 @@
 import { drizzle } from "drizzle-orm/d1";
-import * as schema from "./schema";
+import * as schema from "#server/database/schema";
 import { Hash } from "@adonisjs/hash";
 import { Scrypt } from "@adonisjs/hash/drivers/scrypt";
-import { createBatchInserts, executeBatch } from "./batch";
+import { createBatchInserts, executeBatch } from "#server/database/batch";
 
 // Create hash instance for password hashing
 const scrypt = new Scrypt({

@@ -1,6 +1,6 @@
 import { eq, and } from "drizzle-orm";
-import * as schema from "../database/schema";
-import { BaseRepository } from "./base";
+import * as schema from "#server/database/schema";
+import { BaseRepository } from "#server/repositories/base";
 import type {
   User,
   NewUser,
@@ -8,7 +8,7 @@ import type {
   NewUserSettings,
   AuditLog,
   NewAuditLog,
-} from "../database/schema/identity";
+} from "#server/database/schema/identity";
 
 // ========================================
 // USER REPOSITORY
