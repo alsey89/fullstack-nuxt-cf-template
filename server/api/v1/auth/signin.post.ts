@@ -63,5 +63,7 @@ export default defineEventHandler(async (event) => {
 
   return createSuccessResponse("Signed in successfully", {
     user,
+    permissions,
+    permissionVersion,
   });
 });

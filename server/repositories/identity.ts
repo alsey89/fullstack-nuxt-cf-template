@@ -47,12 +47,7 @@ export class UserRepository extends BaseRepository {
     const result = await this.drizzle
       .select()
       .from(schema.users)
-      .where(
-        and(
-          eq(schema.users.id, id),
-          this.notDeleted(schema.users)
-        )
-      )
+      .where(and(eq(schema.users.id, id), this.notDeleted(schema.users)))
       .limit(1);
 
     return result[0] || null;
@@ -95,12 +90,7 @@ export class UserRepository extends BaseRepository {
     const [user] = await this.drizzle
       .update(schema.users)
       .set({ ...data, updatedAt: new Date() })
-      .where(
-        and(
-          eq(schema.users.id, id),
-          this.notDeleted(schema.users)
-        )
-      )
+      .where(and(eq(schema.users.id, id), this.notDeleted(schema.users)))
       .returning();
 
     return user || null;
@@ -164,7 +154,10 @@ export class UserSettingsRepository extends BaseRepository {
   /**
    * Update user settings
    */
-  async updateSettings(userId: string, settings: Record<string, any>): Promise<UserSettings> {
+  async updateSettings(
+    userId: string,
+    settings: Record<string, any>
+  ): Promise<UserSettings> {
     const [userSettings] = await this.drizzle
       .insert(schema.userSettings)
       .values({

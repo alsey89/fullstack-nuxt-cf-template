@@ -63,9 +63,9 @@ export async function seedDatabase(
     name: p.name,
     description: p.name,
     category: p.category,
-    createdAt: now.toISOString(),
-    updatedAt: now.toISOString(),
-    deletedAt: null,
+    created_at: now.getTime(),
+    updated_at: now.getTime(),
+    deleted_at: null,
   }));
 
   const permissionStatements = createBatchInserts(db, 'permissions', permissionValues);
@@ -114,16 +114,16 @@ export async function seedDatabase(
   const userValues = users.map(u => ({
     id: u.id,
     email: u.email,
-    passwordHash,
-    firstName: u.firstName,
-    lastName: u.lastName,
+    password_hash: passwordHash,
+    first_name: u.firstName,
+    last_name: u.lastName,
     phone: u.phone,
     role: u.role,
-    isEmailVerified: 1, // SQLite uses 1/0 for boolean
-    isActive: 1,
-    createdAt: now.toISOString(),
-    updatedAt: now.toISOString(),
-    deletedAt: null,
+    is_email_verified: 1, // SQLite uses 1/0 for boolean
+    is_active: 1,
+    created_at: now.getTime(),
+    updated_at: now.getTime(),
+    deleted_at: null,
   }));
 
   const userStatements = createBatchInserts(db, 'users', userValues);
@@ -171,7 +171,7 @@ export async function seedDatabase(
   // Insert roles atomically using batch operation
   const roleStatements = roles.map(role =>
     db.prepare(
-      `INSERT INTO roles (id, name, description, permissions, isSystem, createdAt, updatedAt, deletedAt)
+      `INSERT INTO roles (id, name, description, permissions, is_system, created_at, updated_at, deleted_at)
        VALUES (?, ?, ?, ?, ?, ?, ?, ?)`
     ).bind(
       role.id,
@@ -179,8 +179,8 @@ export async function seedDatabase(
       role.description,
       JSON.stringify(role.permissions), // SQLite stores JSON as TEXT
       role.isSystem ? 1 : 0,
-      now.toISOString(),
-      now.toISOString(),
+      now.getTime(),
+      now.getTime(),
       null
     )
   );
@@ -229,11 +229,11 @@ export async function seedDatabase(
   // Insert role assignments atomically using batch operation
   const userRoleValues = roleAssignments.map(ra => ({
     id: ra.id,
-    userId: ra.userId,
-    roleId: ra.roleId,
-    createdAt: now.toISOString(),
-    updatedAt: now.toISOString(),
-    deletedAt: null,
+    user_id: ra.userId,
+    role_id: ra.roleId,
+    created_at: now.getTime(),
+    updated_at: now.getTime(),
+    deleted_at: null,
   }));
 
   const userRoleStatements = createBatchInserts(db, 'user_roles', userRoleValues);

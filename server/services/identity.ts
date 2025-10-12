@@ -156,16 +156,20 @@ export class IdentityService {
     }
 
     // Verify password
-    const isValid = await verifyPassword(password, user.passwordHash);
+    //* according to nuxt-auth-utils docs, it's (hash, password)
+    const isValid = await verifyPassword(user.passwordHash, password);
     if (!isValid) {
       throw new InvalidCredentialsError();
     }
+
+    //remove sensitive fields before returning
+    const { passwordHash, ...userData } = user;
 
     // Log the signin
     await this.logAudit(user.id, "USER_SIGNED_IN", "User", user.id);
 
     return {
-      user,
+      user: userData,
     };
   }
 
@@ -259,7 +263,10 @@ export class IdentityService {
     const passwordHash = await hashPassword(newPassword);
 
     // Update password
-    const updatedUser = await this.userRepo.updatePassword(userId, passwordHash);
+    const updatedUser = await this.userRepo.updatePassword(
+      userId,
+      passwordHash
+    );
     if (!updatedUser) {
       throw new UserNotFoundError();
     }
@@ -294,7 +301,8 @@ export class IdentityService {
     }
 
     // Remove sensitive fields that shouldn't be updated via this method
-    const { id, passwordHash, createdAt, updatedAt, deletedAt, ...updateData } = data;
+    const { id, passwordHash, createdAt, updatedAt, deletedAt, ...updateData } =
+      data;
 
     const user = await this.userRepo.update(userId, updateData);
     if (!user) {
@@ -326,7 +334,7 @@ export class IdentityService {
    */
   async getUserPermissions(userId: string): Promise<string[]> {
     // Import here to avoid circular dependency
-    const { getRBACService } = await import('./rbac');
+    const { getRBACService } = await import("./rbac");
     const rbacService = getRBACService(this.event);
 
     // If RBAC is disabled, return empty permissions array
@@ -343,7 +351,7 @@ export class IdentityService {
    */
   async getPermissionVersion(userId: string): Promise<number> {
     // Import here to avoid circular dependency
-    const { getRBACService } = await import('./rbac');
+    const { getRBACService } = await import("./rbac");
     const rbacService = getRBACService(this.event);
 
     // If RBAC is disabled, return static version
@@ -377,9 +385,15 @@ export class IdentityService {
     );
 
     // Log settings update
-    await this.logAudit(this.userId || userId, "USER_SETTINGS_UPDATED", "User", userId, {
-      metadata: { settings },
-    });
+    await this.logAudit(
+      this.userId || userId,
+      "USER_SETTINGS_UPDATED",
+      "User",
+      userId,
+      {
+        metadata: { settings },
+      }
+    );
 
     return updatedSettings;
   }

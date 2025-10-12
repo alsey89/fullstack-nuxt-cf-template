@@ -29,7 +29,7 @@ export default defineEventHandler(async (event) => {
   const result = await identityService.requestPasswordReset(sanitizedEmail);
 
   return createSuccessResponse("Password reset email sent", {
-    // In production, token would be sent via email
-    token: result.token,
+    //! TODO: Remove reset token from response in production
+    token: result.resetToken,
   });
 });

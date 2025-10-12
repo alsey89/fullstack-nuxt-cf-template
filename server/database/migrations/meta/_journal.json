@@ -5,29 +5,8 @@
     {
       "idx": 0,
       "version": "6",
-      "when": 1760173070628,
-      "tag": "0000_spicy_stingray",
-      "breakpoints": true
-    },
-    {
-      "idx": 1,
-      "version": "6",
-      "when": 1760178180391,
-      "tag": "0001_crazy_beast",
-      "breakpoints": true
-    },
-    {
-      "idx": 2,
-      "version": "6",
-      "when": 1760178221052,
-      "tag": "0002_first_vampiro",
-      "breakpoints": true
-    },
-    {
-      "idx": 3,
-      "version": "6",
-      "when": 1760182750572,
-      "tag": "0003_romantic_james_howlett",
+      "when": 1760257058525,
+      "tag": "0000_brief_joystick",
       "breakpoints": true
     }
   ]
