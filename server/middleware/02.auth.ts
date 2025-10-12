@@ -26,7 +26,7 @@ export default defineEventHandler(async (event) => {
   // Get user session from nuxt-auth-utils
   const session = await getUserSession(event);
 
-  if (!session.user?.id) {
+  if (!session || !session.user?.id) {
     throw new AuthenticationError("Authentication required", "AUTH_REQUIRED");
   }
 

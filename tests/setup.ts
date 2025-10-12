@@ -44,3 +44,13 @@ global.verifyPassword = vi.fn().mockImplementation(async (password: string, hash
 global.getUserSession = vi.fn().mockResolvedValue(null)
 
 global.setUserSession = vi.fn().mockResolvedValue(undefined)
+
+// ========================================
+// MOCK NUXT UTILITIES
+// ========================================
+// Mock Nuxt/h3 utilities that are auto-imported
+// ========================================
+
+global.defineEventHandler = vi.fn().mockImplementation((handler) => handler)
+
+global.setHeader = vi.fn().mockImplementation(() => undefined)
