@@ -7,7 +7,7 @@ import {
 import { UserRepository } from "../repositories/identity";
 import type { PermissionCode } from "../database/schema/identity";
 import { getDatabase } from "../database/utils";
-import { AuthorizationError } from "../error/errors";
+import { AuthorizationError, PermissionDeniedError } from "../error/errors";
 
 // ========================================
 // RBAC SERVICE
@@ -99,11 +99,7 @@ export class RBACService {
     const hasPermission = await this.userHasPermission(userId, permission);
 
     if (!hasPermission) {
-      throw new AuthorizationError(
-        `Permission denied: ${permission} required`,
-        "PERMISSION_DENIED",
-        { permission, userId }
-      );
+      throw new PermissionDeniedError(permission, `Permission denied: ${permission} required`);
     }
   }
 
@@ -356,7 +352,7 @@ export async function requirePermission(
 ): Promise<void> {
   const userId = event.context.userId;
   if (!userId) {
-    throw new AuthorizationError("Authentication required", "AUTH_REQUIRED");
+    throw new AuthorizationError("Authentication required");
   }
 
   const rbacService = getRBACService(event);

@@ -15,11 +15,6 @@ import { BaseRepository } from "./base";
  * Manages role CRUD operations and role-permission relationships
  */
 export class RoleRepository extends BaseRepository {
-  // Alias for consistency with other methods
-  private get db() {
-    return this.drizzle;
-  }
-
   /**
    * Create a new role
    */
@@ -30,7 +25,7 @@ export class RoleRepository extends BaseRepository {
     isSystem?: boolean;
   }) {
     const now = new Date();
-    const [role] = await this.db
+    const [role] = await this.drizzle
       .insert(schema.roles)
       .values({
         id: crypto.randomUUID(),
@@ -51,7 +46,7 @@ export class RoleRepository extends BaseRepository {
    * Get role by ID
    */
   async getRoleById(roleId: string) {
-    const [role] = await this.db
+    const [role] = await this.drizzle
       .select()
       .from(schema.roles)
       .where(and(eq(schema.roles.id, roleId), this.notDeleted(schema.roles)));
@@ -63,7 +58,7 @@ export class RoleRepository extends BaseRepository {
    * Get role by name
    */
   async getRoleByName(name: string) {
-    const [role] = await this.db
+    const [role] = await this.drizzle
       .select()
       .from(schema.roles)
       .where(and(eq(schema.roles.name, name), this.notDeleted(schema.roles)));
@@ -82,7 +77,7 @@ export class RoleRepository extends BaseRepository {
       conditions.push(eq(schema.roles.isSystem, false));
     }
 
-    return this.db
+    return this.drizzle
       .select()
       .from(schema.roles)
       .where(and(...conditions))
@@ -100,7 +95,7 @@ export class RoleRepository extends BaseRepository {
       permissions?: PermissionCode[];
     }
   ) {
-    const [role] = await this.db
+    const [role] = await this.drizzle
       .update(schema.roles)
       .set({
         ...data,
@@ -126,7 +121,7 @@ export class RoleRepository extends BaseRepository {
       throw new Error("Cannot delete system role");
     }
 
-    const [deleted] = await this.db
+    const [deleted] = await this.drizzle
       .update(schema.roles)
       .set({
         deletedAt: new Date(),
@@ -181,11 +176,6 @@ export class RoleRepository extends BaseRepository {
 export class UserRoleRepository extends BaseRepository {
   private roleRepo: RoleRepository;
 
-  // Alias for consistency with other methods
-  private get db() {
-    return this.drizzle;
-  }
-
   constructor(database: D1Database) {
     super(database);
     this.roleRepo = new RoleRepository(database);
@@ -198,7 +188,7 @@ export class UserRoleRepository extends BaseRepository {
     const now = new Date();
 
     // Check if assignment already exists
-    const existing = await this.db
+    const existing = await this.drizzle
       .select()
       .from(schema.userRoles)
       .where(
@@ -213,7 +203,7 @@ export class UserRoleRepository extends BaseRepository {
       return existing[0];
     }
 
-    const [assignment] = await this.db
+    const [assignment] = await this.drizzle
       .insert(schema.userRoles)
       .values({
         id: crypto.randomUUID(),
@@ -232,7 +222,7 @@ export class UserRoleRepository extends BaseRepository {
    * Remove role from user
    */
   async removeRoleFromUser(userId: string, roleId: string) {
-    const [removed] = await this.db
+    const [removed] = await this.drizzle
       .update(schema.userRoles)
       .set({
         deletedAt: new Date(),
@@ -253,7 +243,7 @@ export class UserRoleRepository extends BaseRepository {
    * Get all roles for a user
    */
   async getUserRoles(userId: string) {
-    const userRoleAssignments = await this.db
+    const userRoleAssignments = await this.drizzle
       .select({
         role: schema.roles,
       })
@@ -299,7 +289,7 @@ export class UserRoleRepository extends BaseRepository {
    * Get all users with a specific role
    */
   async getUsersByRole(roleId: string) {
-    const userRoleAssignments = await this.db
+    const userRoleAssignments = await this.drizzle
       .select({
         user: schema.users,
       })
@@ -321,14 +311,14 @@ export class UserRoleRepository extends BaseRepository {
    */
   async replaceUserRoles(userId: string, roleIds: string[]) {
     // Get existing role assignments
-    const existing = await this.db
+    const existing = await this.drizzle
       .select()
       .from(schema.userRoles)
       .where(and(eq(schema.userRoles.userId, userId), this.notDeleted(schema.userRoles)));
 
     // Soft delete all existing assignments
     for (const assignment of existing) {
-      await this.db
+      await this.drizzle
         .update(schema.userRoles)
         .set({ deletedAt: new Date() })
         .where(eq(schema.userRoles.id, assignment.id));
@@ -350,16 +340,11 @@ export class UserRoleRepository extends BaseRepository {
  * Manages permission registry (validation/documentation only)
  */
 export class PermissionRepository extends BaseRepository {
-  // Alias for consistency with other methods
-  private get db() {
-    return this.drizzle;
-  }
-
   /**
    * Get permission by code
    */
   async getPermissionByCode(code: PermissionCode) {
-    const [permission] = await this.db
+    const [permission] = await this.drizzle
       .select()
       .from(schema.permissions)
       .where(and(eq(schema.permissions.code, code), this.notDeleted(schema.permissions)));
@@ -371,7 +356,7 @@ export class PermissionRepository extends BaseRepository {
    * List all permissions (grouped by category)
    */
   async listPermissions() {
-    return this.db
+    return this.drizzle
       .select()
       .from(schema.permissions)
       .where(this.notDeleted(schema.permissions))
@@ -382,7 +367,7 @@ export class PermissionRepository extends BaseRepository {
    * List permissions by category
    */
   async listPermissionsByCategory(category: string) {
-    return this.db
+    return this.drizzle
       .select()
       .from(schema.permissions)
       .where(
@@ -399,7 +384,7 @@ export class PermissionRepository extends BaseRepository {
     if (codes.length === 0) return true
 
     // Batch query: check all permissions at once
-    const found = await this.db
+    const found = await this.drizzle
       .select()
       .from(schema.permissions)
       .where(

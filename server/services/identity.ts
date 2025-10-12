@@ -122,11 +122,16 @@ export class IdentityService {
       metadata: { email: user.email, role },
     });
 
+    const tenantId = this.event.context.tenantId;
+    if (!tenantId) {
+      throw new InternalServerError("Tenant context not available");
+    }
+
     // Generate email confirmation token (bound to current tenant)
     const confirmToken = generateEmailConfirmToken(
       user.id,
       user.email,
-      this.event.context.tenantId,
+      tenantId,
       this.event
     );
 
@@ -168,9 +173,14 @@ export class IdentityService {
    * Confirm email address
    */
   async confirmEmail(token: string) {
+    const tenantId = this.event.context.tenantId;
+    if (!tenantId) {
+      throw new InternalServerError("Tenant context not available");
+    }
+
     const { userId, email } = await verifyEmailConfirmToken(
       token,
-      this.event.context.tenantId,
+      tenantId,
       this.event
     );
 
@@ -200,10 +210,15 @@ export class IdentityService {
       return { success: true };
     }
 
+    const tenantId = this.event.context.tenantId;
+    if (!tenantId) {
+      throw new InternalServerError("Tenant context not available");
+    }
+
     const resetToken = generatePasswordResetToken(
       user.id,
       user.email,
-      this.event.context.tenantId,
+      tenantId,
       this.event
     );
 
@@ -221,9 +236,14 @@ export class IdentityService {
    * Reset password with token
    */
   async resetPassword(token: string, newPassword: string) {
+    const tenantId = this.event.context.tenantId;
+    if (!tenantId) {
+      throw new InternalServerError("Tenant context not available");
+    }
+
     const { userId, email } = await verifyPasswordResetToken(
       token,
-      this.event.context.tenantId,
+      tenantId,
       this.event
     );
 
