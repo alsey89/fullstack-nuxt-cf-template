@@ -2,7 +2,7 @@ import { ValidationError } from "../../../error/errors";
 import { createSuccessResponse } from "../../../lib/response";
 import { createIdentityService } from "../../../services/identity";
 import { signinSchema } from "../../../validators/auth";
-import { sanitizeEmail } from "~/server/lib/sanitize";
+import { sanitizeEmail } from "../../../lib/sanitize";
 
 // ========================================
 // POST /api/v1/auth/signin
@@ -47,6 +47,7 @@ export default defineEventHandler(async (event) => {
 
   // Set session with user data and permissions
   // NOTE: nuxt-auth-utils requires a 'user' key for loggedIn to work
+  // IMPORTANT: tenantId is bound to session to prevent cross-tenant access
   await setUserSession(event, {
     user: {
       id: user.id,
@@ -54,6 +55,7 @@ export default defineEventHandler(async (event) => {
       firstName: user.firstName,
       lastName: user.lastName,
     },
+    tenantId: event.context.tenantId, // Bind session to tenant (prevents cross-tenant session reuse)
     permissions,
     permissionVersion,
     loggedInAt: Date.now(),

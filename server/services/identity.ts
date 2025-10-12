@@ -122,8 +122,13 @@ export class IdentityService {
       metadata: { email: user.email, role },
     });
 
-    // Generate email confirmation token
-    const confirmToken = generateEmailConfirmToken(user.id, user.email);
+    // Generate email confirmation token (bound to current tenant)
+    const confirmToken = generateEmailConfirmToken(
+      user.id,
+      user.email,
+      this.event.context.tenantId,
+      this.event
+    );
 
     // TODO: Send confirmation email (implement based on your email provider)
 
@@ -163,7 +168,11 @@ export class IdentityService {
    * Confirm email address
    */
   async confirmEmail(token: string) {
-    const { userId, email } = await verifyEmailConfirmToken(token);
+    const { userId, email } = await verifyEmailConfirmToken(
+      token,
+      this.event.context.tenantId,
+      this.event
+    );
 
     const user = await this.userRepo.findById(userId);
     if (!user || user.email !== email) {
@@ -191,7 +200,12 @@ export class IdentityService {
       return { success: true };
     }
 
-    const resetToken = generatePasswordResetToken(user.id, user.email);
+    const resetToken = generatePasswordResetToken(
+      user.id,
+      user.email,
+      this.event.context.tenantId,
+      this.event
+    );
 
     // Log password reset request
     await this.logAudit(user.id, "PASSWORD_RESET_REQUESTED", "User", user.id, {
@@ -207,7 +221,11 @@ export class IdentityService {
    * Reset password with token
    */
   async resetPassword(token: string, newPassword: string) {
-    const { userId, email } = await verifyPasswordResetToken(token);
+    const { userId, email } = await verifyPasswordResetToken(
+      token,
+      this.event.context.tenantId,
+      this.event
+    );
 
     // Validate new password
     validatePasswordStrength(newPassword);

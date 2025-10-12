@@ -72,7 +72,11 @@ export default defineEventHandler(async (event) => {
   // Select database binding for tenant
   // Convention: DB_<TENANT_ID> (e.g., "acme" → "DB_ACME")
   const dbBinding = `DB_${tenantId.toUpperCase().replace(/-/g, "_")}`;
-  const db = event.context.cloudflare?.env?.[dbBinding] as D1Database;
+  const cfEnv = event.context.cloudflare?.env as unknown as Record<
+    string,
+    unknown
+  >;
+  const db = cfEnv?.[dbBinding] as D1Database;
 
   if (!db) {
     throw new AuthenticationError(
@@ -93,7 +97,6 @@ export default defineEventHandler(async (event) => {
 function isPublicRoute(path: string): boolean {
   const publicRoutes = [
     "/api/health",
-    "/api/reset-and-seed",
     "/api/_auth", // nuxt-auth-utils internal endpoints
   ];
 

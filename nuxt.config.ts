@@ -5,6 +5,23 @@ export default defineNuxtConfig({
   compatibilityDate: "2025-07-15",
   devtools: { enabled: true },
   runtimeConfig: {
+    // Multitenancy Configuration
+    // Default: Single-tenant mode (one database for all data)
+    // Set to true for multi-tenant mode (requires manual DB provisioning per tenant)
+    multitenancy: {
+      enabled: false, // Override with NUXT_MULTITENANCY_ENABLED
+    },
+    // RBAC Configuration
+    rbac: {
+      enabled: true, // Set to false to disable RBAC enforcement (can override with NUXT_RBAC_ENABLED)
+    },
+    // Email Configuration
+    email: {
+      provider: "none", // "none" | "resend" | "postmark" (override with NUXT_EMAIL_PROVIDER)
+      apiKey: "", // Email provider API key (override with NUXT_EMAIL_API_KEY)
+      from: "noreply@localhost", // From email address (override with NUXT_EMAIL_FROM)
+    },
+
     // Private Keys
     session: {
       password: "overwrite-this-with-environment-in-production", // Min 32 chars
@@ -18,30 +35,11 @@ export default defineNuxtConfig({
     // JWT Secret (for email confirmation and password reset tokens)
     jwtSecret: "overwrite-this-with-environment-in-production", // Override with NUXT_JWT_SECRET
 
-    // Email Configuration
-    email: {
-      provider: "none", // "none" | "resend" | "postmark" (override with NUXT_EMAIL_PROVIDER)
-      apiKey: "", // Email provider API key (override with NUXT_EMAIL_API_KEY)
-      from: "noreply@localhost", // From email address (override with NUXT_EMAIL_FROM)
-    },
-
     // Seed Secret (for production database seeding via API)
     seedSecret: "overwrite-this-with-environment-in-production", // Override with NUXT_SEED_SECRET
 
     // Cloudflare Turnstile (bot protection)
     turnstileSecretKey: "overwrite-this-with-environment-in-production", // Override with NUXT_TURNSTILE_SECRET_KEY
-
-    // Multitenancy Configuration
-    // Default: Single-tenant mode (one database for all data)
-    // Set to true for multi-tenant mode (requires manual DB provisioning per tenant)
-    multitenancy: {
-      enabled: false, // Override with NUXT_MULTITENANCY_ENABLED
-    },
-
-    // RBAC Configuration
-    rbac: {
-      enabled: true, // Set to false to disable RBAC enforcement (can override with NUXT_RBAC_ENABLED)
-    },
 
     // Public Keys
     public: {

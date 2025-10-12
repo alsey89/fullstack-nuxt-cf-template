@@ -1,7 +1,7 @@
 import { defineEventHandler, readBody } from "h3";
 import { getRBACService, requirePermission } from "../../../services/rbac";
 import { createSuccessResponse } from "../../../lib/response";
-import { sanitizeHtml } from "~/server/lib/sanitize";
+import { sanitizeHtml } from "../../../lib/sanitize";
 import { z } from "zod";
 
 // ========================================

@@ -30,6 +30,15 @@ export default defineEventHandler(async (event) => {
     throw new AuthenticationError("Authentication required", "AUTH_REQUIRED");
   }
 
+  // CRITICAL: Validate session is bound to current tenant
+  // This prevents cross-tenant access by reusing session tokens
+  if (session.tenantId !== event.context.tenantId) {
+    throw new AuthenticationError(
+      "Session tenant mismatch. Please sign in again.",
+      "TENANT_MISMATCH"
+    );
+  }
+
   // Set user context for downstream handlers
   event.context.userId = session.user.id as string;
 });

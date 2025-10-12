@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, vi } from "vitest";
-import { IdentityService } from "~/server/services/identity";
+import { IdentityService } from "../../../server/services/identity";
 import {
   InvalidCredentialsError,
   EmailAlreadyExistsError,
@@ -7,7 +7,7 @@ import {
   ValidationError,
   AccountInactiveError,
   AuthenticationError,
-} from "~/server/error/errors";
+} from "../../../server/error/errors";
 import { createMockH3Event, createMockRepository } from "../../helpers/mocks";
 
 // Note: hashPassword, verifyPassword, getUserSession, setUserSession are globally mocked in tests/setup.ts
@@ -20,7 +20,7 @@ const mockVerifyPasswordResetToken = vi.fn();
 const mockValidatePasswordStrength = vi.fn();
 
 // Mock auth utilities
-vi.mock("~/server/lib/auth", () => ({
+vi.mock("../../../server/lib/auth", () => ({
   generateEmailConfirmToken: (...args: any[]) =>
     mockGenerateEmailConfirmToken(...args),
   generatePasswordResetToken: (...args: any[]) =>
@@ -32,7 +32,7 @@ vi.mock("~/server/lib/auth", () => ({
 }));
 
 // Mock password validator
-vi.mock("~/server/validators/password", () => ({
+vi.mock("../../../server/validators/password", () => ({
   validatePasswordStrength: (...args: any[]) =>
     mockValidatePasswordStrength(...args),
 }));

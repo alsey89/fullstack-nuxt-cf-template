@@ -37,6 +37,9 @@ export default defineNitroErrorHandler((error: H3Error, event) => {
     traceId,
     url: event.path,
     method: event.method,
+    ...(error.stack && {
+      stack: error.stack.split("\n").map((line) => line.trim()),
+    }),
   });
 
   // Prepare response based on environment and error type

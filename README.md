@@ -8,6 +8,7 @@ A production-ready full-stack web application template built on Cloudflare Worke
 - **🗄️ Cloudflare D1** - Serverless SQLite database with atomic batch operations
 - **🔐 Authentication** - Secure session-based auth with nuxt-auth-utils
 - **🏢 Multi-tenancy** - Configurable per-tenant database isolation (defaults to single-tenant)
+- **🛡️ Security** - Session-tenant binding, JWT token isolation, cross-tenant protection
 - **⚖️ RBAC** - Enterprise-grade role-based access control with wildcards
 - **📊 Database ORM** - Drizzle ORM with TypeScript
 - **✅ Validation** - Zod schemas with vee-validate
@@ -22,6 +23,7 @@ Complete documentation is available in the [`docs/`](docs/) folder:
 
 - **[docs/README.md](docs/README.md)** - Documentation index and navigation
 - **[docs/CONVENTIONS.md](docs/CONVENTIONS.md)** - Architecture & coding patterns (START HERE)
+- **[docs/SECURITY.md](docs/SECURITY.md)** - Security architecture and best practices
 - **[docs/RBAC.md](docs/RBAC.md)** - Role-Based Access Control guide
 - **[docs/SECRETS.md](docs/SECRETS.md)** - Secrets management and environment variables
 - **[docs/ERROR_HANDLING.md](docs/ERROR_HANDLING.md)** - Error handling guide
@@ -130,6 +132,26 @@ Drizzle ORM → D1 Database (single or multi-tenant)
 - Separate D1 database per tenant via manual provisioning
 - Each tenant requires a `DB_<TENANT>` binding in wrangler config
 - Requires tenant provisioning workflow (see [docs/TEMPLATE_SETUP.md](docs/TEMPLATE_SETUP.md))
+
+**⚠️ Important:** You cannot switch between single-tenant and multi-tenant mode without data migration. Sessions from one mode won't work in the other. Choose your mode carefully before deploying to production.
+
+## 🛡️ Security Features
+
+### Session-Tenant Binding
+Sessions are cryptographically bound to tenant context to prevent cross-tenant access:
+- **Automatic Protection**: Sessions created in Tenant A cannot be used in Tenant B
+- **Mode-Agnostic**: Works in both single-tenant (`tenantId="default"`) and multi-tenant modes
+- **JWT Token Isolation**: Email confirmation and password reset tokens include tenant validation
+- **Zero Configuration**: Security enforcement is built-in and always active
+
+### Cross-Tenant Protection
+The template automatically prevents:
+- ✅ Session reuse across different tenants
+- ✅ JWT token replay attacks across tenants
+- ✅ Unauthorized database access via tenant manipulation
+- ✅ Cross-tenant data leakage through middleware validation
+
+See [docs/SECURITY.md](docs/SECURITY.md) for detailed security documentation.
 
 ## ⚙️ Multitenancy & RBAC Configuration
 

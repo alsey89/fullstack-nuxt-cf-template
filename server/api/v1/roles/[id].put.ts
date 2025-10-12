@@ -2,7 +2,7 @@ import { defineEventHandler, getRouterParam, readBody } from "h3";
 import { getRBACService, requirePermission } from "../../../services/rbac";
 import { createSuccessResponse } from "../../../lib/response";
 import { MissingFieldError, NotFoundError } from "../../../error/errors";
-import { sanitizeHtml } from "~/server/lib/sanitize";
+import { sanitizeHtml } from "../../../lib/sanitize";
 import { z } from "zod";
 
 // ========================================

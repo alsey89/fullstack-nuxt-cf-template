@@ -117,7 +117,53 @@ wrangler d1 migrations apply acme-db --remote
 - Plan your tenant onboarding workflow accordingly
 - Consider tenant limits based on Cloudflare's D1 database limits
 
-### 2.2. Configure RBAC (Optional)
+### 2.3. Security: Tenant Isolation
+
+**Built-in Protection:**
+The template automatically prevents cross-tenant access through:
+
+1. **Session Binding**: User sessions are bound to the tenant where they authenticated
+   - Sessions from Tenant A cannot be used on Tenant B
+   - Automatic validation in authentication middleware ([server/middleware/02.auth.ts:33-40](../server/middleware/02.auth.ts#L33-L40))
+   - Returns "Session tenant mismatch" error if tenants don't match
+
+2. **Token Binding**: JWT tokens (email confirmation, password reset) include tenant validation
+   - Tokens generated for Tenant A won't work on Tenant B
+   - Prevents token replay attacks across tenants
+   - Implemented in [server/lib/auth.ts](../server/lib/auth.ts)
+
+3. **Single-Tenant Mode**: Even in single-tenant mode, sessions use `tenantId="default"`
+   - Makes code mode-agnostic (no conditional logic needed)
+   - Safe migration path if you enable multi-tenancy later
+   - All security checks work identically in both modes
+
+**How It Works:**
+```typescript
+// User signs in to Tenant A
+await setUserSession(event, {
+  user: { id: '123', email: 'user@example.com' },
+  tenantId: 'acme', // Bound to tenant context
+  permissions: ['users:view'],
+  // ...
+});
+
+// User tries to access Tenant B with Tenant A's session
+// Middleware automatically validates:
+if (session.tenantId !== event.context.tenantId) {
+  throw new AuthenticationError("Session tenant mismatch");
+}
+// ❌ Request rejected - session is from different tenant
+```
+
+**⚠️ Important: Mode Migration**
+Changing from single-tenant to multi-tenant mode (or vice versa) requires:
+- **Data migration** to move users/data between databases
+- **Session invalidation** - all users must sign in again
+- **Token invalidation** - all pending email/reset tokens will fail
+
+**Recommendation:** Choose your tenancy mode carefully before production deployment. There is no automatic migration path between modes.
+
+### 2.4. Configure RBAC (Optional)
 
 The template includes **Role-Based Access Control (RBAC)** enabled by default:
 

@@ -2,7 +2,7 @@ import { createIdentityService } from "../../../services/identity";
 import { createSuccessResponse } from "../../../lib/response";
 import { AuthenticationError } from "../../../error/errors";
 import { updateProfileSchema } from "../../../validators/user";
-import { sanitizeHtml, sanitizeEmail, sanitizePhone, sanitizePostalCode } from "~/server/lib/sanitize";
+import { sanitizeHtml, sanitizeEmail, sanitizePhone, sanitizePostalCode } from "../../../lib/sanitize";
 
 // ========================================
 // PUT /api/v1/user/profile

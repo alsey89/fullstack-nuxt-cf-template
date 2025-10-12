@@ -18,6 +18,7 @@ Rate limiting infrastructure to prevent abuse and DDoS attacks.
 - [ ] Implement rate limiting middleware using Cloudflare KV
 - [ ] Add per-IP rate limits (10 req/min for auth endpoints)
 - [ ] Add per-user rate limits (100 req/min for API)
+- [ ] **Add per-tenant rate limits (prevent one tenant from affecting others)**
 - [ ] Make limits configurable via runtime config
 - [ ] Add rate limit headers to responses (`X-RateLimit-Remaining`, etc.)
 - [ ] Create bypass mechanism for trusted IPs/services
@@ -27,25 +28,46 @@ Rate limiting infrastructure to prevent abuse and DDoS attacks.
 - Use Cloudflare KV for distributed rate limit tracking
 - Consider using sliding window algorithm for accuracy
 
+**Multi-Tenant Considerations**:
+- Implement per-tenant rate limiting to prevent noisy neighbor issues
+- Track rate limits with tenant namespace: `ratelimit:${tenantId}:${endpoint}`
+- Set tenant-specific quotas (e.g., free tier: 100 req/min, paid: 1000 req/min)
+- Monitor per-tenant usage for billing/analytics
+
 **Example Implementation**:
 ```typescript
 // server/middleware/03.rate-limit.ts
 export default defineEventHandler(async (event) => {
+  const kv = event.context.cloudflare?.env?.KV
+  const tenantId = event.context.tenantId || 'default'
+  const ip = event.context.ipAddress
+
   if (event.path.startsWith('/api/v1/auth/')) {
-    const ip = event.context.ipAddress
-    const key = `ratelimit:${ip}:auth`
+    // Per-IP rate limit for auth endpoints
+    const ipKey = `ratelimit:${ip}:auth`
+    const ipCount = await kv.get(ipKey)
 
-    const kv = event.context.cloudflare?.env?.KV
-    const count = await kv.get(key)
-
-    if (count && parseInt(count) > 10) {
+    if (ipCount && parseInt(ipCount) > 10) {
       throw new RateLimitError('Too many authentication attempts', 60)
     }
 
-    await kv.put(key, String((parseInt(count || '0') + 1)), {
+    await kv.put(ipKey, String((parseInt(ipCount || '0') + 1)), {
       expirationTtl: 60
     })
   }
+
+  // Per-tenant rate limit for all API endpoints
+  const tenantKey = `ratelimit:${tenantId}:api`
+  const tenantCount = await kv.get(tenantKey)
+  const tenantLimit = getTenantRateLimit(tenantId) // 100 for free, 1000 for paid
+
+  if (tenantCount && parseInt(tenantCount) > tenantLimit) {
+    throw new RateLimitError('Tenant rate limit exceeded', 60)
+  }
+
+  await kv.put(tenantKey, String((parseInt(tenantCount || '0') + 1)), {
+    expirationTtl: 60
+  })
 })
 ```
 
@@ -185,9 +207,26 @@ export async function validateTurnstile(
 
 ---
 
+## ✅ Recently Completed
+
+### Security Enhancements (2025-01-12)
+- [x] **Session-Tenant Binding** - Sessions are now cryptographically bound to tenant context
+  - Prevents cross-tenant session reuse
+  - Works in both single and multi-tenant modes
+  - Implementation: [server/middleware/02.auth.ts:33-40](../server/middleware/02.auth.ts#L33-L40)
+- [x] **JWT Token Tenant Validation** - Email/password reset tokens include tenant validation
+  - Tokens include `tenantId` in payload
+  - Automatic validation on token verification
+  - Prevents cross-tenant token replay attacks
+  - Implementation: [server/lib/auth.ts](../server/lib/auth.ts)
+- [x] **UserSession Type Updates** - Added `tenantId` to session type definitions
+  - Updated [server/types/auth.d.ts](../server/types/auth.d.ts)
+  - TypeScript enforces tenant binding at compile time
+
 ## 🔧 Technical Debt
 
 ### High Priority
+- [ ] Add integration tests for cross-tenant security validation
 - [ ] Add integration tests for auth flow
 - [ ] Add integration tests for RBAC permission resolution
 - [ ] Test multi-tenancy database switching

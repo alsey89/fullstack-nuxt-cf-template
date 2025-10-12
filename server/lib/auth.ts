@@ -28,12 +28,14 @@ const JWT_CONFIG = {
 export interface EmailConfirmTokenPayload {
   userId: string;
   email: string;
+  tenantId: string; // Bind token to tenant (prevents cross-tenant token reuse)
   purpose: "email-confirm";
 }
 
 export interface PasswordResetTokenPayload {
   userId: string;
   email: string;
+  tenantId: string; // Bind token to tenant (prevents cross-tenant token reuse)
   purpose: "password-reset";
 }
 
@@ -57,6 +59,7 @@ function getJWTSecret(event?: H3Event): Uint8Array {
 export async function generateEmailConfirmToken(
   userId: string,
   email: string,
+  tenantId: string,
   event?: H3Event
 ): Promise<string> {
   const secret = getJWTSecret(event);
@@ -66,6 +69,7 @@ export async function generateEmailConfirmToken(
   return await new SignJWT({
     userId,
     email,
+    tenantId, // Bind token to tenant
     purpose: "email-confirm",
   })
     .setProtectedHeader({ alg: "HS256" })
@@ -82,6 +86,7 @@ export async function generateEmailConfirmToken(
 export async function generatePasswordResetToken(
   userId: string,
   email: string,
+  tenantId: string,
   event?: H3Event
 ): Promise<string> {
   const secret = getJWTSecret(event);
@@ -91,6 +96,7 @@ export async function generatePasswordResetToken(
   return await new SignJWT({
     userId,
     email,
+    tenantId, // Bind token to tenant
     purpose: "password-reset",
   })
     .setProtectedHeader({ alg: "HS256" })
@@ -103,9 +109,13 @@ export async function generatePasswordResetToken(
 
 /**
  * Verify email confirmation token
+ * @param token - JWT token to verify
+ * @param currentTenantId - Current tenant ID from context (for validation)
+ * @param event - H3 event for config access
  */
 export async function verifyEmailConfirmToken(
   token: string,
+  currentTenantId: string,
   event?: H3Event
 ): Promise<EmailConfirmTokenPayload> {
   try {
@@ -119,6 +129,11 @@ export async function verifyEmailConfirmToken(
       throw new InvalidTokenError("Invalid token purpose");
     }
 
+    // CRITICAL: Validate token is for current tenant
+    if (payload.tenantId !== currentTenantId) {
+      throw new InvalidTokenError("Token tenant mismatch");
+    }
+
     return payload as unknown as EmailConfirmTokenPayload;
   } catch (error) {
     if ((error as any).code === "ERR_JWT_EXPIRED") {
@@ -130,9 +145,13 @@ export async function verifyEmailConfirmToken(
 
 /**
  * Verify password reset token
+ * @param token - JWT token to verify
+ * @param currentTenantId - Current tenant ID from context (for validation)
+ * @param event - H3 event for config access
  */
 export async function verifyPasswordResetToken(
   token: string,
+  currentTenantId: string,
   event?: H3Event
 ): Promise<PasswordResetTokenPayload> {
   try {
@@ -144,6 +163,11 @@ export async function verifyPasswordResetToken(
 
     if (payload.purpose !== "password-reset") {
       throw new InvalidTokenError("Invalid token purpose");
+    }
+
+    // CRITICAL: Validate token is for current tenant
+    if (payload.tenantId !== currentTenantId) {
+      throw new InvalidTokenError("Token tenant mismatch");
     }
 
     return payload as unknown as PasswordResetTokenPayload;

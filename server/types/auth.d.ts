@@ -12,9 +12,9 @@ declare module '#auth-utils' {
   }
 
   interface UserSession {
-    userId: string
+    tenantId: string // Tenant ID bound to session (prevents cross-tenant access)
     permissions: PermissionCode[]
-    roleIds: string[] // IDs of roles assigned to user
+    permissionVersion: number // Version for permission cache invalidation
     loggedInAt: number
   }
 

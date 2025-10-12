@@ -6,7 +6,7 @@ import {
 } from "../../../../../error/errors";
 import { createSuccessResponse } from "../../../../../lib/response";
 import { passwordResetRequestSchema } from "../../../../../validators/auth";
-import { sanitizeEmail } from "~/server/lib/sanitize";
+import { sanitizeEmail } from "../../../../../lib/sanitize";
 
 // ========================================
 // POST /api/v1/auth/password/reset/request
