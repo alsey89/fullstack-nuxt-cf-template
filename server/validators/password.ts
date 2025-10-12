@@ -16,7 +16,7 @@ export const PASSWORD_RULES = {
   maxLength: 128,
   requireUppercase: false,
   requireLowercase: false,
-  requireNumber: false,
+  requireNumber: true,
   requireSpecial: false,
 } as const;
 
