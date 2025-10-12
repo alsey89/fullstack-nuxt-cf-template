@@ -77,24 +77,12 @@
                             <DropdownMenuItem @click="navigateTo('/account')">
                                 <span>Account</span>
                             </DropdownMenuItem>
-                            <DropdownMenuItem @click="navigateTo('/billing')">
-                                <span>Billing</span>
-                            </DropdownMenuItem>
                             <DropdownMenuItem @click="userStore.signout">
                                 <span>Sign out</span>
                             </DropdownMenuItem>
                         </DropdownMenuContent>
                     </DropdownMenu>
                 </header>
-
-                <!-- Section tabs directly under navbar -->
-                <div v-if="hasTabs" class="w-full border-b bg-background/80">
-                    <div class="w-full max-w-4xl mx-auto px-4 md:px-8 py-2">
-                        <ClientOnly>
-                            <SectionTabs />
-                        </ClientOnly>
-                    </div>
-                </div>
 
                 <!-- layout box -->
                 <div class="flex h-full min-h-0 w-full flex-1 flex-col">
@@ -112,8 +100,6 @@
 </template>
 
 <script setup>
-import SectionTabs from '@/components/App/SectionTabs.vue'
-import { useSectionTabs } from '@/composables/useSectionTabs'
 import TooltipProvider from '@/components/ui/tooltip/TooltipProvider.vue'
 const userStore = useUserStore()
 
@@ -136,7 +122,4 @@ onMounted(() => {
         userStore.fetchUserProfile()
     }
 })
-
-const { tabs } = useSectionTabs()
-const hasTabs = computed(() => (tabs.value?.length ?? 0) > 0)
 </script>

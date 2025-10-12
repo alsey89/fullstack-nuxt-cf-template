@@ -4,9 +4,6 @@ import posthog from "posthog-js";
 export const useUserStore = defineStore("user-store", {
   state: () => ({
     // Local UI state
-    // userType controls app experience: 'admin' | 'manager' | 'employee'
-    // default to 'admin' as requested; persisted via pinia persist plugin
-    userType: 'admin',
     // theme preference: 'light' | 'dark'
     theme: 'light',
 
@@ -16,11 +13,7 @@ export const useUserStore = defineStore("user-store", {
     isLoading: false,
     error: null,
   }),
-  getters: {
-    isAdmin: (state) => state.userType === 'admin',
-    isManager: (state) => state.userType === 'manager',
-    isEmployee: (state) => state.userType === 'employee',
-  },
+  getters: {},
   actions: {
     async signin({ email, password, redirectTo = "/" } = {}) {
       this.isLoading = true;
@@ -61,10 +54,38 @@ export const useUserStore = defineStore("user-store", {
       }
     },
 
-    setUserType(type) {
-      const allowed = ['admin', 'manager', 'employee']
-      if (!allowed.includes(type)) return
-      this.userType = type
+    async signup({ firstName, lastName, email, password } = {}) {
+      this.isLoading = true;
+      const showToast = useShowToast();
+      const { extendedFetch } = useExtendedFetch();
+
+      const { status } = await extendedFetch("/v1/auth/signup", {
+        method: "POST",
+        body: {
+          firstName,
+          lastName,
+          email,
+          password,
+        },
+      });
+
+      if (status === 200 || status === 201) {
+        showToast({
+          title: "Account Created",
+          description: "Please check your email to verify your account before signing in.",
+        });
+
+        // Track user signup
+        posthog.capture('user_signed_up', {
+          email: email,
+        });
+
+        this.isLoading = false;
+        return navigateTo('/auth/signin');
+      } else {
+        this.isLoading = false;
+        return false;
+      }
     },
 
     setTheme(theme) {
@@ -110,7 +131,7 @@ export const useUserStore = defineStore("user-store", {
       // Track user logout
       posthog.reset();
 
-      // Do not clear userType/theme on signout so app preference remains
+      // Do not clear theme on signout so app preference remains
       this.isLoading = false;
       this.error = null;
 

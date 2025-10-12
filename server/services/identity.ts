@@ -147,7 +147,7 @@ export class IdentityService {
     // Find user by email
     const user = await this.userRepo.findByEmail(email);
     if (!user) {
-      throw new InvalidCredentialsError();
+      throw new InvalidCredentialsError("User not found with this email");
     }
 
     // Check if account is active

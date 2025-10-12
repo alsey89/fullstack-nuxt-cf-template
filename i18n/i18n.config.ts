@@ -17,7 +17,7 @@ export default defineI18nConfig(() => ({
             requiredMessage: "Required",
           },
           forgotPasswordButton: "Forgot Password?",
-          noAccountButton: "No account? Contact your admin",
+          noAccountButton: "No account? Sign up",
           submitButton: "Sign In",
           submitting: "Signing in...",
           seperator: "or",
