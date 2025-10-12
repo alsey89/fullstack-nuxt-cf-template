@@ -3,7 +3,10 @@
 // ========================================
 // Custom error types for structured error handling
 // Used throughout services and API routes
+// Error codes are imported from codes.ts for FE/BE consistency
 // ========================================
+
+import { ERROR_CODES } from './codes';
 
 /**
  * Base application error
@@ -38,37 +41,49 @@ export class AppError extends Error {
 
 export class AuthenticationError extends AppError {
   constructor(message = 'Authentication required', details?: any) {
-    super(message, 401, 'AUTH_REQUIRED', details)
+    super(message, 401, ERROR_CODES.AUTH_REQUIRED, details)
   }
 }
 
 export class InvalidCredentialsError extends AppError {
   constructor(message = 'Invalid email or password', details?: any) {
-    super(message, 401, 'INVALID_CREDENTIALS', details)
+    super(message, 401, ERROR_CODES.INVALID_CREDENTIALS, details)
   }
 }
 
 export class InvalidTokenError extends AppError {
   constructor(message = 'Invalid or expired token', details?: any) {
-    super(message, 401, 'INVALID_TOKEN', details)
+    super(message, 401, ERROR_CODES.INVALID_TOKEN, details)
   }
 }
 
 export class TokenExpiredError extends AppError {
   constructor(message = 'Token has expired', details?: any) {
-    super(message, 401, 'TOKEN_EXPIRED', details)
+    super(message, 401, ERROR_CODES.TOKEN_EXPIRED, details)
   }
 }
 
 export class EmailNotConfirmedError extends AppError {
   constructor(message = 'Email address not confirmed', details?: any) {
-    super(message, 401, 'EMAIL_NOT_CONFIRMED', details)
+    super(message, 401, ERROR_CODES.EMAIL_NOT_CONFIRMED, details)
   }
 }
 
 export class AccountInactiveError extends AppError {
   constructor(message = 'Account is inactive', details?: any) {
-    super(message, 401, 'ACCOUNT_INACTIVE', details)
+    super(message, 401, ERROR_CODES.ACCOUNT_INACTIVE, details)
+  }
+}
+
+export class TenantMismatchError extends AppError {
+  constructor(message = 'Session tenant mismatch. Please sign in again.', details?: any) {
+    super(message, 401, ERROR_CODES.TENANT_MISMATCH, details)
+  }
+}
+
+export class InvalidTokenPurposeError extends AppError {
+  constructor(message = 'Invalid token purpose', details?: any) {
+    super(message, 401, ERROR_CODES.INVALID_TOKEN_PURPOSE, details)
   }
 }
 
@@ -78,13 +93,13 @@ export class AccountInactiveError extends AppError {
 
 export class AuthorizationError extends AppError {
   constructor(message = 'Insufficient permissions', details?: any) {
-    super(message, 403, 'FORBIDDEN', details)
+    super(message, 403, ERROR_CODES.FORBIDDEN, details)
   }
 }
 
 export class PermissionDeniedError extends AppError {
   constructor(message = 'Permission denied', details?: any) {
-    super(message, 403, 'PERMISSION_DENIED', details)
+    super(message, 403, ERROR_CODES.PERMISSION_DENIED, details)
   }
 }
 
@@ -94,19 +109,25 @@ export class PermissionDeniedError extends AppError {
 
 export class ValidationError extends AppError {
   constructor(message: string, details?: any) {
-    super(message, 400, 'VALIDATION_ERROR', details)
+    super(message, 400, ERROR_CODES.VALIDATION_ERROR, details)
   }
 }
 
 export class InvalidInputError extends AppError {
   constructor(message: string, details?: any) {
-    super(message, 400, 'INVALID_INPUT', details)
+    super(message, 400, ERROR_CODES.INVALID_INPUT, details)
   }
 }
 
 export class MissingFieldError extends AppError {
   constructor(message: string, details?: any) {
-    super(message, 400, 'MISSING_FIELD', details)
+    super(message, 400, ERROR_CODES.MISSING_FIELD, details)
+  }
+}
+
+export class PasswordSameAsOldError extends AppError {
+  constructor(message = 'New password cannot be the same as your current password', details?: any) {
+    super(message, 400, ERROR_CODES.PASSWORD_SAME_AS_OLD, details)
   }
 }
 
@@ -116,19 +137,19 @@ export class MissingFieldError extends AppError {
 
 export class NotFoundError extends AppError {
   constructor(message: string, details?: any) {
-    super(message, 404, 'NOT_FOUND', details)
+    super(message, 404, ERROR_CODES.NOT_FOUND, details)
   }
 }
 
 export class UserNotFoundError extends AppError {
   constructor(message = 'User not found', details?: any) {
-    super(message, 404, 'USER_NOT_FOUND', details)
+    super(message, 404, ERROR_CODES.USER_NOT_FOUND, details)
   }
 }
 
 export class CompanyNotFoundError extends AppError {
   constructor(message = 'Company not found', details?: any) {
-    super(message, 404, 'COMPANY_NOT_FOUND', details)
+    super(message, 404, ERROR_CODES.COMPANY_NOT_FOUND, details)
   }
 }
 
@@ -138,25 +159,25 @@ export class CompanyNotFoundError extends AppError {
 
 export class ConflictError extends AppError {
   constructor(message: string, details?: any) {
-    super(message, 409, 'CONFLICT', details)
+    super(message, 409, ERROR_CODES.CONFLICT, details)
   }
 }
 
 export class DuplicateError extends AppError {
   constructor(message: string, details?: any) {
-    super(message, 409, 'DUPLICATE', details)
+    super(message, 409, ERROR_CODES.DUPLICATE, details)
   }
 }
 
 export class EmailAlreadyExistsError extends AppError {
   constructor(message = 'Email already exists', details?: any) {
-    super(message, 409, 'EMAIL_EXISTS', details)
+    super(message, 409, ERROR_CODES.EMAIL_EXISTS, details)
   }
 }
 
 export class TenantIdTakenError extends AppError {
   constructor(message = 'Tenant ID already taken', details?: any) {
-    super(message, 409, 'TENANT_ID_TAKEN', details)
+    super(message, 409, ERROR_CODES.TENANT_ID_TAKEN, details)
   }
 }
 
@@ -166,7 +187,7 @@ export class TenantIdTakenError extends AppError {
 
 export class RateLimitError extends AppError {
   constructor(message = 'Too many requests', retryAfter?: number) {
-    super(message, 429, 'RATE_LIMIT_EXCEEDED', { retryAfter })
+    super(message, 429, ERROR_CODES.RATE_LIMIT_EXCEEDED, { retryAfter })
   }
 }
 
@@ -176,21 +197,19 @@ export class RateLimitError extends AppError {
 
 export class InternalServerError extends AppError {
   constructor(message = 'Internal server error', details?: any) {
-    super(message, 500, 'INTERNAL_ERROR', details)
+    super(message, 500, ERROR_CODES.INTERNAL_ERROR, details)
   }
 }
 
 export class DatabaseError extends AppError {
   constructor(message = 'Database error', details?: any) {
-    super(message, 500, 'DATABASE_ERROR', details)
+    super(message, 500, ERROR_CODES.DATABASE_ERROR, details)
   }
 }
 
 export class ExternalServiceError extends AppError {
-  constructor(service: string, message?: string) {
-    super(message || `External service error: ${service}`, 500, 'EXTERNAL_SERVICE_ERROR', {
-      service,
-    })
+  constructor(message = 'External service error', details?: any) {
+    super(message, 500, ERROR_CODES.EXTERNAL_SERVICE_ERROR, details)
   }
 }
 
@@ -200,13 +219,13 @@ export class ExternalServiceError extends AppError {
 
 export class BusinessRuleError extends AppError {
   constructor(message: string, details?: any) {
-    super(message, 422, 'BUSINESS_RULE_VIOLATION', details)
+    super(message, 422, ERROR_CODES.BUSINESS_RULE_VIOLATION, details)
   }
 }
 
 export class InvalidStateError extends AppError {
   constructor(message: string, details?: any) {
-    super(message, 422, 'INVALID_STATE', details)
+    super(message, 422, ERROR_CODES.INVALID_STATE, details)
   }
 }
 

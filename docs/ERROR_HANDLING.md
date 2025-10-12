@@ -2,339 +2,534 @@
 
 ## Overview
 
-The application uses a **structured error system** with custom error classes that extend from `AppError`. This provides:
+The application uses a **structured error system** with specific error classes and shared error codes between frontend and backend. This provides:
 
-- ✅ **Consistent error responses** across all API endpoints
-- ✅ **Automatic HTTP status codes** based on error type
-- ✅ **Machine-readable error codes** for client-side handling
-- ✅ **Type-safe error handling** with TypeScript
-- ✅ **Trace IDs** for debugging and log correlation
+-  **Consistent error responses** across all API endpoints
+-  **Automatic HTTP status codes** based on error type
+-  **Shared error codes** between FE and BE for type-safe handling
+-  **Frontend-only error code reactions** (FE uses codes, not details)
+-  **Minimal error details** for debugging (dev mode only)
+-  **Trace IDs** for debugging and log correlation
 
 ---
 
-## Error Class Hierarchy
+## Architecture Overview
 
+### Three-Part System
+
+#### 1. **Shared Error Codes** ([server/error/codes.ts](../server/error/codes.ts))
+- Single source of truth for all error codes
+- Importable by both frontend and backend
+- Type-safe with TypeScript
+
+```typescript
+export const ERROR_CODES = {
+  // Auth errors
+  INVALID_CREDENTIALS: 'INVALID_CREDENTIALS',
+  PASSWORD_SAME_AS_OLD: 'PASSWORD_SAME_AS_OLD',
+  TENANT_MISMATCH: 'TENANT_MISMATCH',
+  // ... etc
+} as const;
+
+export type ErrorCode = typeof ERROR_CODES[keyof typeof ERROR_CODES];
 ```
-AppError (Base Class)
-├── AuthenticationError (401)
-│   ├── InvalidCredentialsError
-│   ├── InvalidTokenError
-│   ├── TokenExpiredError
-│   ├── EmailNotConfirmedError
-│   └── AccountInactiveError
-├── AuthorizationError (403)
-│   └── PermissionDeniedError
-├── ValidationError (400)
-│   ├── InvalidInputError
-│   └── MissingFieldError
-├── NotFoundError (404)
-│   ├── UserNotFoundError
-│   └── CompanyNotFoundError
-├── ConflictError (409)
-│   ├── DuplicateError
-│   ├── EmailAlreadyExistsError
-│   └── TenantIdTakenError
-├── RateLimitError (429)
-├── InternalServerError (500)
-│   ├── DatabaseError
-│   └── ExternalServiceError
-└── BusinessRuleError (422)
-    └── InvalidStateError
+
+#### 2. **Error Classes** ([server/error/errors.ts](../server/error/errors.ts))
+- Specific error classes for common errors (type-safe)
+- Generic error classes for edge cases
+- All use codes from `ERROR_CODES`
+
+```typescript
+// Specific error (FE can react to this)
+export class PasswordSameAsOldError extends AppError {
+  constructor(message = 'Password cannot be same as old', details?: any) {
+    super(message, 400, ERROR_CODES.PASSWORD_SAME_AS_OLD, details);
+  }
+}
+
+// Generic error (for general cases)
+export class ValidationError extends AppError {
+  constructor(message: string, details?: any) {
+    super(message, 400, ERROR_CODES.VALIDATION_ERROR, details);
+  }
+}
 ```
+
+#### 3. **Error Handler** ([server/error/errorHandler.ts](../server/error/errorHandler.ts))
+- Automatically catches and formats all errors
+- Environment-aware (dev vs production)
+- Logs errors with context
 
 ---
 
 ## Error Response Format
 
-All errors follow this structure:
-
-```typescript
+### Production Response (400-level errors)
+```json
 {
-  message: "Error occurred",    // Always static
-  data: null,                   // Always null for errors
-  error: {
-    traceId: string,           // Request trace ID for debugging
-    code: string,              // Machine-readable error code
-    details?: any,             // Additional context (dev only)
-    debug?: {                  // Development only
-      message: string,         // Human-readable error message
-      statusCode: number,
-      url: string,
-      method: string,
-      timestamp: string
+  "message": "Error occurred",
+  "data": null,
+  "error": {
+    "traceId": "550e8400-e29b-41d4-a716-446655440000",
+    "code": "PASSWORD_SAME_AS_OLD",
+    "message": "New password cannot be the same as your current password",
+    "details": {
+      "field": "password",
+      "userId": "user_123"
+    }
+  }
+}
+```
+
+### Production Response (500-level errors)
+```json
+{
+  "message": "Error occurred",
+  "data": null,
+  "error": {
+    "traceId": "550e8400-e29b-41d4-a716-446655440000",
+    "code": "INTERNAL_ERROR",
+    "message": "Internal server error"
+  }
+}
+```
+
+**Note:** `details` is hidden for 500-level errors in production (security).
+
+### Development Response
+```json
+{
+  "message": "Error occurred",
+  "data": null,
+  "error": {
+    "traceId": "550e8400-e29b-41d4-a716-446655440000",
+    "code": "PASSWORD_SAME_AS_OLD",
+    "message": "New password cannot be the same as your current password",
+    "details": {
+      "field": "password",
+      "userId": "user_123"
     },
-    stack?: string             // Stack trace (dev only)
-  }
-}
-```
-
-**Production vs Development:**
-- **Production:** Only `traceId` and `code` exposed (no error messages, details, or stack traces)
-- **Development:** Full error details including `debug` object with message, context, and stack trace
-
-**Example Production Response:**
-```json
-{
-  "message": "Error occurred",
-  "data": null,
-  "error": {
-    "traceId": "550e8400-e29b-41d4-a716-446655440000",
-    "code": "USER_NOT_FOUND"
-  }
-}
-```
-
-**Example Development Response:**
-```json
-{
-  "message": "Error occurred",
-  "data": null,
-  "error": {
-    "traceId": "550e8400-e29b-41d4-a716-446655440000",
-    "code": "USER_NOT_FOUND",
     "debug": {
-      "message": "User not found: user_123",
-      "statusCode": 404,
-      "url": "/api/v1/user/user_123",
-      "method": "GET",
-      "timestamp": "2025-10-08T10:30:00.000Z"
-    },
-    "stack": "UserNotFoundError: User not found: user_123\n    at ..."
+      "statusCode": 400,
+      "url": "/api/v1/auth/password/reset",
+      "method": "POST",
+      "timestamp": "2025-10-12T10:30:00.000Z",
+      "stack": "PasswordSameAsOldError: ...\n    at ..."
+    }
   }
 }
 ```
+
+### Response Structure Rules
+
+**400-level errors (Client errors):**
+-  Always send: `code`, `message`, `details` (production + dev)
+-  Dev only: `debug` block with stack trace
+
+**500-level errors (Server errors):**
+-  Always send: `code`, generic `message`, `traceId`
+- L Never send: `details` in production (security)
+-  Dev only: `message`, `details`, `debug` block
 
 ---
 
 ## How to Use Errors
 
-### Import Error Classes
+### 1. Backend: Throw Specific Error Classes
+
+**The backend should NOT decide error codes.** Just throw the appropriate error class:
 
 ```typescript
 import {
-  ValidationError,
-  NotFoundError,
-  UserNotFoundError,
+  PasswordSameAsOldError,
+  EmailAlreadyExistsError,
   InvalidCredentialsError,
-  BusinessRuleError,
-} from '../error/errors'
+  UserNotFoundError
+} from '~/server/error/errors';
+
+//  Specific error (FE can react specially)
+throw new PasswordSameAsOldError(undefined, {
+  field: 'password',
+  userId: user.id
+});
+
+//  Generic error (FE shows generic message)
+throw new ValidationError("Field X is invalid", {
+  field: 'fieldX',
+  value: someValue
+});
 ```
 
-### Throw Errors in Services
+### 2. Frontend: React to Error Codes
+
+**Frontend only uses `error.code`** to determine behavior:
 
 ```typescript
-// ❌ BAD - Generic Error
-throw new Error('User not found')
+import { ERROR_CODES } from '~/server/error/codes';
 
-// ✅ GOOD - Specific AppError
-throw new UserNotFoundError(userId)
+// FE reacts based on code only
+if (error.code === ERROR_CODES.PASSWORD_SAME_AS_OLD) {
+  toast.error(t('errors.passwordSameAsOld'));
+  highlightField('password');
+}
+else if (error.code === ERROR_CODES.EMAIL_EXISTS) {
+  toast.error(t('errors.emailExists'));
+  showLoginLink();
+}
+else if (error.code === ERROR_CODES.TENANT_MISMATCH) {
+  navigateTo('/login?reason=session_mismatch');
+}
+// Generic fallback
+else {
+  toast.error(error.message || t('errors.generic'));
+}
+```
+
+**Frontend does NOT use `details`** - it's only for developer debugging in dev mode.
+
+---
+
+## Error Details Convention
+
+**Purpose:** Help developers debug issues by providing minimal, critical context.
+
+### What to Include in `details`
+
+**Only include error-specific data that answers: "What caused this error?"**
+
+ **Include:**
+- Field names (for validation errors)
+- Resource IDs (userId, email, etc.)
+- Conflicting values (existingUserId, tokenTenantId vs currentTenantId)
+- Error-specific context (expectedPurpose vs actualPurpose)
+
+L **Don't include** (errorHandler already logs this):
+- `tenantId` - Already in event.context
+- `path` - Already logged by errorHandler
+- `method` - Already logged by errorHandler
+- `ip` - Can be derived from request
+- `attemptedAction` - Usually obvious from context
+
+### Error Details Examples
+
+```typescript
+//  Email conflict
+throw new EmailAlreadyExistsError(undefined, {
+  field: 'email',
+  email: 'user@example.com',
+  existingUserId: 'user_456'
+});
+
+//  Invalid credentials
+throw new InvalidCredentialsError(undefined, {
+  email: 'user@example.com'  // Just the email
+});
+
+//  Token mismatch
+throw new InvalidTokenError("Token tenant mismatch", {
+  tokenTenantId: 'tenant_a',
+  currentTenantId: 'tenant_b'
+});
+
+//  Password validation
+throw new PasswordSameAsOldError(undefined, {
+  field: 'password',
+  userId: 'user_123'
+});
+
+// L TOO MUCH INFO (redundant)
+throw new EmailAlreadyExistsError(undefined, {
+  field: 'email',
+  email: email,
+  existingUserId: existingUser.id,
+  tenantId: tenantId,        // L Already in event.context
+  attemptedAction: 'signup', // L Obvious from context
+  ip: getRequestIP(event),   // L Already logged by errorHandler
+  path: event.path           // L Already logged by errorHandler
+});
+```
+
+### Details Structure (Flat, Not Nested)
+
+```typescript
+//  GOOD: Flat structure
+{
+  field: 'email',
+  email: 'user@example.com',
+  existingUserId: 'user_456'
+}
+
+// L BAD: Nested with redundant 'context' key
+{
+  field: 'email',
+  context: {              // L Unnecessary nesting
+    email: 'user@example.com',
+    existingUserId: 'user_456'
+  }
+}
 ```
 
 ---
 
-## Common Error Patterns
+## Available Error Classes
 
-### Authentication Errors (401)
+### Authentication (401)
+- `AuthenticationError` - Generic auth required
+- `InvalidCredentialsError` - Wrong email/password
+- `InvalidTokenError` - Invalid/malformed token
+- `InvalidTokenPurposeError` - Token has wrong purpose
+- `TokenExpiredError` - Token expired
+- `TenantMismatchError` - Session tenant mismatch
+- `EmailNotConfirmedError` - Email not verified
+- `AccountInactiveError` - Account is inactive
 
-```typescript
-// Invalid credentials
-const isValid = await verifyPassword(user.passwordHash, password)
-if (!user || !isValid) {
-  throw new InvalidCredentialsError()
-}
+### Authorization (403)
+- `AuthorizationError` - Generic permission denied
+- `PermissionDeniedError` - Specific permission missing
 
-// Email not confirmed
-if (!user.isEmailVerified) {
-  throw new EmailNotConfirmedError()
-}
+### Validation (400)
+- `ValidationError` - Generic validation failed
+- `InvalidInputError` - Invalid input format
+- `MissingFieldError` - Required field missing
+- `PasswordSameAsOldError` - Password same as current
 
-// Account inactive
-if (!user.isActive) {
-  throw new AccountInactiveError()
-}
-```
+### Not Found (404)
+- `NotFoundError` - Generic resource not found
+- `UserNotFoundError` - User not found
+- `CompanyNotFoundError` - Company not found
 
-### Validation Errors (400)
+### Conflict (409)
+- `ConflictError` - Generic conflict
+- `DuplicateError` - Duplicate entry
+- `EmailAlreadyExistsError` - Email already exists
+- `TenantIdTakenError` - Tenant ID taken
 
-```typescript
-// Missing field
-if (!body.email) {
-  throw new MissingFieldError('email')
-}
-
-// Invalid input
-if (!/^[a-z0-9-]+$/.test(tenantId)) {
-  throw new InvalidInputError('tenantId', 'Must be lowercase alphanumeric')
-}
-
-// Validation with details
-const validation = validatePasswordStrength(password)
-if (!validation.valid) {
-  throw new ValidationError(
-    'Password does not meet requirements',
-    validation.errors
-  )
-}
-```
-
-### Not Found Errors (404)
-
-```typescript
-// User not found
-const user = await this.userRepo.findById(userId, companyId)
-if (!user) {
-  throw new UserNotFoundError(userId)
-}
-
-// Generic resource not found
-const location = await this.locationRepo.findById(locationId, companyId)
-if (!location) {
-  throw new NotFoundError('Location', locationId)
-}
-```
-
-### Conflict Errors (409)
-
-```typescript
-// Duplicate check
-const existing = await this.locationRepo.findByName(name, companyId)
-if (existing) {
-  throw new DuplicateError('location name', name)
-}
-
-// Email exists
-const existingUser = await this.userRepo.findByEmail(email, companyId)
-if (existingUser) {
-  throw new EmailAlreadyExistsError(email)
-}
-```
-
-### Business Rule Errors (422)
-
-```typescript
-// Business rule violation with context
-const activeAssignments = assignments.filter(a => !a.endedAt)
-if (activeAssignments.length > 0) {
-  throw new BusinessRuleError(
-    'Cannot delete location with active assignments',
-    { activeCount: activeAssignments.length }
-  )
-}
-```
+### Rate Limit (429)
+- `RateLimitError` - Too many requests
 
 ### Server Errors (500)
+- `InternalServerError` - Generic server error
+- `DatabaseError` - Database operation failed
+- `ExternalServiceError` - External API failed
 
+### Business Logic (422)
+- `BusinessRuleError` - Business rule violation
+- `InvalidStateError` - Invalid state transition
+
+---
+
+## Error Throwing Patterns
+
+### Validation Errors
 ```typescript
-// Internal error with context
-try {
-  await someCriticalOperation()
-} catch (error) {
-  throw new InternalServerError('Failed to process request', { originalError: error })
-}
+// Password validation
+throw new PasswordSameAsOldError(undefined, {
+  field: 'password',
+  userId: user.id
+});
+
+// Generic validation
+throw new ValidationError("Email format is invalid", {
+  field: 'email',
+  email: email
+});
+```
+
+### Authentication Errors
+```typescript
+// Invalid credentials
+throw new InvalidCredentialsError(undefined, {
+  email: email
+});
+
+// Account inactive
+throw new AccountInactiveError(undefined, {
+  userId: user.id,
+  email: user.email
+});
+
+// Token errors
+throw new InvalidTokenPurposeError(undefined, {
+  expectedPurpose: 'email-confirm',
+  actualPurpose: payload.purpose
+});
+```
+
+### Not Found Errors
+```typescript
+throw new UserNotFoundError(undefined, {
+  userId: userId
+});
+```
+
+### Conflict Errors
+```typescript
+throw new EmailAlreadyExistsError(undefined, {
+  field: 'email',
+  email: email,
+  existingUserId: existingUser.id
+});
 ```
 
 ---
 
-## Client-Side Error Handling
+## Frontend Error Handling
 
-Use the `useErrorHandler` composable:
+### Using Error Codes
 
 ```typescript
-const { handleApiError } = useErrorHandler()
+import { ERROR_CODES } from '~/server/error/codes';
 
-try {
-  await $fetch('/api/v1/user/profile')
-} catch (error) {
-  handleApiError({ error })
+async function handlePasswordReset() {
+  try {
+    await $fetch('/api/v1/auth/password/reset', {
+      method: 'POST',
+      body: { token, newPassword }
+    });
+    toast.success(t('password.resetSuccess'));
+  } catch (error: any) {
+    // React based on error code only
+    switch (error.data?.error?.code) {
+      case ERROR_CODES.PASSWORD_SAME_AS_OLD:
+        toast.error(t('errors.passwordSameAsOld'));
+        break;
+      case ERROR_CODES.TOKEN_EXPIRED:
+        toast.error(t('errors.tokenExpired'));
+        navigateTo('/forgot-password');
+        break;
+      case ERROR_CODES.INVALID_TOKEN_PURPOSE:
+        toast.error(t('errors.invalidLink'));
+        break;
+      default:
+        toast.error(error.data?.error?.message || t('errors.generic'));
+    }
+  }
 }
 ```
 
-### Handled Error Codes
-
-- `TOKEN_EXPIRED` - Redirects to signin
-- `USER_NOT_FOUND` - Shows toast notification
-- `401` status - "Not Authenticated" toast + redirect
-- `403` status - "Forbidden" toast + redirect
-- Default - Generic error toast with support link
-
-### Block Redirects
+### i18n Mapping
 
 ```typescript
-handleApiError({ error, blockRedirect: true })
+// In your i18n files
+export default {
+  errors: {
+    passwordSameAsOld: 'Your new password must be different from your current password',
+    emailExists: 'This email is already registered. Try logging in instead.',
+    invalidCredentials: 'Invalid email or password',
+    tokenExpired: 'This link has expired. Please request a new one.',
+    tenantMismatch: 'Your session has expired. Please sign in again.',
+    generic: 'Something went wrong. Please try again.',
+  }
+}
+
+// Map codes to translations
+const errorMap = {
+  [ERROR_CODES.PASSWORD_SAME_AS_OLD]: 'errors.passwordSameAsOld',
+  [ERROR_CODES.EMAIL_EXISTS]: 'errors.emailExists',
+  [ERROR_CODES.INVALID_CREDENTIALS]: 'errors.invalidCredentials',
+  // ... etc
+};
+
+const message = t(errorMap[error.code] || 'errors.generic');
 ```
 
 ---
 
 ## Best Practices
 
-### ✅ DO
+###  DO
 
 ```typescript
-// Use specific error classes
-throw new UserNotFoundError(userId)
+// Use specific error classes when FE needs special handling
+throw new PasswordSameAsOldError(undefined, {
+  field: 'password',
+  userId: user.id
+});
 
-// Include helpful details (dev only)
-throw new ValidationError('Invalid input', { field: 'email', reason: 'Invalid format' })
+// Use generic classes for truly generic cases
+throw new ValidationError("Field X is invalid", {
+  field: 'fieldX',
+  value: value
+});
 
-// Pass identifiers
-throw new NotFoundError('Location', locationId)
+// Keep details minimal and error-specific
+throw new EmailAlreadyExistsError(undefined, {
+  field: 'email',
+  email: email,
+  existingUserId: existingUser.id
+});
 
-// Add context
-throw new BusinessRuleError('Cannot delete', { assignmentId, status: 'ACTIVE' })
+// Frontend: Only check error codes
+if (error.code === ERROR_CODES.PASSWORD_SAME_AS_OLD) {
+  // Handle specially
+}
 ```
 
-### ❌ DON'T
+### L DON'T
 
 ```typescript
 // Don't use generic Error
-throw new Error('Something went wrong')
+throw new Error('Something went wrong');
 
-// Don't throw strings
-throw 'User not found'
+// Don't include redundant info in details
+throw new ValidationError("Error", {
+  field: 'email',
+  tenantId: tenantId,        // L Already in event.context
+  path: event.path,          // L Already logged
+  attemptedAction: 'signup'  // L Obvious from context
+});
 
-// Don't return error objects
-return { error: 'Invalid email' }
+// Don't nest details unnecessarily
+throw new ValidationError("Error", {
+  context: {                 // L Redundant nesting
+    field: 'email'
+  }
+});
 
-// Don't swallow errors
-try {
-  await operation()
-} catch (e) {
-  throw new InternalServerError()  // ❌ Missing context
+// Frontend: Don't use details for business logic
+if (error.details?.field === 'password') {  // L Use error.code instead
+  // ...
 }
 ```
 
 ---
 
-## Error Flow
+## Decision Tree
 
-```
-Service throws AppError
-      ↓
-H3/Nitro catches error
-      ↓
-server/error/errorHandler.ts formats response
-      ↓
-Client receives { traceId, code, debug? }
-      ↓
-useErrorHandler handles UI (toasts/redirects)
-```
+**"Should I create a new specific error class?"**
+
+Ask: **"Does the frontend need to react differently to this error?"**
+
+- **YES** � Create specific error class with specific code
+  - Example: `PasswordSameAsOldError` � FE shows hint about password rules
+  - Example: `EmailExistsError` � FE shows "Already have account? Login"
+  - Example: `TenantMismatchError` � FE redirects to login
+
+- **NO** � Use generic error class
+  - Example: `ValidationError("Field X invalid")` � FE shows generic toast
+  - Example: `InternalServerError("DB failed")` � FE shows generic "something went wrong"
 
 ---
 
-## Summary Table
+## Summary
 
-| Error Class | Status | Code | Production Response |
-|------------|--------|------|---------------------|
-| `InvalidCredentialsError` | 401 | `INVALID_CREDENTIALS` | traceId + code only |
-| `EmailNotConfirmedError` | 401 | `EMAIL_NOT_CONFIRMED` | traceId + code only |
-| `PermissionDeniedError` | 403 | `PERMISSION_DENIED` | traceId + code only |
-| `ValidationError` | 400 | `VALIDATION_ERROR` | traceId + code only |
-| `UserNotFoundError` | 404 | `USER_NOT_FOUND` | traceId + code only |
-| `DuplicateError` | 409 | `DUPLICATE` | traceId + code only |
-| `BusinessRuleError` | 422 | `BUSINESS_RULE_VIOLATION` | traceId + code only |
-| `InternalServerError` | 500 | `INTERNAL_ERROR` | traceId + code only |
+### Backend:
+- Throw specific error classes (don't think about codes)
+- Include minimal, error-specific details
+- Let errorHandler format the response
 
-**Key Points:**
-- Production: Minimal response (`traceId` + `code` only) for security
-- Development: Full `debug` info, `details`, and `stack` trace
-- Use `traceId` for log correlation when debugging production issues
+### Frontend:
+- Check `error.code` only
+- Map codes to i18n translations
+- Ignore `details` (only for dev debugging)
+
+### Error Details:
+- Only include error-specific critical data
+- Keep it flat (no nested `context` key)
+- Don't duplicate what errorHandler already logs
+
+### Error Handler:
+- Automatically catches all errors
+- Formats response based on environment
+- Logs full context for debugging
+- Obscures 500-level errors in production

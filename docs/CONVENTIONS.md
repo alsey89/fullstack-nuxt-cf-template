@@ -267,31 +267,69 @@ throw new ValidationError("Email is required")
 
 ## Error Handling
 
-### Custom Error Classes
+The application uses a **structured error system** with shared error codes between frontend and backend. For complete documentation, see [ERROR_HANDLING.md](ERROR_HANDLING.md).
 
+### Quick Reference
+
+**Backend throws specific error classes:**
 ```typescript
-// 400 Bad Request
-throw new ValidationError("Invalid email format");
+import {
+  PasswordSameAsOldError,
+  EmailAlreadyExistsError,
+  InvalidCredentialsError
+} from '~/server/error/errors';
 
-// 401 Unauthorized
-throw new AuthenticationError("User not authenticated");
+// Specific error (FE reacts specially)
+throw new PasswordSameAsOldError(undefined, {
+  field: 'password',
+  userId: user.id
+});
 
-// 403 Forbidden
-throw new PermissionError("Insufficient permissions");
-
-// 404 Not Found
-throw new NotFoundError("User", userId);
-
-// 409 Conflict
-throw new DuplicateError("Email already exists");
-
-// 500 Internal Server Error
-throw new InternalServerError("Database connection failed");
+// Generic error
+throw new ValidationError("Field X is invalid", {
+  field: 'fieldX',
+  value: value
+});
 ```
 
-### Error Middleware
+**Frontend reacts to error codes:**
+```typescript
+import { ERROR_CODES } from '~/server/error/codes';
 
-Errors are automatically caught and formatted by the error middleware in `server/middleware/03.error.ts`.
+if (error.code === ERROR_CODES.PASSWORD_SAME_AS_OLD) {
+  toast.error(t('errors.passwordSameAsOld'));
+}
+```
+
+### Error Details Convention
+
+**Only include error-specific data:**
+- ✅ Field names, resource IDs, conflicting values
+- ❌ tenantId, path, method, IP (already logged by errorHandler)
+
+```typescript
+// ✅ GOOD: Minimal, flat structure
+throw new EmailAlreadyExistsError(undefined, {
+  field: 'email',
+  email: 'user@example.com',
+  existingUserId: 'user_456'
+});
+
+// ❌ BAD: Redundant info
+throw new EmailAlreadyExistsError(undefined, {
+  field: 'email',
+  email: email,
+  tenantId: tenantId,        // ❌ Already in context
+  path: event.path           // ❌ Already logged
+});
+```
+
+### Error Handler
+
+Errors are automatically caught and formatted by [server/error/errorHandler.ts](../server/error/errorHandler.ts):
+- **400-level:** Message + details sent to FE (production + dev)
+- **500-level:** Generic message only (production), full details in dev
+- **Dev mode:** Includes `debug` block with stack trace
 
 ---
 

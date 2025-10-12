@@ -1,4 +1,4 @@
-import { AuthenticationError } from "../error/errors";
+import { AuthenticationError, TenantMismatchError } from "../error/errors";
 
 // ========================================
 // AUTHENTICATION MIDDLEWARE
@@ -27,16 +27,17 @@ export default defineEventHandler(async (event) => {
   const session = await getUserSession(event);
 
   if (!session || !session.user?.id) {
-    throw new AuthenticationError("Authentication required", "AUTH_REQUIRED");
+    throw new AuthenticationError();
   }
 
   // CRITICAL: Validate session is bound to current tenant
   // This prevents cross-tenant access by reusing session tokens
   if (session.tenantId !== event.context.tenantId) {
-    throw new AuthenticationError(
-      "Session tenant mismatch. Please sign in again.",
-      "TENANT_MISMATCH"
-    );
+    throw new TenantMismatchError(undefined, {
+      sessionTenantId: session.tenantId,
+      currentTenantId: event.context.tenantId,
+      userId: session.user.id
+    });
   }
 
   // Set user context for downstream handlers

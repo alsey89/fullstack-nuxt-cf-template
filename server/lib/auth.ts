@@ -1,6 +1,6 @@
 import { SignJWT, jwtVerify } from "jose";
 import type { H3Event } from "h3";
-import { InvalidTokenError, TokenExpiredError } from "../error/errors";
+import { InvalidTokenError, TokenExpiredError, InvalidTokenPurposeError } from "../error/errors";
 
 // ========================================
 // AUTHENTICATION LIBRARY
@@ -133,20 +133,30 @@ export async function verifyEmailConfirmToken(
     });
 
     if (payload.purpose !== "email-confirm") {
-      throw new InvalidTokenError("Invalid token purpose");
+      throw new InvalidTokenPurposeError(undefined, {
+        expectedPurpose: 'email-confirm',
+        actualPurpose: payload.purpose
+      });
     }
 
     // CRITICAL: Validate token is for current tenant
     if (payload.tenantId !== currentTenantId) {
-      throw new InvalidTokenError("Token tenant mismatch");
+      throw new InvalidTokenError("Token tenant mismatch", {
+        tokenTenantId: payload.tenantId,
+        currentTenantId: currentTenantId
+      });
     }
 
     return payload as unknown as EmailConfirmTokenPayload;
   } catch (error) {
     if ((error as any).code === "ERR_JWT_EXPIRED") {
-      throw new TokenExpiredError();
+      throw new TokenExpiredError(undefined, {
+        tokenPurpose: 'email-confirm'
+      });
     }
-    throw new InvalidTokenError();
+    throw new InvalidTokenError(undefined, {
+      errorType: (error as any).code || 'unknown'
+    });
   }
 }
 
@@ -169,20 +179,30 @@ export async function verifyPasswordResetToken(
     });
 
     if (payload.purpose !== "password-reset") {
-      throw new InvalidTokenError("Invalid token purpose");
+      throw new InvalidTokenPurposeError(undefined, {
+        expectedPurpose: 'password-reset',
+        actualPurpose: payload.purpose
+      });
     }
 
     // CRITICAL: Validate token is for current tenant
     if (payload.tenantId !== currentTenantId) {
-      throw new InvalidTokenError("Token tenant mismatch");
+      throw new InvalidTokenError("Token tenant mismatch", {
+        tokenTenantId: payload.tenantId,
+        currentTenantId: currentTenantId
+      });
     }
 
     return payload as unknown as PasswordResetTokenPayload;
   } catch (error) {
     if ((error as any).code === "ERR_JWT_EXPIRED") {
-      throw new TokenExpiredError();
+      throw new TokenExpiredError(undefined, {
+        tokenPurpose: 'password-reset'
+      });
     }
-    throw new InvalidTokenError();
+    throw new InvalidTokenError(undefined, {
+      errorType: (error as any).code || 'unknown'
+    });
   }
 }
 

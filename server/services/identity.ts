@@ -1,5 +1,4 @@
 import type { H3Event } from "h3";
-import { getRequestIP, getHeader } from "h3";
 import {
   UserRepository,
   UserSettingsRepository,
@@ -20,6 +19,7 @@ import {
   AccountInactiveError,
   AuthenticationError,
   InternalServerError,
+  PasswordSameAsOldError,
 } from "../error/errors";
 import type { User } from "../database/schema/identity";
 import { getDatabase } from "../database/utils";
@@ -99,7 +99,11 @@ export class IdentityService {
     // Check if email already exists
     const existingUser = await this.userRepo.findByEmail(email);
     if (existingUser) {
-      throw new EmailAlreadyExistsError(email);
+      throw new EmailAlreadyExistsError(undefined, {
+        field: 'email',
+        email: email,
+        existingUserId: existingUser.id
+      });
     }
 
     // Hash password
@@ -147,19 +151,27 @@ export class IdentityService {
     // Find user by email
     const user = await this.userRepo.findByEmail(email);
     if (!user) {
-      throw new InvalidCredentialsError("User not found with this email");
+      throw new InvalidCredentialsError(undefined, {
+        email: email
+      });
     }
 
     // Check if account is active
     if (!user.isActive) {
-      throw new AccountInactiveError();
+      throw new AccountInactiveError(undefined, {
+        userId: user.id,
+        email: user.email
+      });
     }
 
     // Verify password
     //* according to nuxt-auth-utils docs, it's (hash, password)
     const isValid = await verifyPassword(user.passwordHash, password);
     if (!isValid) {
-      throw new InvalidCredentialsError();
+      throw new InvalidCredentialsError(undefined, {
+        userId: user.id,
+        email: email
+      });
     }
 
     //remove sensitive fields before returning
@@ -190,12 +202,17 @@ export class IdentityService {
 
     const user = await this.userRepo.findById(userId);
     if (!user || user.email !== email) {
-      throw new ValidationError("Invalid confirmation token");
+      throw new ValidationError("Invalid confirmation token", {
+        userId: userId,
+        email: email
+      });
     }
 
     const updatedUser = await this.userRepo.confirmEmail(userId);
     if (!updatedUser) {
-      throw new UserNotFoundError();
+      throw new UserNotFoundError(undefined, {
+        userId: userId
+      });
     }
 
     // Log email confirmation
@@ -256,13 +273,19 @@ export class IdentityService {
 
     const user = await this.userRepo.findById(userId);
     if (!user || user.email !== email) {
-      throw new ValidationError("Invalid reset token");
+      throw new ValidationError("Invalid reset token", {
+        userId: userId,
+        email: email
+      });
     }
 
     // Check if new password is same as old password
     const isSamePassword = await verifyPassword(user.passwordHash, newPassword);
     if (isSamePassword) {
-      throw new ValidationError("New password cannot be the same as your current password");
+      throw new PasswordSameAsOldError(undefined, {
+        field: 'password',
+        userId: userId
+      });
     }
 
     // Hash new password
