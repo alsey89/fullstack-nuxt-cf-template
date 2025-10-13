@@ -1,38 +1,79 @@
-import { getQuery } from 'h3'
 import { createIdentityService } from '#server/services/identity'
 import { createSuccessResponse } from '#server/lib/response'
 import { requirePermission } from '#server/services/rbac'
+import {
+  parseListQuery,
+  validateSortField,
+  validateFilters,
+} from '#server/utils/query-parser'
+import { calculateLimitOffset, buildPaginatedResponse } from '#server/utils/pagination'
 
 // ========================================
 // GET /api/v1/user
 // ========================================
-// List users
+// List users with pagination, filtering, and sorting
 // Requires authentication and users:view permission
+// ========================================
+// Query Parameters:
+//   - page: Page number (default: 1)
+//   - perPage: Items per page (default: 20, max: 100, -1 for all)
+//   - sortBy: Field to sort by (email, firstName, lastName, createdAt, role, isActive)
+//   - sortOrder: Sort order (asc, desc)
+//   - filter[field][operator]=value: Filters (e.g., filter[email][like]=%@example.com)
 // ========================================
 
 export default defineEventHandler(async (event) => {
   // Check permission
   await requirePermission(event, 'users:view')
 
-  const query = getQuery(event)
+  // Parse query parameters
+  const query = parseListQuery(event)
 
-  // Parse pagination parameters (page and perPage)
-  const page = query.page ? Math.max(1, parseInt(query.page as string)) : 1
-  const perPage = query.perPage ? parseInt(query.perPage as string) : 20
+  // Validate sort field
+  const allowedSortFields = [
+    'email',
+    'firstName',
+    'lastName',
+    'createdAt',
+    'role',
+    'isActive',
+    'isEmailVerified',
+  ]
+  const sortBy = validateSortField(query.sortBy, allowedSortFields, 'createdAt')
+  const sortOrder = query.sortOrder || 'desc'
 
-  // Convert page/perPage to limit/offset for service layer
-  const limit = perPage > 0 ? perPage : 20
-  const offset = perPage > 0 ? (page - 1) * perPage : 0
+  // Validate filter fields
+  const allowedFilterFields = [
+    'email',
+    'firstName',
+    'lastName',
+    'role',
+    'isActive',
+    'isEmailVerified',
+  ]
+  const filters = validateFilters(query.filters || [], allowedFilterFields)
 
+  // Calculate limit and offset
+  const { limit, offset } = calculateLimitOffset(query.page || 1, query.perPage || 20)
+
+  // Get users and count
   const identityService = createIdentityService(event)
-  const users = await identityService.listUsers(limit, offset)
+  const [users, total] = await Promise.all([
+    identityService.listUsers(limit, offset, filters, sortBy, sortOrder),
+    identityService.countUsers(filters),
+  ])
+
+  // Build paginated response
+  const response = buildPaginatedResponse(
+    users,
+    query.page || 1,
+    query.perPage || 20,
+    total
+  )
 
   return createSuccessResponse(
     'Users retrieved successfully',
-    users,
-    {
-      page,
-      perPage,
-    }
+    response.items,
+    response.pagination
   )
 })

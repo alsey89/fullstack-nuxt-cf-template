@@ -1,0 +1,67 @@
+meta {
+  name: Update Role
+  type: http
+  seq: 5
+}
+
+put {
+  url: {{baseUrl}}/api/v1/roles/:id
+  body: json
+  auth: none
+}
+
+params:path {
+  id: {{roleId}}
+}
+
+body:json {
+  {
+    "name": "updated-moderator",
+    "description": "Updated moderator role",
+    "permissions": ["users:view", "users:edit", "roles:view"]
+  }
+}
+
+docs {
+  # Update Role
+
+  Update an existing role. Cannot update system roles.
+
+  ## Path Parameters
+  - `id` (required): Role ID
+
+  ## Request Body
+
+  All fields are optional. Only provided fields will be updated.
+
+  ```json
+  {
+    "name": "string (optional)",
+    "description": "string (optional)",
+    "permissions": ["permission:code", ...] (optional)
+  }
+  ```
+
+  ## Response
+
+  ```json
+  {
+    "message": "Role updated successfully",
+    "data": {
+      "id": "...",
+      "name": "updated-moderator",
+      "description": "Updated moderator role",
+      "permissions": ["users:view", "users:edit", "roles:view"],
+      "isSystem": false,
+      "createdAt": "...",
+      "updatedAt": "...",
+      "deletedAt": null
+    },
+    "error": null
+  }
+  ```
+
+  ## Notes
+  - System roles (isSystem: true) cannot be updated
+  - Permission codes must exist in the permission registry
+}

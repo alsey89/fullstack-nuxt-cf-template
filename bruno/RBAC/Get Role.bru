@@ -1,0 +1,43 @@
+meta {
+  name: Get Role
+  type: http
+  seq: 3
+}
+
+get {
+  url: {{baseUrl}}/api/v1/roles/:id
+  body: none
+  auth: none
+}
+
+params:path {
+  id: {{roleId}}
+}
+
+docs {
+  # Get Role
+
+  Get a single role by ID.
+
+  ## Path Parameters
+  - `id` (required): Role ID
+
+  ## Response
+
+  ```json
+  {
+    "message": "Role retrieved successfully",
+    "data": {
+      "id": "...",
+      "name": "admin",
+      "description": "Administrator role",
+      "permissions": ["*"],
+      "isSystem": true,
+      "createdAt": "...",
+      "updatedAt": "...",
+      "deletedAt": null
+    },
+    "error": null
+  }
+  ```
+}

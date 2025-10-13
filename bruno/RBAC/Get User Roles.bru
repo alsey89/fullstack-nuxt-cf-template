@@ -1,0 +1,45 @@
+meta {
+  name: Get User Roles
+  type: http
+  seq: 7
+}
+
+get {
+  url: {{baseUrl}}/api/v1/users/:userId/roles
+  body: none
+  auth: none
+}
+
+params:path {
+  userId: {{userId}}
+}
+
+docs {
+  # Get User Roles
+
+  Get all roles assigned to a specific user.
+
+  ## Path Parameters
+  - `userId` (required): User ID
+
+  ## Response
+
+  ```json
+  {
+    "message": "User roles retrieved successfully",
+    "data": [
+      {
+        "id": "...",
+        "name": "admin",
+        "description": "Administrator role",
+        "permissions": ["*"],
+        "isSystem": true,
+        "createdAt": "...",
+        "updatedAt": "...",
+        "deletedAt": null
+      }
+    ],
+    "error": null
+  }
+  ```
+}

@@ -5,7 +5,7 @@ meta {
 }
 
 get {
-  url: {{baseUrl}}/api/v1/user?page=1&perPage=20
+  url: {{baseUrl}}/api/v1/user?page=1&perPage=20&sortBy=createdAt&sortOrder=desc&filter[firstName][startsWith]=Ad
   body: none
   auth: none
 }
@@ -13,26 +13,130 @@ get {
 params:query {
   page: 1
   perPage: 20
+  sortBy: createdAt
+  sortOrder: desc
+  filter[firstName][startsWith]: Ad
+  ~filter[isActive][eq]: false
+  ~filter[email][contains]: admin
 }
 
 docs {
   # List Users
-
-  Lists active users with optional search and pagination.
-
+  
+  Lists users with pagination, filtering, and sorting support.
+  
   ## Query Parameters
-  - `q` (optional): Search query string
-  - `page` (optional): Page number (default: 1)
-  - `perPage` (optional): Items per page (default: all if not specified)
-
+  
+  ### Pagination
+  - `page` (number, default: 1): Page number (1-indexed)
+  - `perPage` (number, default: 20, max: 100): Items per page
+    - Set to `-1` to get all results (no pagination)
+  
+  ### Sorting
+  - `sortBy` (string, default: 'createdAt'): Field to sort by
+    - Allowed: `email`, `firstName`, `lastName`, `createdAt`, `role`, `isActive`, `isEmailVerified`
+  - `sortOrder` (string, default: 'desc'): Sort direction
+    - Allowed: `asc`, `desc`
+  
+  ### Filtering
+  Format: `filter[fieldName][operator]=value`
+  
+  **Allowed Fields:** `email`, `firstName`, `lastName`, `role`, `isActive`, `isEmailVerified`
+  
+  **Operators:**
+  - `eq` - Equal to
+  - `ne` - Not equal to
+  - `like` - SQL LIKE pattern (you provide % wildcards)
+  - `contains` - Contains text (simpler, no % needed)
+  - `startsWith` - Starts with text (no % needed)
+  - `endsWith` - Ends with text (no % needed)
+  - `in` - Value in array (comma-separated)
+  - `gt` - Greater than
+  - `gte` - Greater than or equal
+  - `lt` - Less than
+  - `lte` - Less than or equal
+  - `isNull` - Field is NULL
+  - `notNull` - Field is NOT NULL
+  
+  ## Response Format
+  
+  ```json
+  {
+    "message": "Users retrieved successfully",
+    "data": [
+      {
+        "id": "...",
+        "email": "...",
+        "firstName": "...",
+        "lastName": "...",
+        "role": "...",
+        "isActive": true,
+        "isEmailVerified": false,
+        "createdAt": "...",
+        ...
+      }
+    ],
+    "pagination": {
+      "page": 1,
+      "perPage": 20,
+      "total": 150,
+      "totalPages": 8,
+      "hasNext": true,
+      "hasPrevious": false
+    },
+    "error": null
+  }
+  ```
+  
   ## Examples
-
-  ### List all users
-  GET /api/v1/user
-
-  ### Search users
-  GET /api/v1/user?q=john
-
-  ### Paginated list
-  GET /api/v1/user?page=1&perPage=20
+  
+  ### Basic pagination
+  ```
+  GET /api/v1/user?page=2&perPage=50
+  ```
+  
+  ### Sorting
+  ```
+  GET /api/v1/user?sortBy=email&sortOrder=asc
+  ```
+  
+  ### Filter active users
+  ```
+  GET /api/v1/user?filter[isActive][eq]=true
+  ```
+  
+  ### Filter by email pattern (simple)
+  ```
+  GET /api/v1/user?filter[email][contains]=@company.com
+  ```
+  
+  ### Filter with startsWith
+  ```
+  GET /api/v1/user?filter[firstName][startsWith]=John
+  ```
+  
+  ### Filter with endsWith
+  ```
+  GET /api/v1/user?filter[email][endsWith]=@gmail.com
+  ```
+  
+  ### Multiple filters (AND logic)
+  ```
+  GET /api/v1/user?filter[isActive][eq]=true&filter[role][eq]=admin
+  ```
+  
+  ### Combined query
+  ```
+  GET /api/v1/user?page=1&perPage=20&sortBy=createdAt&sortOrder=desc&filter[isActive][eq]=true
+  ```
+  
+  ### Get all unverified users
+  ```
+  GET /api/v1/user?filter[isEmailVerified][eq]=false&sortBy=createdAt&sortOrder=desc
+  ```
+  
+  ### Get all results (no pagination)
+  ```
+  GET /api/v1/user?perPage=-1
+  ```
 }

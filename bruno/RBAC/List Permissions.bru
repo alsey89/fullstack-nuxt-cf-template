@@ -1,0 +1,148 @@
+meta {
+  name: List Permissions
+  type: http
+  seq: 2
+}
+
+get {
+  url: {{baseUrl}}/api/v1/permissions?page=1&perPage=20&sortBy=category&sortOrder=asc
+  body: none
+  auth: none
+}
+
+params:query {
+  page: 1
+  perPage: 20
+  sortBy: category
+  sortOrder: asc
+  ~filter[category][eq]: users
+  ~filter[code][startsWith]: users:
+}
+
+docs {
+  # List Permissions
+
+  Lists all available permissions in the permission registry with pagination, filtering, and sorting support.
+
+  ## Query Parameters
+
+  ### Pagination
+  - `page` (number, default: 1): Page number (1-indexed)
+  - `perPage` (number, default: 20, max: 100): Items per page
+    - Set to `-1` to get all results (no pagination)
+
+  ### Sorting
+  - `sortBy` (string, default: 'category'): Field to sort by
+    - Allowed: `code`, `category`, `description`
+  - `sortOrder` (string, default: 'asc'): Sort direction
+    - Allowed: `asc`, `desc`
+
+  ### Filtering
+  Format: `filter[fieldName][operator]=value`
+
+  **Allowed Fields:** `code`, `category`
+
+  **Operators:**
+  - `eq` - Equal to
+  - `ne` - Not equal to
+  - `like` - SQL LIKE pattern (you provide % wildcards)
+  - `contains` - Contains text (simpler, no % needed)
+  - `startsWith` - Starts with text (no % needed)
+  - `endsWith` - Ends with text (no % needed)
+  - `in` - Value in array (comma-separated)
+  - `gt` - Greater than
+  - `gte` - Greater than or equal
+  - `lt` - Less than
+  - `lte` - Less than or equal
+  - `isNull` - Field is NULL
+  - `notNull` - Field is NOT NULL
+
+  ## Response Format
+
+  ```json
+  {
+    "message": "Permissions retrieved successfully",
+    "data": [
+      {
+        "id": "...",
+        "code": "users:view",
+        "category": "users",
+        "description": "View users",
+        "createdAt": "...",
+        "updatedAt": "...",
+        "deletedAt": null
+      }
+    ],
+    "pagination": {
+      "page": 1,
+      "perPage": 20,
+      "total": 50,
+      "totalPages": 3,
+      "hasNext": true,
+      "hasPrevious": false
+    },
+    "error": null
+  }
+  ```
+
+  ## Examples
+
+  ### Get all permissions (paginated)
+  ```
+  GET /api/v1/permissions?page=1&perPage=20
+  ```
+
+  ### Sort by permission code
+  ```
+  GET /api/v1/permissions?sortBy=code&sortOrder=asc
+  ```
+
+  ### Filter by category (exact match)
+  ```
+  GET /api/v1/permissions?filter[category][eq]=users
+  ```
+
+  ### Search permissions by code pattern (simple)
+  ```
+  GET /api/v1/permissions?filter[code][startsWith]=users:
+  ```
+
+  ### Get all user-related permissions
+  ```
+  GET /api/v1/permissions?filter[category][eq]=users&sortBy=code
+  ```
+
+  ### Get multiple categories
+  ```
+  GET /api/v1/permissions?filter[category][in]=users,roles,settings
+  ```
+
+  ### Get all permissions (no pagination)
+  ```
+  GET /api/v1/permissions?perPage=-1
+  ```
+
+  ### Combined query
+  ```
+  GET /api/v1/permissions?page=1&perPage=50&sortBy=category&sortOrder=asc&filter[category][eq]=users
+  ```
+
+  ## Common Categories
+
+  Common permission categories in the system:
+  - `users` - User management permissions
+  - `roles` - Role management permissions
+  - `settings` - System settings permissions
+  - `*` - Wildcard (super admin)
+
+  ## Permission Codes Format
+
+  Permissions follow the format: `category:action`
+
+  Examples:
+  - `users:view` - View users
+  - `users:edit` - Edit users
+  - `users:delete` - Delete users
+  - `roles:*` - All role permissions
+  - `*` - All permissions (super admin)
+}

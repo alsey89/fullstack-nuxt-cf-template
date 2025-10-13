@@ -2,6 +2,7 @@ import { eq, and, desc, inArray } from "drizzle-orm";
 import * as schema from "#server/database/schema";
 import type { PermissionCode } from "#server/database/schema/identity";
 import { BaseRepository } from "#server/repositories/base";
+import type { Filter, SortOrder } from "#server/types/api";
 
 // ========================================
 // RBAC REPOSITORIES
@@ -67,9 +68,12 @@ export class RoleRepository extends BaseRepository {
   }
 
   /**
-   * List all roles
+   * Count roles with optional filters
    */
-  async listRoles(options?: { includeSystem?: boolean }) {
+  async countRoles(
+    filters?: Filter[],
+    options?: { includeSystem?: boolean }
+  ): Promise<number> {
     const conditions = [this.notDeleted(schema.roles)];
 
     // Optionally exclude system roles
@@ -77,11 +81,61 @@ export class RoleRepository extends BaseRepository {
       conditions.push(eq(schema.roles.isSystem, false));
     }
 
-    return this.drizzle
+    const baseConditions = and(...conditions);
+    return this.countRecords(schema.roles, baseConditions, filters);
+  }
+
+  /**
+   * List all roles with optional filters and sorting
+   */
+  async listRoles(
+    limit?: number,
+    offset?: number,
+    filters?: Filter[],
+    sortBy?: string,
+    sortOrder?: SortOrder,
+    options?: { includeSystem?: boolean }
+  ) {
+    const conditions = [this.notDeleted(schema.roles)];
+
+    // Optionally exclude system roles
+    if (options?.includeSystem === false) {
+      conditions.push(eq(schema.roles.isSystem, false));
+    }
+
+    // Add filters
+    if (filters && filters.length > 0) {
+      const filterCondition = this.buildFilters(schema.roles, filters);
+      if (filterCondition) {
+        conditions.push(filterCondition);
+      }
+    }
+
+    // Build query
+    let query = this.drizzle
       .select()
       .from(schema.roles)
-      .where(and(...conditions))
-      .orderBy(desc(schema.roles.createdAt));
+      .where(and(...conditions));
+
+    // Add sorting
+    const sort = this.buildSort(
+      schema.roles,
+      sortBy || "createdAt",
+      sortOrder || "desc"
+    );
+    if (sort) {
+      query = query.orderBy(sort) as any;
+    }
+
+    // Handle pagination
+    if (limit !== undefined && limit !== -1) {
+      query = query.limit(limit) as any;
+      if (offset !== undefined) {
+        query = query.offset(offset) as any;
+      }
+    }
+
+    return query;
   }
 
   /**
@@ -353,14 +407,61 @@ export class PermissionRepository extends BaseRepository {
   }
 
   /**
-   * List all permissions (grouped by category)
+   * Count permissions with optional filters
    */
-  async listPermissions() {
-    return this.drizzle
+  async countPermissions(filters?: Filter[]): Promise<number> {
+    return this.countRecords(
+      schema.permissions,
+      this.notDeleted(schema.permissions),
+      filters
+    );
+  }
+
+  /**
+   * List all permissions with optional filters and sorting
+   */
+  async listPermissions(
+    limit?: number,
+    offset?: number,
+    filters?: Filter[],
+    sortBy?: string,
+    sortOrder?: SortOrder
+  ) {
+    const conditions = [this.notDeleted(schema.permissions)];
+
+    // Add filters
+    if (filters && filters.length > 0) {
+      const filterCondition = this.buildFilters(schema.permissions, filters);
+      if (filterCondition) {
+        conditions.push(filterCondition);
+      }
+    }
+
+    // Build query
+    let query = this.drizzle
       .select()
       .from(schema.permissions)
-      .where(this.notDeleted(schema.permissions))
-      .orderBy(schema.permissions.category, schema.permissions.code);
+      .where(and(...conditions));
+
+    // Add sorting
+    const sort = this.buildSort(
+      schema.permissions,
+      sortBy || "category",
+      sortOrder || "asc"
+    );
+    if (sort) {
+      query = query.orderBy(sort) as any;
+    }
+
+    // Handle pagination
+    if (limit !== undefined && limit !== -1) {
+      query = query.limit(limit) as any;
+      if (offset !== undefined) {
+        query = query.offset(offset) as any;
+      }
+    }
+
+    return query;
   }
 
   /**

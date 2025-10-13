@@ -347,10 +347,23 @@ export class IdentityService {
   }
 
   /**
-   * List users
+   * List users with pagination, filtering, and sorting
    */
-  async listUsers(limit?: number, offset?: number): Promise<User[]> {
-    return this.userRepo.list(limit, offset);
+  async listUsers(
+    limit?: number,
+    offset?: number,
+    filters?: import("#server/types/api").Filter[],
+    sortBy?: string,
+    sortOrder?: import("#server/types/api").SortOrder
+  ): Promise<User[]> {
+    return this.userRepo.list(limit, offset, filters, sortBy, sortOrder);
+  }
+
+  /**
+   * Count users with optional filters
+   */
+  async countUsers(filters?: import("#server/types/api").Filter[]): Promise<number> {
+    return this.userRepo.count(filters);
   }
 
   // ========================================

@@ -1,0 +1,54 @@
+meta {
+  name: Create Role
+  type: http
+  seq: 4
+}
+
+post {
+  url: {{baseUrl}}/api/v1/roles
+  body: json
+  auth: none
+}
+
+body:json {
+  {
+    "name": "moderator",
+    "description": "Moderator role with limited permissions",
+    "permissions": ["users:view", "roles:view"]
+  }
+}
+
+docs {
+  # Create Role
+
+  Create a new role with specified permissions.
+
+  ## Request Body
+
+  ```json
+  {
+    "name": "string (required)",
+    "description": "string (optional)",
+    "permissions": ["permission:code", ...] (required)
+  }
+  ```
+
+  ## Response
+
+  ```json
+  {
+    "message": "Role created successfully",
+    "data": {
+      "id": "...",
+      "name": "moderator",
+      "description": "Moderator role with limited permissions",
+      "permissions": ["users:view", "roles:view"],
+      "isSystem": false,
+      "createdAt": "...",
+      "updatedAt": "...",
+      "deletedAt": null
+    },
+    "error": null
+  }
+  ```
+}

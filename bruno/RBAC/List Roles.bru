@@ -1,0 +1,130 @@
+meta {
+  name: List Roles
+  type: http
+  seq: 1
+}
+
+get {
+  url: {{baseUrl}}/api/v1/roles?page=1&perPage=20&sortBy=createdAt&sortOrder=desc
+  body: none
+  auth: none
+}
+
+params:query {
+  page: 1
+  perPage: 20
+  sortBy: createdAt
+  sortOrder: desc
+  includeSystem: true
+  ~filter[name][contains]: admin
+  ~filter[isSystem][eq]: false
+}
+
+docs {
+  # List Roles
+
+  Lists roles with pagination, filtering, and sorting support.
+
+  ## Query Parameters
+
+  ### Pagination
+  - `page` (number, default: 1): Page number (1-indexed)
+  - `perPage` (number, default: 20, max: 100): Items per page
+    - Set to `-1` to get all results (no pagination)
+
+  ### Sorting
+  - `sortBy` (string, default: 'createdAt'): Field to sort by
+    - Allowed: `name`, `createdAt`, `isSystem`, `description`
+  - `sortOrder` (string, default: 'desc'): Sort direction
+    - Allowed: `asc`, `desc`
+
+  ### Filtering
+  Format: `filter[fieldName][operator]=value`
+
+  **Allowed Fields:** `name`, `isSystem`
+
+  **Operators:**
+  - `eq` - Equal to
+  - `ne` - Not equal to
+  - `like` - SQL LIKE pattern (you provide % wildcards)
+  - `contains` - Contains text (simpler, no % needed)
+  - `startsWith` - Starts with text (no % needed)
+  - `endsWith` - Ends with text (no % needed)
+  - `in` - Value in array (comma-separated)
+  - `gt` - Greater than
+  - `gte` - Greater than or equal
+  - `lt` - Less than
+  - `lte` - Less than or equal
+  - `isNull` - Field is NULL
+  - `notNull` - Field is NOT NULL
+
+  ### Additional Parameters
+  - `includeSystem` (boolean, default: true): Include system roles
+    - Set to `false` to exclude built-in system roles
+
+  ## Response Format
+
+  ```json
+  {
+    "message": "Roles retrieved successfully",
+    "data": [
+      {
+        "id": "...",
+        "name": "admin",
+        "description": "Administrator role",
+        "permissions": ["users:view", "users:edit", ...],
+        "isSystem": true,
+        "createdAt": "...",
+        "updatedAt": "...",
+        "deletedAt": null
+      }
+    ],
+    "pagination": {
+      "page": 1,
+      "perPage": 20,
+      "total": 15,
+      "totalPages": 1,
+      "hasNext": false,
+      "hasPrevious": false
+    },
+    "error": null
+  }
+  ```
+
+  ## Examples
+
+  ### Get all roles (paginated)
+  ```
+  GET /api/v1/roles?page=1&perPage=20
+  ```
+
+  ### Get custom roles only (exclude system roles)
+  ```
+  GET /api/v1/roles?includeSystem=false
+  ```
+
+  ### Sort roles by name
+  ```
+  GET /api/v1/roles?sortBy=name&sortOrder=asc
+  ```
+
+  ### Search roles by name (simple)
+  ```
+  GET /api/v1/roles?filter[name][contains]=admin
+  ```
+
+  ### Get only system roles
+  ```
+  GET /api/v1/roles?filter[isSystem][eq]=true
+  ```
+
+  ### Combined query
+  ```
+  GET /api/v1/roles?page=1&perPage=20&sortBy=name&sortOrder=asc&includeSystem=false
+  ```
+
+  ### Get all custom roles (no pagination)
+  ```
+  GET /api/v1/roles?perPage=-1&includeSystem=false
+  ```
+}

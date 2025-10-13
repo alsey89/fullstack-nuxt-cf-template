@@ -1,0 +1,26 @@
+meta {
+  name: Health Check
+  type: http
+  seq: 1
+}
+
+get {
+  url: {{baseUrl}}/api/health
+  body: none
+  auth: none
+}
+
+docs {
+  # Health Check
+
+  Simple health check endpoint to verify the API is running.
+
+  ## Response
+
+  ```json
+  {
+    "status": "ok",
+    "timestamp": "2024-01-01T00:00:00.000Z"
+  }
+  ```
+}

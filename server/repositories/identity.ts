@@ -9,6 +9,7 @@ import type {
   AuditLog,
   NewAuditLog,
 } from "#server/database/schema/identity";
+import type { Filter, SortOrder } from "#server/types/api";
 
 // ========================================
 // USER REPOSITORY
@@ -54,16 +55,58 @@ export class UserRepository extends BaseRepository {
   }
 
   /**
-   * List users (database-scoped)
+   * Count users with optional filters
    */
-  async list(limit = 100, offset = 0): Promise<User[]> {
-    return this.drizzle
+  async count(filters?: Filter[]): Promise<number> {
+    return this.countRecords(
+      schema.users,
+      this.notDeleted(schema.users),
+      filters
+    );
+  }
+
+  /**
+   * List users (database-scoped) with optional filters and sorting
+   */
+  async list(
+    limit = 100,
+    offset = 0,
+    filters?: Filter[],
+    sortBy?: string,
+    sortOrder?: SortOrder
+  ): Promise<User[]> {
+    const conditions = [this.notDeleted(schema.users)];
+
+    // Add filters
+    if (filters && filters.length > 0) {
+      const filterCondition = this.buildFilters(schema.users, filters);
+      if (filterCondition) {
+        conditions.push(filterCondition);
+      }
+    }
+
+    // Build query
+    let query = this.drizzle
       .select()
       .from(schema.users)
-      .where(this.notDeleted(schema.users))
-      .orderBy(schema.users.createdAt)
-      .limit(limit)
-      .offset(offset);
+      .where(and(...conditions));
+
+    // Add sorting
+    const sort = this.buildSort(
+      schema.users,
+      sortBy || "createdAt",
+      sortOrder || "desc"
+    );
+    if (sort) {
+      query = query.orderBy(sort) as any;
+    }
+
+    // Handle pagination disabled case
+    if (limit === -1) {
+      return query;
+    }
+
+    return query.limit(limit).offset(offset);
   }
 
   /**

@@ -1,0 +1,39 @@
+meta {
+  name: Delete Role
+  type: http
+  seq: 6
+}
+
+delete {
+  url: {{baseUrl}}/api/v1/roles/:id
+  body: none
+  auth: none
+}
+
+params:path {
+  id: {{roleId}}
+}
+
+docs {
+  # Delete Role
+
+  Soft delete a role. Cannot delete system roles.
+
+  ## Path Parameters
+  - `id` (required): Role ID
+
+  ## Response
+
+  ```json
+  {
+    "message": "Role deleted successfully",
+    "data": null,
+    "error": null
+  }
+  ```
+
+  ## Notes
+  - System roles (isSystem: true) cannot be deleted
+  - This is a soft delete (deletedAt timestamp is set)
+  - Users with this role will lose associated permissions
+}

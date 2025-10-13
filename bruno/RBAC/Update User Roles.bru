@@ -1,0 +1,63 @@
+meta {
+  name: Update User Roles
+  type: http
+  seq: 8
+}
+
+put {
+  url: {{baseUrl}}/api/v1/users/:userId/roles
+  body: json
+  auth: none
+}
+
+params:path {
+  userId: {{userId}}
+}
+
+body:json {
+  {
+    "roleIds": ["role-id-1", "role-id-2"]
+  }
+}
+
+docs {
+  # Update User Roles
+
+  Replace all roles for a user. This removes all existing role assignments and assigns the new ones.
+
+  ## Path Parameters
+  - `userId` (required): User ID
+
+  ## Request Body
+
+  ```json
+  {
+    "roleIds": ["roleId1", "roleId2", ...]
+  }
+  ```
+
+  ## Response
+
+  ```json
+  {
+    "message": "User roles updated successfully",
+    "data": [
+      {
+        "id": "...",
+        "userId": "...",
+        "roleId": "...",
+        "createdAt": "...",
+        "updatedAt": "...",
+        "deletedAt": null
+      }
+    ],
+    "error": null
+  }
+  ```
+
+  ## Notes
+  - This is a **replace** operation, not an add operation
+  - All existing role assignments are soft-deleted
+  - New assignments are created for the provided role IDs
+  - Role IDs must exist in the system
+}

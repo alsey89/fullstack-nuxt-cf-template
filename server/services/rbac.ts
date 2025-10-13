@@ -194,10 +194,27 @@ export class RBACService {
   }
 
   /**
-   * List all roles
+   * List all roles with pagination, filtering, and sorting
    */
-  async listRoles(options?: { includeSystem?: boolean }) {
-    return this.roleRepo.listRoles(options);
+  async listRoles(
+    limit?: number,
+    offset?: number,
+    filters?: import("#server/types/api").Filter[],
+    sortBy?: string,
+    sortOrder?: import("#server/types/api").SortOrder,
+    options?: { includeSystem?: boolean }
+  ) {
+    return this.roleRepo.listRoles(limit, offset, filters, sortBy, sortOrder, options);
+  }
+
+  /**
+   * Count roles with optional filters
+   */
+  async countRoles(
+    filters?: import("#server/types/api").Filter[],
+    options?: { includeSystem?: boolean }
+  ): Promise<number> {
+    return this.roleRepo.countRoles(filters, options);
   }
 
   /**
@@ -293,10 +310,23 @@ export class RBACService {
   // ========================================
 
   /**
-   * List all available permissions (registry)
+   * List all available permissions with pagination, filtering, and sorting
    */
-  async listPermissions() {
-    return this.permissionRepo.listPermissions();
+  async listPermissions(
+    limit?: number,
+    offset?: number,
+    filters?: import("#server/types/api").Filter[],
+    sortBy?: string,
+    sortOrder?: import("#server/types/api").SortOrder
+  ) {
+    return this.permissionRepo.listPermissions(limit, offset, filters, sortBy, sortOrder);
+  }
+
+  /**
+   * Count permissions with optional filters
+   */
+  async countPermissions(filters?: import("#server/types/api").Filter[]): Promise<number> {
+    return this.permissionRepo.countPermissions(filters);
   }
 
   /**
