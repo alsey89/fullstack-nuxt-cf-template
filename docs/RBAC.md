@@ -2,6 +2,12 @@
 
 Complete guide to the enterprise-grade RBAC system built into this template.
 
+> **Related Documentation:**
+> - [CLAUDE.md](CLAUDE.md) - Quick RBAC reference
+> - [CONVENTIONS.md](CONVENTIONS.md) - Service and repository patterns
+> - [SECURITY.md](SECURITY.md) - Security architecture
+> - [TEMPLATE_SETUP.md](TEMPLATE_SETUP.md) - RBAC setup and configuration
+
 ## 📋 Table of Contents
 
 - [Overview](#overview)

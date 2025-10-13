@@ -1,5 +1,10 @@
 # Error Handling Guide
 
+> **Related Documentation:**
+> - [CLAUDE.md](CLAUDE.md) - Quick error handling reference
+> - [CONVENTIONS.md](CONVENTIONS.md) - Complete conventions guide
+> - [SECURITY.md](SECURITY.md) - Security considerations
+
 ## Overview
 
 The application uses a **structured error system** with specific error classes and shared error codes between frontend and backend. This provides:
@@ -500,14 +505,14 @@ if (error.details?.field === 'password') {  // L Use error.code instead
 
 Ask: **"Does the frontend need to react differently to this error?"**
 
-- **YES** ’ Create specific error class with specific code
-  - Example: `PasswordSameAsOldError` ’ FE shows hint about password rules
-  - Example: `EmailExistsError` ’ FE shows "Already have account? Login"
-  - Example: `TenantMismatchError` ’ FE redirects to login
+- **YES** ï¿½ Create specific error class with specific code
+  - Example: `PasswordSameAsOldError` ï¿½ FE shows hint about password rules
+  - Example: `EmailExistsError` ï¿½ FE shows "Already have account? Login"
+  - Example: `TenantMismatchError` ï¿½ FE redirects to login
 
-- **NO** ’ Use generic error class
-  - Example: `ValidationError("Field X invalid")` ’ FE shows generic toast
-  - Example: `InternalServerError("DB failed")` ’ FE shows generic "something went wrong"
+- **NO** ï¿½ Use generic error class
+  - Example: `ValidationError("Field X invalid")` ï¿½ FE shows generic toast
+  - Example: `InternalServerError("DB failed")` ï¿½ FE shows generic "something went wrong"
 
 ---
 

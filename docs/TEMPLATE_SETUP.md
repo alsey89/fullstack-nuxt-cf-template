@@ -2,6 +2,14 @@
 
 This guide walks you through setting up the Cloudflare Full-Stack Template for your new project.
 
+> **Related Documentation:**
+> - [CLAUDE.md](CLAUDE.md) - Development quick reference
+> - [CONVENTIONS.md](CONVENTIONS.md) - Coding conventions and patterns
+> - [RBAC.md](RBAC.md) - Role-based access control setup
+> - [SECURITY.md](SECURITY.md) - Security considerations
+> - [MIGRATIONS.md](MIGRATIONS.md) - Database migration guide
+> - [SECRETS.md](SECRETS.md) - Managing secrets and environment variables
+
 ## 📋 Pre-Setup Checklist
 
 - [ ] Cloudflare account created

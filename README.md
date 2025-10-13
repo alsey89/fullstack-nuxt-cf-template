@@ -21,14 +21,17 @@ A production-ready full-stack web application template built on Cloudflare Worke
 
 Complete documentation is available in the [`docs/`](docs/) folder:
 
-- **[docs/README.md](docs/README.md)** - Documentation index and navigation
-- **[docs/CONVENTIONS.md](docs/CONVENTIONS.md)** - Architecture & coding patterns (START HERE)
-- **[docs/SECURITY.md](docs/SECURITY.md)** - Security architecture and best practices
-- **[docs/RBAC.md](docs/RBAC.md)** - Role-Based Access Control guide
+### Quick Start
+- **[docs/CLAUDE.md](docs/CLAUDE.md)** - AI-optimized quick reference (START HERE for development)
+- **[docs/TEMPLATE_SETUP.md](docs/TEMPLATE_SETUP.md)** - Complete setup guide for new projects
+
+### Core Documentation
+- **[docs/CONVENTIONS.md](docs/CONVENTIONS.md)** - Complete architectural patterns and coding conventions
+- **[docs/ERROR_HANDLING.md](docs/ERROR_HANDLING.md)** - Structured error handling system
+- **[docs/RBAC.md](docs/RBAC.md)** - Enterprise role-based access control guide
+- **[docs/SECURITY.md](docs/SECURITY.md)** - Security architecture and threat model
+- **[docs/MIGRATIONS.md](docs/MIGRATIONS.md)** - Database migration workflows
 - **[docs/SECRETS.md](docs/SECRETS.md)** - Secrets management and environment variables
-- **[docs/ERROR_HANDLING.md](docs/ERROR_HANDLING.md)** - Error handling guide
-- **[docs/MIGRATIONS.md](docs/MIGRATIONS.md)** - Database migration system
-- **[docs/TEMPLATE_SETUP.md](docs/TEMPLATE_SETUP.md)** - Complete setup guide
 
 ## 🏗️ Tech Stack
 

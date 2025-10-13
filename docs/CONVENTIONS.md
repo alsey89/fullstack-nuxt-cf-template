@@ -5,6 +5,17 @@
 
 This document consolidates all coding conventions, architectural patterns, and best practices for the Cloudflare Full-Stack Template.
 
+> **Quick Reference for AI:** See [CLAUDE.md](CLAUDE.md) for a condensed AI-optimized reference guide.
+
+**Related Documentation:**
+- [CLAUDE.md](CLAUDE.md) - AI-optimized quick reference (recommended starting point)
+- [ERROR_HANDLING.md](ERROR_HANDLING.md) - Complete error handling system
+- [RBAC.md](RBAC.md) - Role-based access control guide
+- [SECURITY.md](SECURITY.md) - Security architecture and threat model
+- [TEMPLATE_SETUP.md](TEMPLATE_SETUP.md) - Setup guide for new projects
+- [MIGRATIONS.md](MIGRATIONS.md) - Database migration workflows
+- [SECRETS.md](SECRETS.md) - Secrets management
+
 ---
 
 ## Table of Contents
@@ -814,6 +825,174 @@ type Example = {
   isActive: boolean;
 };
 ```
+
+---
+
+## Pagination and Filtering
+
+The application uses a standardized pagination, filtering, and sorting system across all list endpoints.
+
+### Query Parameters Format
+
+```
+GET /api/v1/{resource}?page=1&perPage=20&sortBy=field&sortOrder=desc&filter[field][operator]=value
+```
+
+#### Pagination Parameters
+- `page` (number, default: 1): Page number (1-indexed)
+- `perPage` (number, default: 20, max: 100): Items per page
+  - Set to `-1` to disable pagination and return all results
+
+#### Sorting Parameters
+- `sortBy` (string): Field name to sort by (validated per endpoint)
+- `sortOrder` (enum: "asc" | "desc", default: "asc"): Sort direction
+
+#### Filter Parameters
+Format: `filter[fieldName][operator]=value`
+
+**Supported Operators:**
+- `eq`: Equal to
+- `ne`: Not equal to
+- `like`: SQL LIKE pattern (you provide `%` wildcards)
+- `contains`: Contains text (auto-wrapped with `%`)
+- `startsWith`: Starts with text (auto-appends `%`)
+- `endsWith`: Ends with text (auto-prepends `%`)
+- `in`: Value in array (comma-separated)
+- `gt`: Greater than
+- `gte`: Greater than or equal
+- `lt`: Less than
+- `lte`: Less than or equal
+- `isNull`: Field is NULL
+- `notNull`: Field is NOT NULL
+
+### Response Format
+
+```json
+{
+  "message": "Resources retrieved successfully",
+  "data": [...],
+  "pagination": {
+    "page": 1,
+    "perPage": 20,
+    "total": 150,
+    "totalPages": 8,
+    "hasNext": true,
+    "hasPrevious": false
+  },
+  "error": null
+}
+```
+
+### Common Query Examples
+
+#### Basic Pagination
+```bash
+# First page (default: 20 items)
+GET /api/v1/user
+
+# Specific page and size
+GET /api/v1/user?page=2&perPage=50
+
+# Get all results (no pagination)
+GET /api/v1/user?perPage=-1
+```
+
+#### Sorting
+```bash
+# Sort by email ascending (default)
+GET /api/v1/user?sortBy=email
+
+# Sort by creation date descending
+GET /api/v1/user?sortBy=createdAt&sortOrder=desc
+```
+
+#### Filtering
+```bash
+# Exact match
+GET /api/v1/user?filter[isActive][eq]=true
+
+# Pattern matching (simple)
+GET /api/v1/user?filter[email][contains]=@example.com
+GET /api/v1/user?filter[firstName][startsWith]=John
+
+# Pattern matching (advanced with like)
+GET /api/v1/user?filter[email][like]=%@example.com%
+
+# Multiple filters (AND logic)
+GET /api/v1/user?filter[isActive][eq]=true&filter[role][eq]=admin
+```
+
+#### Combined Queries
+```bash
+# Pagination + Sorting + Filtering
+GET /api/v1/user?page=1&perPage=50&filter[isActive][eq]=true&filter[role][eq]=admin&sortBy=email&sortOrder=asc
+```
+
+### Implementation Architecture
+
+#### Type Definitions (`server/types/api.ts`)
+- `Pagination`: Pagination metadata
+- `PaginatedResponse<T>`: Generic paginated response wrapper
+- `SortOrder`: "asc" | "desc"
+- `FilterOperator`: Supported filter operators
+- `Filter`: Single filter definition
+- `ListQuery`: Combined query parameters
+
+#### Query Parser (`server/utils/query-parser.ts`)
+- `parseListQuery(event)`: Parses all query parameters
+- `parsePaginationParams(query)`: Extracts pagination
+- `parseSortParams(query)`: Extracts sorting
+- `parseFilterParams(query)`: Parses filter[field][operator] format
+- `validateSortField()`: Validates sortBy against allowed fields
+- `validateFilters()`: Validates filter fields
+
+#### Pagination Helper (`server/utils/pagination.ts`)
+- `calculatePagination()`: Computes pagination metadata
+- `buildPaginatedResponse()`: Creates paginated response wrapper
+- `calculateLimitOffset()`: Converts page/perPage to limit/offset
+
+#### Base Repository (`server/repositories/base.ts`)
+Enhanced with:
+- `buildFilterCondition()`: Converts Filter to SQL condition
+- `buildFilters()`: Combines multiple filters with AND
+- `buildSort()`: Creates SQL ORDER BY clause
+- `countRecords()`: Counts with optional filters
+
+### Frontend Integration
+
+```typescript
+// Fetch users with pagination
+const { data } = await $fetch('/api/v1/user', {
+  query: {
+    page: 1,
+    perPage: 20,
+    sortBy: 'email',
+    sortOrder: 'asc',
+    'filter[isActive][eq]': true
+  }
+})
+
+// Access pagination info
+console.log(data.pagination.total)
+console.log(data.pagination.hasNext)
+console.log(data.data) // Array of users
+```
+
+### Validation
+
+Zod schemas are available in `server/validators/query.ts`:
+- `paginationSchema`: Validates pagination params
+- `sortSchema`: Validates sort params
+- `filterSchema`: Validates individual filters
+- `listQuerySchema`: Combined validation
+- Endpoint-specific schemas: `userListQuerySchema`, `roleListQuerySchema`, etc.
+
+### Performance Considerations
+
+1. **Parallel Queries**: Count and list queries run in parallel
+2. **Index Optimization**: Ensure indexes on filtered/sorted fields
+3. **Max Page Size**: Enforced limit of 100 items per page
+4. **Validated Fields**: Only allowed fields can be filtered/sorted
 
 ---
 
