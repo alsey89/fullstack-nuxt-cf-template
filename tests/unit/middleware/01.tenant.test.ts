@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeEach, vi } from "vitest";
 import tenantMiddleware from "../../../server/middleware/01.tenant";
-import { AuthenticationError } from "../../../server/error/errors";
+import { TenantMismatchError, InternalServerError } from "../../../server/error/errors";
+import { HdrKeyTenantID } from "../../../server/types/api";
 
 // Mock h3 utilities
 vi.mock("h3", async () => {
@@ -129,14 +130,14 @@ describe("Tenant Middleware (01.tenant)", () => {
       mockEvent.context.cloudflare.env.DB = undefined;
 
       await expect(tenantMiddleware(mockEvent)).rejects.toThrow(
-        "Database not available"
+        InternalServerError
       );
     });
 
     it("ignores tenant headers in single-tenant mode", async () => {
       mockEvent.path = "/api/users";
       vi.mocked(getHeader).mockImplementation((event, header) => {
-        if (header === "x-tenant-id") return "acme";
+        if (header === HdrKeyTenantID) return "acme";
         if (header === "host") return "acme.example.com";
         return undefined;
       });
@@ -175,7 +176,7 @@ describe("Tenant Middleware (01.tenant)", () => {
       mockEvent.path = "/api/users";
       vi.mocked(getHeader).mockImplementation((event, header) => {
         if (header === "host") return "acme.example.com";
-        if (header === "x-tenant-id") return "wrong-tenant";
+        if (header === HdrKeyTenantID) return "wrong-tenant";
         return undefined;
       });
 
@@ -206,7 +207,7 @@ describe("Tenant Middleware (01.tenant)", () => {
       // The subdomain would be "example", but we don't have DB_EXAMPLE
       // This should throw an error about tenant being required or database not found
       await expect(tenantMiddleware(mockEvent)).rejects.toThrow(
-        AuthenticationError
+        TenantMismatchError
       );
     });
 
@@ -221,7 +222,7 @@ describe("Tenant Middleware (01.tenant)", () => {
       delete mockEvent.context.cloudflare.env.DB_UNKNOWN_TENANT;
 
       await expect(tenantMiddleware(mockEvent)).rejects.toThrow(
-        AuthenticationError
+        TenantMismatchError
       );
       await expect(tenantMiddleware(mockEvent)).rejects.toThrow(
         'Database for tenant "unknown-tenant" not found'
@@ -287,7 +288,7 @@ describe("Tenant Middleware (01.tenant)", () => {
     it("accepts x-tenant-id header in development", async () => {
       mockEvent.path = "/api/users";
       vi.mocked(getHeader).mockImplementation((event, header) => {
-        if (header === "x-tenant-id") return "acme";
+        if (header === HdrKeyTenantID) return "acme";
         if (header === "host") return "localhost:3000";
         return undefined;
       });
@@ -301,7 +302,7 @@ describe("Tenant Middleware (01.tenant)", () => {
     it("prioritizes x-tenant-id header over subdomain in development", async () => {
       mockEvent.path = "/api/users";
       vi.mocked(getHeader).mockImplementation((event, header) => {
-        if (header === "x-tenant-id") return "header-tenant";
+        if (header === HdrKeyTenantID) return "header-tenant";
         if (header === "host") return "subdomain-tenant.localhost:3000";
         return undefined;
       });
@@ -338,14 +339,14 @@ describe("Tenant Middleware (01.tenant)", () => {
       // The subdomain would be "localhost", but we don't have DB_LOCALHOST
       // This will throw a database not found error
       await expect(tenantMiddleware(mockEvent)).rejects.toThrow(
-        AuthenticationError
+        TenantMismatchError
       );
     });
 
     it("handles development localhost without subdomain", async () => {
       mockEvent.path = "/api/users";
       vi.mocked(getHeader).mockImplementation((event, header) => {
-        if (header === "x-tenant-id") return "acme";
+        if (header === HdrKeyTenantID) return "acme";
         if (header === "host") return "localhost:3000";
         return undefined;
       });
@@ -413,7 +414,7 @@ describe("Tenant Middleware (01.tenant)", () => {
       vi.mocked(getHeader).mockReturnValue(undefined);
 
       await expect(tenantMiddleware(mockEvent)).rejects.toThrow(
-        AuthenticationError
+        TenantMismatchError
       );
     });
 
@@ -426,7 +427,7 @@ describe("Tenant Middleware (01.tenant)", () => {
       });
 
       await expect(tenantMiddleware(mockEvent)).rejects.toThrow(
-        AuthenticationError
+        TenantMismatchError
       );
     });
 
@@ -434,7 +435,7 @@ describe("Tenant Middleware (01.tenant)", () => {
       mockEvent.context.cloudflare = undefined;
 
       await expect(tenantMiddleware(mockEvent)).rejects.toThrow(
-        "Database not available"
+        InternalServerError
       );
     });
 
@@ -442,7 +443,7 @@ describe("Tenant Middleware (01.tenant)", () => {
       mockEvent.context.cloudflare.env = undefined;
 
       await expect(tenantMiddleware(mockEvent)).rejects.toThrow(
-        "Database not available"
+        InternalServerError
       );
     });
 

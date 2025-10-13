@@ -16,7 +16,8 @@ This is the primary reference for AI-assisted development. For complete document
 6. [API Responses](#api-responses)
 7. [Common Patterns](#common-patterns)
 8. [Database Conventions](#database-conventions)
-9. [Deep Dive Docs](#deep-dive-docs)
+9. [Testing](#testing)
+10. [Deep Dive Docs](#deep-dive-docs)
 
 ---
 
@@ -473,12 +474,94 @@ export const examples = sqliteTable('examples', {
 
 ---
 
+## Testing
+
+**Quick Commands:**
+```bash
+npm run test:unit        # Unit tests (services, middleware)
+npm run test:watch       # Watch mode
+npm run test:coverage    # Coverage report
+```
+
+### Critical Test Patterns
+
+#### 1. Test Error Types, Not Messages
+```typescript
+import { UserNotFoundError, ValidationError } from '#server/error/errors'
+
+// ✅ Test error class
+await expect(service.getUser('invalid')).rejects.toThrow(UserNotFoundError)
+
+// ❌ Don't test exact message (brittle, breaks on improvements)
+await expect(service.getUser('invalid')).rejects.toThrow('User not found')
+```
+
+**Why?** Error messages are implementation details that change. Testing types ensures correct error handling while allowing message improvements.
+
+#### 2. Use Constants, Not Magic Strings
+```typescript
+import { HdrKeyTenantID } from '#server/types/api'
+
+// ✅ Use constant
+vi.mocked(getHeader).mockImplementation((event, header) => {
+  if (header === HdrKeyTenantID) return 'test-tenant'
+  return undefined
+})
+
+// ❌ Hardcode string
+if (header === 'X-Tenant-ID') return 'test-tenant'
+```
+
+**Why?** Constants keep tests in sync with production code. Header name changes automatically propagate to tests.
+
+#### 3. Global Mock Signatures (nuxt-auth-utils)
+```typescript
+// IMPORTANT: Parameter order matters!
+global.verifyPassword = vi.fn().mockImplementation(
+  async (hash: string, password: string) => {
+    return hash === `hashed_${password}`
+  }
+)
+```
+
+**Critical:** `verifyPassword` signature is `(hash, password)` - not `(password, hash)`.
+
+### Test Configuration
+
+Two config files work together:
+
+**`tests/tsconfig.json`** - TypeScript/IDE support
+- Extends `.nuxt/tsconfig.json` (inherits all Nuxt path mappings)
+- Only needs `types: ["vitest/globals"]` for test function autocomplete
+
+**`vitest.config.ts`** - Runtime module resolution
+- **Must explicitly define path aliases** (`#server`, `#shared`)
+- Vite doesn't read TypeScript path mappings
+- This is where `Cannot find module '#server/...'` errors come from
+
+```typescript
+// vitest.config.ts
+export default defineConfig({
+  resolve: {
+    alias: {
+      '#server': fileURLToPath(new URL('./server', import.meta.url)),
+      '#shared': fileURLToPath(new URL('./shared', import.meta.url)),
+    },
+  },
+})
+```
+
+**Full Testing Guide:** See [TESTING.md](TESTING.md) for complete patterns, mock utilities, and troubleshooting.
+
+---
+
 ## Deep Dive Docs
 
 For complete documentation, refer to:
 
 - **[CONVENTIONS.md](CONVENTIONS.md)** - Complete architectural patterns and conventions (976 lines)
 - **[ERROR_HANDLING.md](ERROR_HANDLING.md)** - Complete error system with all error classes and codes
+- **[TESTING.md](TESTING.md)** - Complete testing guide: patterns, mocks, configuration, troubleshooting
 - **[RBAC.md](RBAC.md)** - Enterprise RBAC system with API reference
 - **[SECURITY.md](SECURITY.md)** - Security architecture and threat model
 - **[TEMPLATE_SETUP.md](TEMPLATE_SETUP.md)** - Complete setup guide for new projects

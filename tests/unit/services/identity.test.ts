@@ -321,7 +321,6 @@ describe("IdentityService", () => {
 
       const result = await service.requestPasswordReset("test@example.com");
 
-      expect(result.success).toBe(true);
       expect(result.resetToken).toBe("reset-token");
       expect(mockAuditLogRepo.log).toHaveBeenCalledWith(
         "user-1",
@@ -339,7 +338,7 @@ describe("IdentityService", () => {
         "nonexistent@example.com"
       );
 
-      expect(result.success).toBe(true);
+      expect(result.resetToken).toBe(null);
       expect(mockGeneratePasswordResetToken).not.toHaveBeenCalled();
     });
   });
@@ -534,7 +533,7 @@ describe("IdentityService", () => {
       const result = await service.listUsers(10, 0);
 
       expect(result).toHaveLength(2);
-      expect(mockUserRepo.list).toHaveBeenCalledWith(10, 0);
+      expect(mockUserRepo.list).toHaveBeenCalledWith(10, 0, undefined, undefined, undefined);
     });
   });
 

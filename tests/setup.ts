@@ -35,9 +35,9 @@ global.hashPassword = vi.fn().mockImplementation(async (password: string) => {
   return `hashed_${password}`
 })
 
-global.verifyPassword = vi.fn().mockImplementation(async (password: string, hash: string) => {
+global.verifyPassword = vi.fn().mockImplementation(async (hash: string, password: string) => {
   // Check if hash matches the expected pattern
-  // Note: nuxt-auth-utils verifyPassword signature is (password, hash)
+  // Note: nuxt-auth-utils verifyPassword signature is (hash, password)
   return hash === `hashed_${password}`
 })
 

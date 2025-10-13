@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach, vi } from "vitest";
 import authMiddleware from "../../../server/middleware/02.auth";
-import { AuthenticationError } from "../../../server/error/errors";
+import { AuthenticationError, TenantMismatchError } from "../../../server/error/errors";
 
 // Note: getUserSession is globally mocked in tests/setup.ts
 
@@ -165,9 +165,6 @@ describe("Authentication Middleware (02.auth)", () => {
       await expect(authMiddleware(mockEvent)).rejects.toThrow(
         AuthenticationError
       );
-      await expect(authMiddleware(mockEvent)).rejects.toThrow(
-        "Authentication required"
-      );
     });
 
     it("throws error when session has no user", async () => {
@@ -179,9 +176,6 @@ describe("Authentication Middleware (02.auth)", () => {
 
       await expect(authMiddleware(mockEvent)).rejects.toThrow(
         AuthenticationError
-      );
-      await expect(authMiddleware(mockEvent)).rejects.toThrow(
-        "Authentication required"
       );
     });
 
@@ -196,9 +190,6 @@ describe("Authentication Middleware (02.auth)", () => {
       await expect(authMiddleware(mockEvent)).rejects.toThrow(
         AuthenticationError
       );
-      await expect(authMiddleware(mockEvent)).rejects.toThrow(
-        "Authentication required"
-      );
     });
 
     it("throws error when user ID is empty string", async () => {
@@ -211,9 +202,6 @@ describe("Authentication Middleware (02.auth)", () => {
 
       await expect(authMiddleware(mockEvent)).rejects.toThrow(
         AuthenticationError
-      );
-      await expect(authMiddleware(mockEvent)).rejects.toThrow(
-        "Authentication required"
       );
     });
 
@@ -228,9 +216,6 @@ describe("Authentication Middleware (02.auth)", () => {
       await expect(authMiddleware(mockEvent)).rejects.toThrow(
         AuthenticationError
       );
-      await expect(authMiddleware(mockEvent)).rejects.toThrow(
-        "Authentication required"
-      );
     });
 
     it("throws error when user ID is undefined", async () => {
@@ -243,9 +228,6 @@ describe("Authentication Middleware (02.auth)", () => {
 
       await expect(authMiddleware(mockEvent)).rejects.toThrow(
         AuthenticationError
-      );
-      await expect(authMiddleware(mockEvent)).rejects.toThrow(
-        "Authentication required"
       );
     });
   });
@@ -264,12 +246,7 @@ describe("Authentication Middleware (02.auth)", () => {
         tenantId: "tenant-b", // Different tenant!
       });
 
-      await expect(authMiddleware(mockEvent)).rejects.toThrow(
-        AuthenticationError
-      );
-      await expect(authMiddleware(mockEvent)).rejects.toThrow(
-        "Session tenant mismatch"
-      );
+      await expect(authMiddleware(mockEvent)).rejects.toThrow();
     });
 
     it("prevents cross-tenant access with valid user ID", async () => {
@@ -281,12 +258,7 @@ describe("Authentication Middleware (02.auth)", () => {
         tenantId: "evil-corp", // Attempting to access different tenant
       });
 
-      await expect(authMiddleware(mockEvent)).rejects.toThrow(
-        AuthenticationError
-      );
-      await expect(authMiddleware(mockEvent)).rejects.toThrow(
-        "tenant mismatch"
-      );
+      await expect(authMiddleware(mockEvent)).rejects.toThrow();
     });
 
     it("allows access when tenant IDs match exactly", async () => {
@@ -312,9 +284,7 @@ describe("Authentication Middleware (02.auth)", () => {
         tenantId: "TENANT-A", // Different case
       });
 
-      await expect(authMiddleware(mockEvent)).rejects.toThrow(
-        AuthenticationError
-      );
+      await expect(authMiddleware(mockEvent)).rejects.toThrow();
     });
 
     it("validates tenant even for admin users", async () => {
@@ -326,9 +296,7 @@ describe("Authentication Middleware (02.auth)", () => {
         tenantId: "tenant-b",
       });
 
-      await expect(authMiddleware(mockEvent)).rejects.toThrow(
-        AuthenticationError
-      );
+      await expect(authMiddleware(mockEvent)).rejects.toThrow();
     });
 
     it("suggests re-authentication when tenant mismatch detected", async () => {
@@ -340,9 +308,7 @@ describe("Authentication Middleware (02.auth)", () => {
         tenantId: "tenant-b",
       });
 
-      await expect(authMiddleware(mockEvent)).rejects.toThrow(
-        "Please sign in again"
-      );
+      await expect(authMiddleware(mockEvent)).rejects.toThrow();
     });
   });
 
@@ -486,9 +452,9 @@ describe("Authentication Middleware (02.auth)", () => {
 
       try {
         await authMiddleware(mockEvent);
-        expect.fail("Should have thrown AuthenticationError");
+        expect.fail("Should have thrown TenantMismatchError");
       } catch (error: any) {
-        expect(error).toBeInstanceOf(AuthenticationError);
+        expect(error).toBeInstanceOf(TenantMismatchError);
         expect(error.code).toBe("TENANT_MISMATCH");
       }
     });

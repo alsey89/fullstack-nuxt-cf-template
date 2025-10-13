@@ -1,11 +1,7 @@
 {
   "extends": "../.nuxt/tsconfig.json",
   "compilerOptions": {
-    "types": ["vitest/globals"],
-    "paths": {
-      "~/*": ["../*"],
-      "@/*": ["../*"]
-    }
+    "types": ["vitest/globals"]
   },
   "include": [
     "./**/*.ts",
