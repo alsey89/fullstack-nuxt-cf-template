@@ -4,9 +4,6 @@
 // Central export point for all repositories
 // ========================================
 
-// Types
-export * from "./types";
-
 // Base repositories
 export * from "./base";
 

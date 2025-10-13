@@ -27,17 +27,20 @@ export default defineEventHandler(async (event) => {
   const session = await getUserSession(event);
 
   if (!session || !session.user?.id) {
-    throw new AuthenticationError();
+    throw new AuthenticationError("Invalid or missing authentication session.");
   }
 
   // CRITICAL: Validate session is bound to current tenant
   // This prevents cross-tenant access by reusing session tokens
   if (session.tenantId !== event.context.tenantId) {
-    throw new TenantMismatchError(undefined, {
-      sessionTenantId: session.tenantId,
-      currentTenantId: event.context.tenantId,
-      userId: session.user.id
-    });
+    throw new TenantMismatchError(
+      "Tenant mismatch between session and request",
+      {
+        sessionTenantId: session.tenantId,
+        currentTenantId: event.context.tenantId,
+        userId: session.user.id,
+      }
+    );
   }
 
   // Set user context for downstream handlers

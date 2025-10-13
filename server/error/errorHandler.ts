@@ -3,6 +3,7 @@ import { setResponseStatus, setResponseHeader, send } from "h3";
 import { ZodError } from "zod";
 import type { AppError } from "#server/error/errors";
 import { logError, ValidationError } from "#server/error/errors";
+import { isDevelopment } from "#server/utils/environment";
 
 // ========================================
 // NITRO ERROR HANDLER
@@ -13,8 +14,7 @@ import { logError, ValidationError } from "#server/error/errors";
 // ========================================
 
 export default defineNitroErrorHandler((error: H3Error, event) => {
-  const config = useRuntimeConfig(event);
-  const isDev = config.public.environment === "development";
+  const isDev = isDevelopment(event);
 
   // H3 wraps thrown errors - extract the original error from error.cause
   const originalError = error.cause;

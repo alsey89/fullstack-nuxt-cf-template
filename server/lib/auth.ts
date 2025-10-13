@@ -1,6 +1,7 @@
 import { SignJWT, jwtVerify } from "jose";
 import type { H3Event } from "h3";
 import { InvalidTokenError, TokenExpiredError, InvalidTokenPurposeError } from "#server/error/errors";
+import { isDevelopment } from "#server/utils/environment";
 
 // ========================================
 // AUTHENTICATION LIBRARY
@@ -46,7 +47,7 @@ function getJWTSecret(event?: H3Event): Uint8Array {
   // Get secret from runtime config
   const config = event ? useRuntimeConfig(event) : useRuntimeConfig();
   const secret = config.jwtSecret;
-  const isDev = config.public.environment === "development";
+  const isDev = isDevelopment(event);
 
   if (
     !secret ||

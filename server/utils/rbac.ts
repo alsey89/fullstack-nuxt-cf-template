@@ -1,5 +1,6 @@
 import type { H3Event } from "h3";
 import type { PermissionCode } from "#server/database/schema/identity";
+import { isDevelopment } from "#server/utils/environment";
 
 // ========================================
 // RBAC UTILITY HELPERS
@@ -205,9 +206,7 @@ export class RBACDebugger {
     granted: boolean,
     userPermissions: PermissionCode[]
   ): void {
-    // Get environment from runtime config
-    const config = useRuntimeConfig();
-    if (config.public.environment === "development") {
+    if (isDevelopment()) {
       console.log("[RBAC] Permission Check:", {
         userId,
         requiredPermission: permission,

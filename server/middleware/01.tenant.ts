@@ -1,5 +1,11 @@
 import { getHeader } from "h3";
-import { AuthenticationError } from "#server/error/errors";
+import {
+  AuthenticationError,
+  InternalServerError,
+  TenantMismatchError,
+} from "#server/error/errors";
+import { HdrKeyTenantID } from "#server/types/api";
+import { isDevelopment } from "#server/utils/environment";
 
 // ========================================
 // DATABASE SELECTION MIDDLEWARE
@@ -42,7 +48,9 @@ export default defineEventHandler(async (event) => {
     const db = event.context.cloudflare?.env?.DB as D1Database;
 
     if (!db) {
-      throw new Error("Database not available");
+      throw new InternalServerError(
+        "Default database not found. Ensure DB binding exists."
+      );
     }
 
     event.context.db = db;
@@ -51,21 +59,19 @@ export default defineEventHandler(async (event) => {
   }
 
   // Multi-tenant mode: Select tenant-specific database
-  const isDev = config.public.environment === "development";
-
   const host = getHeader(event, "host") || "";
   const hostWithoutPort = host.split(":")[0]; // "acme.domain.localhost:3000" → "acme.domain.localhost"
   const subdomain = hostWithoutPort.split(".")[0] || null; // "acme.domain.localhost" → "acme"
 
+  const isDev = isDevelopment(event);
   const tenantId = isDev
-    ? getHeader(event, "x-tenant-id") || subdomain
+    ? getHeader(event, HdrKeyTenantID) || subdomain
     : subdomain;
 
   if (!tenantId) {
-    throw new AuthenticationError(
+    throw new TenantMismatchError(
       "Tenant ID required. Use subdomain (e.g., acme.example.com)" +
-        (isDev ? " or x-tenant-id header" : ""),
-      "TENANT_REQUIRED"
+        (isDev ? " or x-tenant-id header" : "")
     );
   }
 
@@ -79,10 +85,9 @@ export default defineEventHandler(async (event) => {
   const db = cfEnv?.[dbBinding] as D1Database;
 
   if (!db) {
-    throw new AuthenticationError(
+    throw new TenantMismatchError(
       `Database for tenant "${tenantId}" not found. ` +
-        `Expected binding: ${dbBinding}`,
-      "TENANT_DATABASE_NOT_FOUND"
+        `Expected binding: ${dbBinding}`
     );
   }
 

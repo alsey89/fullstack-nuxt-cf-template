@@ -1,9 +1,5 @@
-export const HdrKeyRequestID = 'X-Request-ID';
-export const HdrKeyTenantID = 'X-Tenant-ID';
-
-export const CtxKeyRequestID = 'requestID';
-export const CtxKeyRawTenantID = 'rawTenantID'; // The raw tenant ID from the request header, not resolved.
-export const CtxKeyResolvedTenantID = 'resolvedTenantID';
+export const HdrKeyRequestID = "X-Request-ID";
+export const HdrKeyTenantID = "X-Tenant-ID";
 
 export interface ApiResponse<T = any> {
   message: string;
@@ -44,7 +40,7 @@ export interface PaginatedResponse<T> {
 // SORTING
 //////////////////////////////////////////////////////////////////////////
 
-export type SortOrder = 'asc' | 'desc';
+export type SortOrder = "asc" | "desc";
 
 export interface SortOptions {
   sortBy?: string;
@@ -56,19 +52,19 @@ export interface SortOptions {
 //////////////////////////////////////////////////////////////////////////
 
 export type FilterOperator =
-  | 'eq'         // equal
-  | 'ne'         // not equal
-  | 'like'       // SQL LIKE pattern (user provides %)
-  | 'contains'   // contains (auto-wrapped with %)
-  | 'startsWith' // starts with (auto-appends %)
-  | 'endsWith'   // ends with (auto-prepends %)
-  | 'in'         // in array
-  | 'gt'         // greater than
-  | 'gte'        // greater than or equal
-  | 'lt'         // less than
-  | 'lte'        // less than or equal
-  | 'isNull'     // is NULL
-  | 'notNull'    // is NOT NULL;
+  | "eq" // equal
+  | "ne" // not equal
+  | "like" // SQL LIKE pattern (user provides %)
+  | "contains" // contains (auto-wrapped with %)
+  | "startsWith" // starts with (auto-appends %)
+  | "endsWith" // ends with (auto-prepends %)
+  | "in" // in array
+  | "gt" // greater than
+  | "gte" // greater than or equal
+  | "lt" // less than
+  | "lte" // less than or equal
+  | "isNull" // is NULL
+  | "notNull"; // is NOT NULL;
 
 export interface Filter {
   field: string;

@@ -2,6 +2,7 @@ import { getHeader, defineEventHandler } from "h3";
 import { seedDatabase, clearDatabase } from "#server/database/seed";
 import { createSuccessResponse } from "#server/lib/response";
 import { AuthorizationError } from "#server/error/errors";
+import { isProduction } from "#server/utils/environment";
 
 // ========================================
 // POST /api/seed
@@ -16,10 +17,10 @@ export default defineEventHandler(async (event) => {
   const env = event.context.cloudflare?.env;
 
   // Check if we're in production
-  const isProduction = config.public.environment === "production";
+  const isProd = isProduction(event);
   const seedSecret = config.seedSecret;
 
-  if (isProduction) {
+  if (isProd) {
     // Require secret in production
     const providedSecret = getHeader(event, "x-seed-secret");
 
@@ -42,7 +43,7 @@ export default defineEventHandler(async (event) => {
   await seedDatabase(db, { multitenancyEnabled: isMultitenancyEnabled });
 
   return createSuccessResponse("Database seeded successfully", {
-    environment: isProduction ? "production" : "development",
+    environment: isProd ? "production" : "development",
     multitenancy: isMultitenancyEnabled ? "enabled" : "disabled",
   });
 });

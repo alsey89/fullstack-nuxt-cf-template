@@ -1,7 +1,7 @@
 # Development Conventions & Guidelines
 
 **Project:** Cloudflare Full-Stack Template
-**Last Updated:** 2025-10-10
+**Last Updated:** 2025-10-13
 
 This document consolidates all coding conventions, architectural patterns, and best practices for the Cloudflare Full-Stack Template.
 
@@ -11,15 +11,16 @@ This document consolidates all coding conventions, architectural patterns, and b
 
 1. [Architecture Overview](#architecture-overview)
 2. [Import Aliases](#import-aliases)
-3. [Service Layer Pattern](#service-layer-pattern)
-4. [Repository Layer](#repository-layer)
-5. [API Response Format](#api-response-format)
-6. [Error Handling](#error-handling)
-7. [Pagination](#pagination)
-8. [Route Handlers](#route-handlers)
-9. [Testing](#testing)
-10. [Database Access](#database-access)
-11. [Field Naming](#field-naming)
+3. [Environment Detection](#environment-detection)
+4. [Service Layer Pattern](#service-layer-pattern)
+5. [Repository Layer](#repository-layer)
+6. [API Response Format](#api-response-format)
+7. [Error Handling](#error-handling)
+8. [Pagination](#pagination)
+9. [Route Handlers](#route-handlers)
+10. [Testing](#testing)
+11. [Database Access](#database-access)
+12. [Field Naming](#field-naming)
 
 ---
 
@@ -217,6 +218,149 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useAuth } from "@/composables/useAuth";
 import type { ApiResponse } from "~~/server/types/api";
+```
+
+---
+
+## Environment Detection
+
+Always use the centralized environment utilities from [server/utils/environment.ts](server/utils/environment.ts) to check the current environment. This prevents typos and provides type-safe environment detection.
+
+### Available Utilities
+
+```typescript
+import {
+  isDevelopment,
+  isProduction,
+  isStaging,
+  isNonProduction,
+  getEnvironment,
+  ENV
+} from "#server/utils/environment";
+```
+
+### Environment Check Functions
+
+```typescript
+// Check if current environment is development
+if (isDevelopment(event)) {
+  console.log("Debug info");
+}
+
+// Check if production
+if (isProduction(event)) {
+  // Production-only logic
+}
+
+// Check if staging
+if (isStaging(event)) {
+  // Staging-only logic
+}
+
+// Check if NOT production (dev or staging)
+if (isNonProduction(event)) {
+  // Non-production logic
+}
+
+// Get environment string directly
+const env = getEnvironment(event); // "development" | "staging" | "production"
+```
+
+### Environment Constants
+
+Use constants instead of hardcoded strings:
+
+```typescript
+// ✅ GOOD: Use constants
+if (config.public.environment === ENV.DEVELOPMENT) {
+  // ...
+}
+
+// ❌ BAD: Hardcoded strings (prone to typos)
+if (config.public.environment === "development") {
+  // What if you type "developmentt"?
+}
+```
+
+### When to Assign vs. Inline
+
+**Assign to variable when:**
+- Used 2+ times in the same scope
+- Makes complex logic clearer
+- Avoids repeated function calls
+
+**Use inline when:**
+- Used only once
+- Already in a clear conditional
+- The function name is self-documenting
+
+#### Examples
+
+```typescript
+// ✅ GOOD: Assign when used multiple times
+const isDev = isDevelopment(event);
+const tenantId = isDev ? getHeader(event, "x-tenant-id") || subdomain : subdomain;
+if (!tenantId) {
+  throw new Error("Tenant required" + (isDev ? " or x-tenant-id header" : ""));
+}
+
+// ✅ GOOD: Inline for single use
+if (isDevelopment()) {
+  console.log("[RBAC] Permission Check:", { userId, permission });
+}
+
+// ✅ GOOD: Assign for readability in complex conditions
+const isDev = isDevelopment(event);
+if (!secret || (!isDev && secret === "overwrite-this-with-environment-in-production")) {
+  throw new Error("JWT_SECRET not configured");
+}
+```
+
+### Rules & Best Practices
+
+1. **Never use hardcoded environment strings**: Always use `isDevelopment()`, `isProduction()`, etc.
+2. **Pass the event when available**: Most functions accept an optional `event: H3Event` parameter
+3. **Use constants for comparisons**: When you need the raw string, use `ENV.DEVELOPMENT` instead of `"development"`
+4. **Assign to variable for reuse**: If checking the same environment 2+ times, assign to `const isDev`
+5. **Keep it simple**: For single checks, use inline `if (isDevelopment())`
+
+### Common Use Cases
+
+#### Debug Logging (Development Only)
+
+```typescript
+if (isDevelopment()) {
+  console.log("[DEBUG] User authenticated:", userId);
+}
+```
+
+#### Environment-Specific Configuration
+
+```typescript
+const isDev = isDevelopment(event);
+if (!secret || (!isDev && secret === "default-secret")) {
+  throw new Error("Secret not configured for production");
+}
+```
+
+#### Conditional Error Details
+
+```typescript
+const isDev = isDevelopment(event);
+return {
+  message: isClientError || isDev ? error.message : "Internal server error",
+  ...(isDev && { debug: { stack: error.stack } })
+};
+```
+
+#### Development-Only Features
+
+```typescript
+// Allow x-tenant-id header in development only
+const isDev = isDevelopment(event);
+const tenantId = isDev
+  ? getHeader(event, "x-tenant-id") || subdomain
+  : subdomain;
 ```
 
 ---
