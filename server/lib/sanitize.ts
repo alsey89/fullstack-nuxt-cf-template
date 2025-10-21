@@ -1,4 +1,3 @@
-import DOMPurify from 'isomorphic-dompurify'
 import validator from 'validator'
 
 // ========================================
@@ -19,11 +18,19 @@ import validator from 'validator'
 export function sanitizeHtml(input: string | null | undefined): string {
   if (!input) return ''
 
-  // Strip ALL HTML tags (no tags allowed)
-  return DOMPurify.sanitize(input, {
-    ALLOWED_TAGS: [],
-    ALLOWED_ATTR: [],
-  }).trim()
+  // Strip ALL HTML tags using a simple regex approach
+  // This is CF-compatible (no DOM dependencies)
+  return input
+    .replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '') // Remove script tags
+    .replace(/<style\b[^<]*(?:(?!<\/style>)<[^<]*)*<\/style>/gi, '')   // Remove style tags
+    .replace(/<[^>]+>/g, '')                                             // Remove all other HTML tags
+    .replace(/&lt;/g, '')                                                // Remove HTML entities
+    .replace(/&gt;/g, '')
+    .replace(/&amp;/g, '&')
+    .replace(/&quot;/g, '"')
+    .replace(/&#x27;/g, "'")
+    .replace(/&#x2F;/g, '/')
+    .trim()
 }
 
 /**
