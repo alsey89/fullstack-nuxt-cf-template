@@ -311,6 +311,24 @@ export class IdentityService {
   // ========================================
 
   /**
+   * Get current authenticated user
+   */
+  async getCurrentUser(): Promise<User> {
+    if (!this.userId) {
+      throw new AuthenticationError("User not authenticated");
+    }
+
+    const user = await this.userRepo.findById(this.userId);
+    if (!user) {
+      throw new UserNotFoundError();
+    }
+
+    // Remove sensitive fields
+    const { passwordHash, ...userData } = user;
+    return userData as User;
+  }
+
+  /**
    * Get user by ID
    */
   async getUser(userId: string): Promise<User> {

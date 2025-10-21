@@ -104,7 +104,7 @@ export const useUserStore = defineStore("user-store", {
         });
 
         if (status === 200) {
-          this.userProfile = payload.data.user;
+          this.userProfile = payload.data;
         }
       } catch (error) {
         console.error('Failed to fetch user profile:', error);

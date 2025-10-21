@@ -11,7 +11,7 @@ import { createSuccessResponse } from '#server/lib/response'
 export default defineEventHandler(async (event) => {
   const identityService = createIdentityService(event)
 
-  const result = await identityService.getCurrentUser()
+  const user = await identityService.getCurrentUser()
 
-  return createSuccessResponse('User profile retrieved successfully', result)
+  return createSuccessResponse('User profile retrieved successfully', user)
 })
