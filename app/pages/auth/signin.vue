@@ -84,9 +84,9 @@ definePageMeta({
   layout: 'auth',
 });
 
-import { z } from 'zod';
 import { useForm } from 'vee-validate';
 import { toTypedSchema } from '@vee-validate/zod';
+import { signinSchema } from '#shared/validators/auth';
 
 const { t } = useI18n();
 const userStore = useUserStore();
@@ -98,12 +98,8 @@ const showToast = useShowToast();
 // Form Setup
 /////////////////////////////////////////////////////////////////////
 
-const formSchema = toTypedSchema(
-  z.object({
-    email: z.string().min(1, t('auth.signin.email.requiredMessage')).email(t('auth.signin.email.formatErrMessage')),
-    password: z.string().min(1, t('auth.signin.password.requiredMessage')),
-  })
-);
+// Use shared schema (same validation as backend)
+const formSchema = toTypedSchema(signinSchema);
 const { handleSubmit, isSubmitting, isFieldDirty } = useForm({
   validationSchema: formSchema,
 });

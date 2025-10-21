@@ -1,3 +1,9 @@
+import {
+  MAX_PER_PAGE,
+  DEFAULT_PER_PAGE,
+  DEFAULT_PAGE,
+} from "#shared/constants/api";
+
 export const HdrKeyRequestID = "X-Request-ID";
 export const HdrKeyTenantID = "X-Tenant-ID";
 
@@ -18,9 +24,8 @@ export interface ApiError {
 // PAGINATION & FILTERING
 //////////////////////////////////////////////////////////////////////////
 
-export const MAX_PER_PAGE = 100;
-export const DEFAULT_PER_PAGE = 20;
-export const DEFAULT_PAGE = 1;
+// Re-export constants for backward compatibility
+export { MAX_PER_PAGE, DEFAULT_PER_PAGE, DEFAULT_PAGE };
 
 export interface Pagination {
   page: number;

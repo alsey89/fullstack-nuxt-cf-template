@@ -50,9 +50,9 @@ definePageMeta({
   layout: 'auth',
 });
 
-import { z } from 'zod';
 import { useForm } from 'vee-validate';
 import { toTypedSchema } from '@vee-validate/zod';
+import { passwordResetRequestSchema } from '#shared/validators/auth';
 
 const userStore = useUserStore();
 
@@ -60,11 +60,8 @@ const userStore = useUserStore();
 // Form Setup
 /////////////////////////////////////////////////////////////////////
 
-const formSchema = toTypedSchema(
-  z.object({
-    email: z.string().min(1, 'Email is required').email('Invalid email format'),
-  })
-);
+// Use shared schema (same validation as backend)
+const formSchema = toTypedSchema(passwordResetRequestSchema);
 
 const { handleSubmit, isSubmitting, isFieldDirty } = useForm({
   validationSchema: formSchema,

@@ -8,7 +8,7 @@ import { isDevelopment } from "#server/utils/environment";
 // ========================================
 // JWT token utilities for email confirmation & password reset
 // Note: Session-based auth is handled by nuxt-auth-utils
-// Note: Password validation is in server/validators/password.ts
+// Note: Password validation is in shared/validators/password.ts
 // ========================================
 
 // ========================================

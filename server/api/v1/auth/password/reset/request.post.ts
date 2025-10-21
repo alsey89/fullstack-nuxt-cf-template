@@ -5,7 +5,7 @@ import {
   AuthenticationError,
 } from "#server/error/errors";
 import { createSuccessResponse } from "#server/lib/response";
-import { passwordResetRequestSchema } from "#server/validators/auth";
+import { passwordResetRequestSchema } from "#shared/validators/auth";
 import { sanitizeEmail } from "#server/lib/sanitize";
 
 // ========================================

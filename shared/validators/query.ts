@@ -1,9 +1,5 @@
 import { z } from "zod";
-import {
-  MAX_PER_PAGE,
-  DEFAULT_PER_PAGE,
-  DEFAULT_PAGE,
-} from "#server/types/api";
+import { MAX_PER_PAGE, DEFAULT_PER_PAGE, DEFAULT_PAGE } from "../constants/api";
 
 // ========================================
 // QUERY VALIDATION SCHEMAS
@@ -96,7 +92,15 @@ export type ListQueryParams = z.infer<typeof listQuerySchema>;
  */
 export const userListQuerySchema = listQuerySchema.extend({
   sortBy: z
-    .enum(["email", "firstName", "lastName", "createdAt", "role", "isActive", "isEmailVerified"])
+    .enum([
+      "email",
+      "firstName",
+      "lastName",
+      "createdAt",
+      "role",
+      "isActive",
+      "isEmailVerified",
+    ])
     .optional(),
 });
 
@@ -119,7 +123,9 @@ export const permissionListQuerySchema = listQuerySchema.extend({
   sortBy: z.enum(["code", "category", "description"]).optional(),
 });
 
-export type PermissionListQueryParams = z.infer<typeof permissionListQuerySchema>;
+export type PermissionListQueryParams = z.infer<
+  typeof permissionListQuerySchema
+>;
 
 /**
  * Helper function to validate and parse list query parameters

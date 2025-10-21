@@ -209,7 +209,7 @@ import type { NewUser } from "#server/database/schema/identity";
 import { createIdentityService } from "#server/services/identity";
 import { createSuccessResponse } from "#server/lib/response";
 import { ValidationError } from "#server/error/errors";
-import { signinSchema } from "#server/validators/auth";
+import { signinSchema } from "#shared/validators/auth";
 ```
 
 #### Repository Files

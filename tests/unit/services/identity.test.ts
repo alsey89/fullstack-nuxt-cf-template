@@ -32,7 +32,7 @@ vi.mock("../../../server/lib/auth", () => ({
 }));
 
 // Mock password validator
-vi.mock("../../../server/validators/password", () => ({
+vi.mock("../../../shared/validators/password", () => ({
   validatePasswordStrength: (...args: any[]) =>
     mockValidatePasswordStrength(...args),
 }));

@@ -1,7 +1,7 @@
 import { createIdentityService } from "#server/services/identity";
 import { ValidationError } from "#server/error/errors";
 import { createSuccessResponse } from "#server/lib/response";
-import { signupSchema } from "#server/validators/auth";
+import { signupSchema } from "#shared/validators/auth";
 import { sanitizeEmail, sanitizeHtml } from "#server/lib/sanitize";
 
 // ========================================

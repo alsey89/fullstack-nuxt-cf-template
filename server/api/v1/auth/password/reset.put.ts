@@ -1,7 +1,7 @@
 import { createIdentityService } from "#server/services/identity";
 import { ValidationError } from "#server/error/errors";
 import { createSuccessResponse } from "#server/lib/response";
-import { passwordResetSchema } from "#server/validators/auth";
+import { passwordResetSchema } from "#shared/validators/auth";
 
 // ========================================
 // PUT /api/v1/auth/password/reset

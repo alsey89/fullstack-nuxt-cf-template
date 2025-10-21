@@ -1,7 +1,7 @@
 import { createIdentityService } from "#server/services/identity";
 import { createSuccessResponse } from "#server/lib/response";
 import { AuthenticationError } from "#server/error/errors";
-import { updateProfileSchema } from "#server/validators/user";
+import { updateProfileSchema } from "#shared/validators/user";
 import { sanitizeHtml, sanitizeEmail, sanitizePhone, sanitizePostalCode } from "#server/lib/sanitize";
 
 // ========================================

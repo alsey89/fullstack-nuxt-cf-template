@@ -62,7 +62,7 @@
         </FormField>
 
         <!-- Confirm Password (required) -->
-        <FormField v-slot="{ field }" name="confirmPassword" :validate-on-blur="!isFieldDirty">
+        <FormField v-slot="{ field }" name="passwordConfirmation" :validate-on-blur="!isFieldDirty">
           <FormItem class="w-full">
             <FormLabel v-auto-animate class="flex items-center justify-between text-sm md:text-base">
               <span>{{ t('auth.signup.confirmPassword.title') }}</span>
@@ -120,9 +120,9 @@ definePageMeta({
   layout: 'auth',
 });
 
-import { z } from 'zod';
 import { useForm } from 'vee-validate';
 import { toTypedSchema } from '@vee-validate/zod';
+import { signupSchema } from '#shared/validators/auth';
 
 const { t } = useI18n();
 const userStore = useUserStore();
@@ -131,18 +131,8 @@ const userStore = useUserStore();
 // Form Setup
 /////////////////////////////////////////////////////////////////////
 
-const formSchema = toTypedSchema(
-  z.object({
-    firstName: z.string().min(1, 'First name is required'),
-    lastName: z.string().min(1, 'Last name is required'),
-    email: z.string().min(1, t('auth.signup.email.requiredMessage')).email(t('auth.signup.email.formatErrMessage')),
-    password: z.string().min(8, t('auth.signup.password.formatErrMessage')),
-    confirmPassword: z.string().min(1, t('auth.signup.confirmPassword.requiredMessage')),
-  }).refine((data) => data.password === data.confirmPassword, {
-    message: t('auth.signup.confirmPassword.matchErrMessage'),
-    path: ['confirmPassword'],
-  })
-);
+// Use shared schema (same validation as backend, includes password strength requirements)
+const formSchema = toTypedSchema(signupSchema);
 
 const { handleSubmit, isSubmitting, isFieldDirty } = useForm({
   validationSchema: formSchema,
@@ -158,7 +148,7 @@ const onSubmit = handleSubmit(async (values) => {
     lastName: values.lastName,
     email: values.email,
     password: values.password,
-    passwordConfirmation: values.confirmPassword,
+    passwordConfirmation: values.passwordConfirmation,
   });
 });
 

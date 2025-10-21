@@ -5,9 +5,7 @@ import { fileURLToPath } from "node:url";
 export default defineNuxtConfig({
   compatibilityDate: "2025-07-15",
   devtools: { enabled: true },
-  alias: {
-    "#server": fileURLToPath(new URL("./server", import.meta.url)),
-  },
+
   runtimeConfig: {
     // Multitenancy Configuration
     // Default: Single-tenant mode (one database for all data)
@@ -81,6 +79,10 @@ export default defineNuxtConfig({
   css: ["~/assets/css/tailwind.css"],
   vite: {
     plugins: [tailwindcss()],
+  },
+  alias: {
+    "#server": fileURLToPath(new URL("./server", import.meta.url)),
+    "#shared": fileURLToPath(new URL("./shared", import.meta.url)),
   },
   nitro: {
     preset: "cloudflare-module",

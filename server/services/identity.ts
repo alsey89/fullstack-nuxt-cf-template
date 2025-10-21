@@ -10,7 +10,7 @@ import {
   verifyEmailConfirmToken,
   verifyPasswordResetToken,
 } from "#server/lib/auth";
-import { validatePasswordStrength } from "#server/validators/password";
+import { validatePasswordStrength } from "#shared/validators/password";
 import {
   InvalidCredentialsError,
   EmailAlreadyExistsError,

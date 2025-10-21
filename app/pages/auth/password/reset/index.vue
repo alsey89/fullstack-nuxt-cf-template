@@ -22,7 +22,7 @@
         </FormField>
 
         <!-- Confirm New Password (required) -->
-        <FormField v-slot="{ field }" name="confirmNewPassword" :validate-on-blur="!isFieldDirty">
+        <FormField v-slot="{ field }" name="newPasswordConfirmation" :validate-on-blur="!isFieldDirty">
           <FormItem class="w-full">
             <FormLabel v-auto-animate class="flex items-center justify-between text-sm md:text-base">
               <span>Confirm New Password</span>
@@ -63,9 +63,9 @@ definePageMeta({
   layout: 'auth',
 });
 
-import { z } from 'zod';
 import { useForm } from 'vee-validate';
 import { toTypedSchema } from '@vee-validate/zod';
+import { passwordResetSchema } from '#shared/validators/auth';
 
 const userStore = useUserStore();
 const route = useRoute();
@@ -90,15 +90,8 @@ onMounted(() => {
 // Form Setup
 /////////////////////////////////////////////////////////////////////
 
-const formSchema = toTypedSchema(
-  z.object({
-    newPassword: z.string().min(8, 'Password must be at least 8 characters long'),
-    confirmNewPassword: z.string().min(1, 'Password confirmation is required'),
-  }).refine((data) => data.newPassword === data.confirmNewPassword, {
-    message: 'Passwords must match',
-    path: ['confirmNewPassword'],
-  })
-);
+// Use shared schema (same validation as backend, includes password strength requirements)
+const formSchema = toTypedSchema(passwordResetSchema);
 
 const { handleSubmit, isSubmitting, isFieldDirty } = useForm({
   validationSchema: formSchema,
@@ -112,7 +105,7 @@ const onSubmit = handleSubmit(async (values) => {
   await userStore.resetPassword({
     token: token.value,
     newPassword: values.newPassword,
-    newPasswordConfirmation: values.confirmNewPassword,
+    newPasswordConfirmation: values.newPasswordConfirmation,
   });
 });
 
