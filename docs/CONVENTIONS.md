@@ -1,7 +1,7 @@
 # Development Conventions & Guidelines
 
 **Project:** Cloudflare Full-Stack Template
-**Last Updated:** 2025-10-13
+**Last Updated:** 2025-10-21
 
 This document consolidates all coding conventions, architectural patterns, and best practices for the Cloudflare Full-Stack Template.
 
@@ -51,40 +51,58 @@ This document consolidates all coding conventions, architectural patterns, and b
 
 ```
 ┌─────────────────────────────────────────────────────────┐
-│  API Layer (Route Handlers)                             │
-│  - server/api/**/*.{get,post,put,delete}.ts             │
-│  - Request validation & parsing                         │
-│  - Response formatting                                  │
-│  - Session management (nuxt-auth-utils)                 │
+│  Frontend (app/)                                        │
+│  - Vue components, pages, layouts                       │
+│  - Client-side form validation                          │
+│  - Pinia stores, composables                            │
+└──────────────────┬──────────────────────────────────────┘
+                   │ imports ↓
+                   ├───────────────────────────────────────┐
+                   │                                       │
+┌──────────────────▼──────────────────────────────────────▼┐
+│  Shared Layer (shared/)                                  │
+│  - shared/validators/*.ts (Zod schemas)                  │
+│  - shared/constants/*.ts (business rules)                │
+│  - shared/types/*.ts (shared TypeScript types)           │
+│  ⚠️  NO dependencies on server/ or app/                  │
+│  ⚠️  Use relative imports within shared/                 │
+└──────────────────▲──────────────────────────────────────┬┘
+                   │ imports ↑                    imports ↓
+┌──────────────────┴──────────────────────────────────────▼┐
+│  API Layer (Route Handlers)                              │
+│  - server/api/**/*.{get,post,put,delete}.ts              │
+│  - Request validation using #shared validators           │
+│  - Response formatting                                   │
+│  - Session management (nuxt-auth-utils)                  │
 └──────────────────┬──────────────────────────────────────┘
                    │ calls ↓
 ┌──────────────────▼──────────────────────────────────────┐
-│  Middleware Layer                                       │
-│  - server/middleware/01.tenant.ts (tenant resolution)   │
-│  - server/middleware/02.auth.ts (authentication)        │
+│  Middleware Layer                                        │
+│  - server/middleware/01.tenant.ts (tenant resolution)    │
+│  - server/middleware/02.auth.ts (authentication)         │
 └──────────────────┬──────────────────────────────────────┘
                    │ calls ↓
 ┌──────────────────▼──────────────────────────────────────┐
-│  Service Layer (Business Logic)                         │
-│  - server/services/*.ts                                 │
-│  - Request-scoped instances (no singletons)             │
-│  - Context validation in constructors                   │
-│  - Factory functions for dependency injection           │
+│  Service Layer (Business Logic)                          │
+│  - server/services/*.ts                                  │
+│  - Request-scoped instances (no singletons)              │
+│  - Context validation in constructors                    │
+│  - Uses #shared validators for business logic validation │
 └──────────────────┬──────────────────────────────────────┘
                    │ calls ↓
 ┌──────────────────▼──────────────────────────────────────┐
-│  Repository Layer (Data Access)                         │
-│  - server/repositories/*.ts                             │
-│  - Database-scoped queries with batch operations        │
-│  - No business logic (data access only)                 │
-│  - Type-safe Drizzle ORM operations                     │
+│  Repository Layer (Data Access)                          │
+│  - server/repositories/*.ts                              │
+│  - Database-scoped queries with batch operations         │
+│  - No business logic (data access only)                  │
+│  - Type-safe Drizzle ORM operations                      │
 └──────────────────┬──────────────────────────────────────┘
                    │ queries ↓
 ┌──────────────────▼──────────────────────────────────────┐
-│  Database Layer (Cloudflare D1)                         │
-│  - Drizzle schema definitions                           │
-│  - Type-safe SQL generation                             │
-│  - Multi-tenant data isolation                          │
+│  Database Layer (Cloudflare D1)                          │
+│  - Drizzle schema definitions                            │
+│  - Type-safe SQL generation                              │
+│  - Multi-tenant data isolation                           │
 └─────────────────────────────────────────────────────────┘
 ```
 
@@ -109,6 +127,7 @@ This project uses TypeScript path aliases to simplify imports and avoid deeply n
 | ------------------ | -------------- | ------------------------------------------------- | -------------------------------------------------------- |
 | `~` or `@`         | `app/`         | Frontend code (components, pages, composables)    | `import Button from '@/components/ui/Button.vue'`        |
 | `#server`          | `server/`      | Backend code (services, repositories, middleware) | `import { getRBACService } from '#server/services/rbac'` |
+| `#shared`          | `shared/`      | Shared code (validators, constants, types)        | `import { signinSchema } from '#shared/validators/auth'` |
 | `~~` or `@@`       | Project root   | Cross-boundary imports (rare)                     | `import type { ApiResponse } from '~~/server/types/api'` |
 | `#app`, `#imports` | Nuxt internals | Framework auto-imports                            | `import { useAsyncData } from '#app'`                    |
 
@@ -144,6 +163,45 @@ import type { PermissionCode } from "#server/database/schema/identity";
 import { createIdentityService } from "../../../services/identity";
 import { ValidationError } from "../../error/errors";
 ```
+
+#### Shared Code (shared/)
+
+**The `shared/` directory contains code that is used by BOTH frontend and backend.**
+
+Use `#shared` when importing from outside the shared directory:
+
+```typescript
+// From backend API routes
+import { signinSchema } from "#shared/validators/auth";
+import { MAX_PER_PAGE } from "#shared/constants/api";
+
+// From frontend pages
+import { signupSchema } from "#shared/validators/auth";
+import { DEFAULT_PER_PAGE } from "#shared/constants/api";
+```
+
+**Within the `shared/` directory itself, use relative imports:**
+
+```typescript
+// shared/validators/auth.ts
+import { passwordSchema } from './password';  // ✅ relative import within shared/
+
+// shared/validators/query.ts
+import { MAX_PER_PAGE } from '../constants/api';  // ✅ relative import within shared/
+```
+
+**Why relative imports within shared/?**
+- TypeScript path resolution works differently for files inside vs outside the shared directory
+- Relative imports are more reliable and work consistently across all contexts
+- Simpler and more explicit for files in the same directory structure
+
+**What goes in `shared/`?**
+- ✅ **Validators**: Zod schemas for form and API validation
+- ✅ **Constants**: Business rules that apply to both FE/BE (pagination limits, validation rules)
+- ✅ **Types**: TypeScript types/interfaces used across boundaries
+- ✅ **Utilities**: Pure functions with no side effects or platform dependencies
+- ❌ **NOT server-specific code**: Database queries, H3 event handlers, middleware
+- ❌ **NOT frontend-specific code**: Vue components, composables, stores
 
 #### Cross-Boundary Imports
 
@@ -749,6 +807,156 @@ export default defineEventHandler(async (event) => {
 - **Service delegation**: Delegate business logic to services
 - **Standardized responses**: Use response helpers
 - **Error handling**: Let middleware handle errors
+
+---
+
+## Validation Strategy
+
+### Shared Validators (`shared/validators/`)
+
+**All validation schemas are defined in the `shared/` directory** to ensure consistency between frontend and backend validation.
+
+#### Directory Structure
+
+```
+shared/
+├── validators/
+│   ├── auth.ts          # Authentication schemas (signin, signup, password reset)
+│   ├── password.ts      # Password strength validation
+│   ├── user.ts          # User profile schemas
+│   └── query.ts         # Query parameter schemas (pagination, filtering, sorting)
+└── constants/
+    └── api.ts           # Shared constants (MAX_PER_PAGE, DEFAULT_PER_PAGE, etc.)
+```
+
+#### Benefits of Shared Validators
+
+1. **Single Source of Truth**: Validation logic defined once, used everywhere
+2. **Consistent Validation**: Frontend and backend enforce identical rules
+3. **Type Safety**: Zod schemas generate TypeScript types automatically
+4. **Better UX**: Frontend catches errors before submission
+5. **Security**: Backend re-validates even if frontend bypassed
+6. **Maintainability**: Update validation in one place
+
+#### Backend Usage
+
+```typescript
+// server/api/v1/auth/signin.post.ts
+import { signinSchema } from "#shared/validators/auth";
+
+export default defineEventHandler(async (event) => {
+  const body = await readBody(event);
+
+  // Validate with shared schema
+  const validated = signinSchema.parse(body);  // ✅ Throws ValidationError if invalid
+
+  // ... rest of handler
+});
+```
+
+#### Frontend Usage
+
+```vue
+<!-- app/pages/auth/signin.vue -->
+<script setup>
+import { useForm } from 'vee-validate';
+import { toTypedSchema } from '@vee-validate/zod';
+import { signinSchema } from '#shared/validators/auth';
+
+// Use shared schema for form validation
+const formSchema = toTypedSchema(signinSchema);
+const { handleSubmit, isSubmitting } = useForm({
+  validationSchema: formSchema,
+});
+</script>
+```
+
+#### Example Schemas
+
+**Authentication** (`shared/validators/auth.ts`):
+- `signinSchema`: Email + password
+- `signupSchema`: Email, password, names (with password confirmation)
+- `passwordResetRequestSchema`: Email only
+- `passwordResetSchema`: Token + new password (with confirmation)
+- `emailConfirmSchema`: Token only
+
+**Password** (`shared/validators/password.ts`):
+- `passwordSchema`: Reusable password validation with strength requirements
+- `validatePasswordStrength()`: Programmatic validation function
+- `PASSWORD_RULES`: Configurable password policy constants
+
+**User Profile** (`shared/validators/user.ts`):
+- `updateProfileSchema`: Optional fields for profile updates
+
+**Query Parameters** (`shared/validators/query.ts`):
+- `paginationSchema`: Page + perPage validation
+- `sortSchema`: Sort field + order validation
+- `filterSchema`: Field + operator + value validation
+- `listQuerySchema`: Combined pagination + sorting + filtering
+
+#### Validation Best Practices
+
+1. **Always validate on backend**: Never trust client-side validation alone
+2. **Use `.parse()` for sync validation**: Throws `ZodError` on failure
+3. **Use `.safeParse()` for custom error handling**: Returns `{ success, data/error }`
+4. **Keep schemas focused**: One schema per endpoint/form
+5. **Reuse base schemas**: Compose larger schemas from smaller ones
+6. **Add helpful error messages**: Users should understand what's wrong
+7. **Use relative imports within shared/**: TypeScript path resolution works better
+
+#### Password Validation Example
+
+```typescript
+// shared/validators/password.ts
+export const PASSWORD_RULES = {
+  minLength: 8,
+  maxLength: 128,
+  requireNumber: true,
+  requireUppercase: false,
+  requireLowercase: false,
+  requireSpecial: false,
+} as const;
+
+export const passwordSchema = z
+  .string()
+  .min(PASSWORD_RULES.minLength, `Password must be at least ${PASSWORD_RULES.minLength} characters`)
+  .max(PASSWORD_RULES.maxLength, `Password must be less than ${PASSWORD_RULES.maxLength} characters`)
+  .refine(
+    (password) => validatePasswordStrength(password).valid,
+    (password) => ({
+      message: validatePasswordStrength(password).errors.join(", "),
+    })
+  );
+```
+
+#### Schema Composition Example
+
+```typescript
+// shared/validators/auth.ts
+import { passwordSchema } from './password';  // ✅ relative import within shared/
+
+export const signupSchema = z.object({
+  email: z.string().min(1, 'Email is required').email('Invalid email format'),
+  password: passwordSchema,  // ✅ Reuse password schema
+  passwordConfirmation: z.string().min(1, 'Password confirmation is required'),
+  firstName: z.string().min(1, 'First name is required').max(100),
+  lastName: z.string().min(1, 'Last name is required').max(100),
+}).refine((data) => data.password === data.passwordConfirmation, {
+  message: 'Passwords must match',
+  path: ['passwordConfirmation'],
+});
+```
+
+#### Error Handling
+
+```typescript
+// Backend: Let Zod errors be caught by error middleware
+const validated = signinSchema.parse(body);  // Throws ZodError → caught by middleware
+
+// Frontend: Use vee-validate for inline error display
+const formSchema = toTypedSchema(signinSchema);
+const { handleSubmit, errors } = useForm({ validationSchema: formSchema });
+```
 
 ---
 

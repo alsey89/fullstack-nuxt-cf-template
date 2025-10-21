@@ -1,6 +1,6 @@
 # AI Assistant Reference Guide
 
-**Quick Reference for Claude Code** - Last Updated: 2025-10-13
+**Quick Reference for Claude Code** - Last Updated: 2025-10-21
 
 This is the primary reference for AI-assisted development. For complete documentation, see [CONVENTIONS.md](CONVENTIONS.md).
 
@@ -14,10 +14,11 @@ This is the primary reference for AI-assisted development. For complete document
 4. [Repository Pattern](#repository-pattern)
 5. [Error Handling](#error-handling)
 6. [API Responses](#api-responses)
-7. [Common Patterns](#common-patterns)
-8. [Database Conventions](#database-conventions)
-9. [Testing](#testing)
-10. [Deep Dive Docs](#deep-dive-docs)
+7. [Validation](#validation)
+8. [Common Patterns](#common-patterns)
+9. [Database Conventions](#database-conventions)
+10. [Testing](#testing)
+11. [Deep Dive Docs](#deep-dive-docs)
 
 ---
 
@@ -59,12 +60,14 @@ Database (Drizzle ORM → D1)
 | Alias | Points To | Use In | Example |
 |-------|-----------|--------|---------|
 | `#server` | `server/` | Backend code | `import { createIdentityService } from '#server/services/identity'` |
+| `#shared` | `shared/` | Shared code | `import { signinSchema } from '#shared/validators/auth'` |
 | `@` or `~` | `app/` | Frontend code | `import { Button } from '@/components/ui/button'` |
 | `~~` | Project root | Cross-boundary | `import type { ApiResponse } from '~~/server/types/api'` |
 
 **Rules:**
 - Frontend: Always use `@` or `~`
 - Backend: Always use `#server`
+- Shared code: Always use `#shared` (except within `shared/` directory - use relative imports)
 - Use `import type` for TypeScript types
 
 **Examples:**
@@ -326,6 +329,59 @@ return createSuccessResponse('Users retrieved', users, {
 ```
 
 Errors are automatically caught by `server/error/errorHandler.ts`.
+
+---
+
+## Validation
+
+**All validation schemas live in `shared/validators/`** - single source of truth for FE and BE.
+
+### Backend Usage
+```typescript
+import { signinSchema } from '#shared/validators/auth'
+
+export default defineEventHandler(async (event) => {
+  const body = await readBody(event)
+  const validated = signinSchema.parse(body)  // ✅ Throws if invalid
+  // ... use validated data
+})
+```
+
+### Frontend Usage
+```vue
+<script setup>
+import { useForm } from 'vee-validate'
+import { toTypedSchema } from '@vee-validate/zod'
+import { signupSchema } from '#shared/validators/auth'
+
+const formSchema = toTypedSchema(signupSchema)
+const { handleSubmit } = useForm({ validationSchema: formSchema })
+</script>
+```
+
+### Available Schemas
+- **Auth**: `signinSchema`, `signupSchema`, `passwordResetRequestSchema`, `passwordResetSchema`
+- **Password**: `passwordSchema` (reusable with strength rules)
+- **User**: `updateProfileSchema`
+- **Query**: `paginationSchema`, `sortSchema`, `filterSchema`, `listQuerySchema`
+
+### Shared Directory Rules
+- ✅ **From outside shared/**: Use `#shared` alias
+- ✅ **Within shared/**: Use relative imports (`./ or ../`)
+- ✅ **What goes in shared/**: Validators, constants, types, pure utilities
+- ❌ **Don't put in shared/**: Server-specific code, Vue components
+
+**Example within shared/:**
+```typescript
+// shared/validators/auth.ts
+import { passwordSchema } from './password'  // ✅ relative import
+
+export const signupSchema = z.object({
+  email: z.string().email(),
+  password: passwordSchema,  // ✅ Reuse shared schema
+  // ...
+})
+```
 
 ---
 

@@ -11,7 +11,7 @@ A production-ready full-stack web application template built on Cloudflare Worke
 - **🛡️ Security** - Session-tenant binding, JWT token isolation, cross-tenant protection
 - **⚖️ RBAC** - Enterprise-grade role-based access control with wildcards
 - **📊 Database ORM** - Drizzle ORM with TypeScript
-- **✅ Validation** - Zod schemas with vee-validate
+- **✅ Validation** - Shared Zod schemas for FE/BE consistency with vee-validate
 - **🎨 UI Components** - shadcn-nuxt with Tailwind CSS
 - **📱 Responsive** - Mobile-first design with dark mode
 - **🧪 Testing** - Vitest with Cloudflare Workers testing
