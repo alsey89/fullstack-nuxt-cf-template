@@ -22,7 +22,7 @@ The application uses a **structured error system** with specific error classes a
 
 ### Three-Part System
 
-#### 1. **Shared Error Codes** ([server/error/codes.ts](../server/error/codes.ts))
+#### 1. **Shared Error Codes** ([shared/error/codes.ts](../shared/error/codes.ts))
 - Single source of truth for all error codes
 - Importable by both frontend and backend
 - Type-safe with TypeScript
@@ -170,7 +170,7 @@ throw new ValidationError("Field X is invalid", {
 **Frontend only uses `error.code`** to determine behavior:
 
 ```typescript
-import { ERROR_CODES } from '~/server/error/codes';
+import { ERROR_CODES } from '#shared/error/codes';
 
 // FE reacts based on code only
 if (error.code === ERROR_CODES.PASSWORD_SAME_AS_OLD) {
@@ -383,7 +383,7 @@ throw new EmailAlreadyExistsError(undefined, {
 ### Using Error Codes
 
 ```typescript
-import { ERROR_CODES } from '~/server/error/codes';
+import { ERROR_CODES } from '#shared/error/codes';
 
 async function handlePasswordReset() {
   try {

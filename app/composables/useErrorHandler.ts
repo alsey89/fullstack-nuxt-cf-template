@@ -6,7 +6,7 @@
 // Uses i18n for multi-language error messages
 // ========================================
 
-import { ERROR_CODES, type ErrorCode } from "~~/server/error/codes";
+import { ERROR_CODES, type ErrorCode } from "#shared/error/codes";
 import type { FetchError } from "ofetch";
 
 interface ApiErrorData {

@@ -1,6 +1,7 @@
 import { eq, and } from "drizzle-orm";
 import * as schema from "#server/database/schema";
 import { BaseRepository } from "#server/repositories/base";
+import { QueryHelpers } from "#server/repositories/helpers/query-builder";
 import type {
   User,
   NewUser,
@@ -31,9 +32,9 @@ export class UserRepository extends BaseRepository {
       .select()
       .from(schema.users)
       .where(
-        and(
-          eq(schema.users.email, email.toLowerCase()),
-          this.notDeleted(schema.users)
+        QueryHelpers.notDeleted(
+          schema.users,
+          eq(schema.users.email, email.toLowerCase())
         )
       )
       .limit(1);
@@ -48,7 +49,7 @@ export class UserRepository extends BaseRepository {
     const result = await this.drizzle
       .select()
       .from(schema.users)
-      .where(and(eq(schema.users.id, id), this.notDeleted(schema.users)))
+      .where(QueryHelpers.notDeleted(schema.users, eq(schema.users.id, id)))
       .limit(1);
 
     return result[0] || null;
@@ -60,7 +61,7 @@ export class UserRepository extends BaseRepository {
   async count(filters?: Filter[]): Promise<number> {
     return this.countRecords(
       schema.users,
-      this.notDeleted(schema.users),
+      QueryHelpers.notDeleted(schema.users),
       filters
     );
   }
@@ -75,7 +76,7 @@ export class UserRepository extends BaseRepository {
     sortBy?: string,
     sortOrder?: SortOrder
   ): Promise<User[]> {
-    const conditions = [this.notDeleted(schema.users)];
+    const conditions = [QueryHelpers.notDeleted(schema.users)];
 
     // Add filters
     if (filters && filters.length > 0) {
@@ -133,7 +134,7 @@ export class UserRepository extends BaseRepository {
     const [user] = await this.drizzle
       .update(schema.users)
       .set({ ...data, updatedAt: new Date() })
-      .where(and(eq(schema.users.id, id), this.notDeleted(schema.users)))
+      .where(QueryHelpers.notDeleted(schema.users, eq(schema.users.id, id)))
       .returning();
 
     return user || null;
@@ -184,9 +185,9 @@ export class UserSettingsRepository extends BaseRepository {
       .select()
       .from(schema.userSettings)
       .where(
-        and(
-          eq(schema.userSettings.userId, userId),
-          this.notDeleted(schema.userSettings)
+        QueryHelpers.notDeleted(
+          schema.userSettings,
+          eq(schema.userSettings.userId, userId)
         )
       )
       .limit(1);

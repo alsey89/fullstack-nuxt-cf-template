@@ -5,11 +5,11 @@
 // Frontend can use these codes for type-safe error handling and i18n mapping
 //
 // Usage (Frontend):
-//   import { ERROR_CODES } from '~/server/error/codes'
+//   import { ERROR_CODES } from '#shared/error/codes'
 //   if (error.code === ERROR_CODES.INVALID_CREDENTIALS) { ... }
 //
 // Usage (Backend):
-//   import { ERROR_CODES } from '../error/codes'
+//   import { ERROR_CODES } from '#shared/error/codes'
 //   throw new InvalidCredentialsError('Wrong password')
 // ========================================
 

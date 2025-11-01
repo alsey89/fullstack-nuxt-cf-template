@@ -19,6 +19,7 @@ import {
 } from "drizzle-orm";
 import * as schema from "#server/database/schema";
 import type { Filter, SortOrder } from "#server/types/api";
+import { QueryHelpers } from "#server/repositories/helpers/query-builder";
 
 /**
  * Base repository class with soft delete support
@@ -29,24 +30,6 @@ export class BaseRepository {
 
   constructor(protected db: D1Database) {
     this.drizzle = drizzle(db, { schema });
-  }
-
-  /**
-   * Helper to add soft delete filter to queries
-   * Returns a SQL condition that checks if deletedAt is NULL
-   *
-   * @example
-   * // Single condition
-   * .where(this.notDeleted(schema.users))
-   *
-   * // Multiple conditions
-   * .where(and(
-   *   eq(schema.users.email, email),
-   *   this.notDeleted(schema.users)
-   * ))
-   */
-  protected notDeleted<T extends { deletedAt: any }>(table: T): SQL {
-    return isNull(table.deletedAt);
   }
 
   /**

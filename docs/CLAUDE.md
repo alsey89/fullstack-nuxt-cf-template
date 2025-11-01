@@ -167,10 +167,12 @@ export function createExampleService(event: H3Event): ExampleService {
 
 ## Repository Pattern
 
-Repositories handle data access with tenant isolation.
+Repositories handle data access with tenant isolation using **QueryHelpers** for common operations.
 
 ### Repository Structure
 ```typescript
+import { QueryHelpers } from '#server/repositories/helpers/query-builder'
+
 export class ExampleRepository extends BaseRepository {
   constructor(db: D1Database) {
     super(db)
@@ -180,15 +182,35 @@ export class ExampleRepository extends BaseRepository {
     const result = await this.drizzle
       .select()
       .from(schema.examples)
-      .where(
-        and(
-          eq(schema.examples.id, id),
-          isNull(schema.examples.deletedAt) // Always check soft deletes
-        )
-      )
+      .where(QueryHelpers.notDeleted(schema.examples, eq(schema.examples.id, id)))
       .limit(1)
 
     return result[0] || null
+  }
+
+  async list(
+    limit = 100,
+    offset = 0,
+    searchTerm?: string
+  ): Promise<Example[]> {
+    const conditions: (SQL | undefined)[] = [
+      QueryHelpers.notDeleted(schema.examples),
+    ]
+
+    // Add search across multiple columns
+    if (searchTerm) {
+      conditions.push(
+        QueryHelpers.search([schema.examples.name, schema.examples.description], searchTerm)
+      )
+    }
+
+    const validConditions = conditions.filter((c): c is SQL => c !== undefined)
+    return this.drizzle
+      .select()
+      .from(schema.examples)
+      .where(and(...validConditions))
+      .limit(limit)
+      .offset(offset)
   }
 
   async create(data: NewExample): Promise<Example> {
@@ -200,16 +222,6 @@ export class ExampleRepository extends BaseRepository {
     return example
   }
 
-  async update(id: string, data: Partial<Example>): Promise<Example> {
-    const [updated] = await this.drizzle
-      .update(schema.examples)
-      .set({ ...data, updatedAt: new Date() })
-      .where(eq(schema.examples.id, id))
-      .returning()
-
-    return updated
-  }
-
   async softDelete(id: string): Promise<void> {
     await this.drizzle
       .update(schema.examples)
@@ -219,9 +231,32 @@ export class ExampleRepository extends BaseRepository {
 }
 ```
 
+### QueryHelpers Quick Reference
+
+**File:** `server/repositories/helpers/query-builder.ts`
+
+```typescript
+// Soft delete filtering
+QueryHelpers.notDeleted(table, ...conditions)
+
+// Multi-column search
+QueryHelpers.search([table.name, table.email], searchTerm)
+
+// Date range filtering
+QueryHelpers.dateRange(table.createdAt, startDate, endDate)
+
+// Pagination with metadata
+QueryHelpers.paginated(baseQuery, totalCount, { page: 1, limit: 10 })
+
+// Active records (isActive + notDeleted)
+QueryHelpers.activeOnly(table, ...conditions)
+```
+
+**Why QueryHelpers?** Single source of truth for common patterns (search, pagination, filtering). Usable anywhere, not just repositories. See [CONVENTIONS.md](CONVENTIONS.md#queryhelpers-pattern) for full guide.
+
 **Repository Rules:**
+- **Use QueryHelpers** for soft deletes, search, pagination
 - Extend `BaseRepository`
-- Always check `deletedAt IS NULL` for soft deletes
 - Use Drizzle schema types
 - No business logic (data access only)
 - Use batch operations for multi-record operations (see [CONVENTIONS.md](CONVENTIONS.md#batch-operations-for-atomicity-d1))
@@ -263,7 +298,7 @@ throw new EmailAlreadyExistsError(undefined, {
 
 ### Frontend: React to Error Codes
 ```typescript
-import { ERROR_CODES } from '~/server/error/codes'
+import { ERROR_CODES } from '#shared/error/codes'
 
 if (error.code === ERROR_CODES.PASSWORD_SAME_AS_OLD) {
   toast.error(t('errors.passwordSameAsOld'))

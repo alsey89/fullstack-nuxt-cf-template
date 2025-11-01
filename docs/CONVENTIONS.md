@@ -205,15 +205,15 @@ import { MAX_PER_PAGE } from '../constants/api';  // ✅ relative import within 
 
 #### Cross-Boundary Imports
 
-Use `~~` (project root) when importing across app/server boundaries:
+Use `~~` (project root) when importing across app/server boundaries, or `#shared` for shared code:
 
 ```typescript
-// Frontend importing shared server types
-import type { ApiResponse } from "~~/server/types/api";
-import { ERROR_CODES } from "~~/server/error/codes";
+// Frontend importing shared constants/types
+import { ERROR_CODES } from "#shared/error/codes";
+import type { PaginationParams } from "#shared/validators/query";
 
-// Server importing from project root (rare)
-import { someUtil } from "~~/utils/shared";
+// Server importing shared constants
+import { ERROR_CODES } from "#shared/error/codes";
 ```
 
 ### Rules & Best Practices
@@ -522,6 +522,8 @@ Repositories handle data access with tenant isolation.
 ### Repository Structure
 
 ```typescript
+import { QueryHelpers } from "#server/repositories/helpers/query-builder";
+
 export class ExampleRepository extends BaseRepository {
   constructor(db: D1Database) {
     super(db);
@@ -531,10 +533,45 @@ export class ExampleRepository extends BaseRepository {
     const result = await this.drizzle
       .select()
       .from(schema.examples)
-      .where(and(eq(schema.examples.id, id), isNull(schema.examples.deletedAt)))
+      .where(QueryHelpers.notDeleted(schema.examples, eq(schema.examples.id, id)))
       .limit(1);
 
     return result[0] || null;
+  }
+
+  async list(
+    limit = 100,
+    offset = 0,
+    filters?: Filter[],
+    sortBy?: string,
+    sortOrder?: SortOrder,
+    searchTerm?: string
+  ): Promise<Example[]> {
+    const conditions: (SQL | undefined)[] = [
+      QueryHelpers.notDeleted(schema.examples),
+    ];
+
+    // Add filters
+    if (filters && filters.length > 0) {
+      conditions.push(this.buildFilters(schema.examples, filters));
+    }
+
+    // Add search
+    if (searchTerm) {
+      conditions.push(
+        QueryHelpers.search([schema.examples.name, schema.examples.description], searchTerm)
+      );
+    }
+
+    const validConditions = conditions.filter((c): c is SQL => c !== undefined);
+    const query = this.drizzle
+      .select()
+      .from(schema.examples)
+      .where(and(...validConditions))
+      .limit(limit)
+      .offset(offset);
+
+    return query;
   }
 
   async create(data: NewExample): Promise<Example> {
@@ -548,13 +585,126 @@ export class ExampleRepository extends BaseRepository {
 }
 ```
 
+### QueryHelpers Pattern
+
+**Architectural Decision:** This template uses **QueryHelpers** as the single source of truth for common query utilities. This pattern was chosen for scalability and consistency in list APIs.
+
+#### Why QueryHelpers?
+
+1. **Scalable for growing webapps**: All production apps need pagination, search, and filtering
+2. **Single source of truth**: No redundancy between repository helpers
+3. **Usable anywhere**: Not limited to repository classes (works in services, utils)
+4. **Consistent patterns**: Standardized query building across the codebase
+5. **Easy to extend**: Add new helpers as needs grow
+
+#### Available Helpers
+
+**File:** `server/repositories/helpers/query-builder.ts`
+
+```typescript
+// Soft delete filtering
+QueryHelpers.notDeleted(table, ...additionalConditions)
+
+// Multi-column search
+QueryHelpers.search(columns, searchTerm)
+
+// Date range filtering
+QueryHelpers.dateRange(column, startDate, endDate)
+
+// Pagination with metadata
+QueryHelpers.paginated(baseQuery, totalCount, { page, limit })
+
+// Active records (isActive + notDeleted)
+QueryHelpers.activeOnly(table, ...additionalConditions)
+```
+
+#### Usage Examples
+
+**Simple soft delete check:**
+```typescript
+// Get all non-deleted users
+const users = await db
+  .select()
+  .from(schema.users)
+  .where(QueryHelpers.notDeleted(schema.users));
+```
+
+**Combining multiple helpers:**
+```typescript
+// Search users by name/email, exclude deleted
+const searchCondition = QueryHelpers.search(
+  [schema.users.name, schema.users.email],
+  "john"
+);
+
+const users = await db
+  .select()
+  .from(schema.users)
+  .where(QueryHelpers.notDeleted(schema.users, searchCondition));
+```
+
+**Pagination with total count:**
+```typescript
+// Build base query
+const condition = QueryHelpers.notDeleted(schema.users);
+const baseQuery = db.select().from(schema.users).where(condition);
+
+// Count total records
+const [{ count: total }] = await db
+  .select({ count: drizzleCount() })
+  .from(schema.users)
+  .where(condition);
+
+// Return paginated results with metadata
+return QueryHelpers.paginated(baseQuery, total, { page: 1, limit: 10 });
+// Returns: { data: [...], total: 150, pages: 15, page: 1, limit: 10 }
+```
+
+**Date range filtering:**
+```typescript
+// Get users created in 2024
+const dateCondition = QueryHelpers.dateRange(
+  schema.users.createdAt,
+  new Date("2024-01-01"),
+  new Date("2024-12-31")
+);
+
+const users = await db
+  .select()
+  .from(schema.users)
+  .where(QueryHelpers.notDeleted(schema.users, dateCondition));
+```
+
+#### Extending QueryHelpers
+
+Add new helpers to `server/repositories/helpers/query-builder.ts`:
+
+```typescript
+export class QueryHelpers {
+  // ... existing helpers
+
+  // NEW: Tenant isolation helper
+  static byTenant<T extends { tenantId: any; deletedAt: any }>(
+    table: T,
+    tenantId: string,
+    ...additionalConditions: (SQL | undefined)[]
+  ): SQL {
+    return this.notDeleted(
+      table,
+      eq(table.tenantId, tenantId),
+      ...additionalConditions
+    );
+  }
+}
+```
+
 ### Repository Rules
 
-- **Soft deletes**: Check `deletedAt IS NULL` for all queries
+- **Use QueryHelpers**: Always use `QueryHelpers.notDeleted()` for soft delete checks
 - **Type safety**: Use Drizzle schema types
 - **No business logic**: Data access only
 - **Atomic operations**: Use batch operations from `server/utils/database.ts` for multi-record operations
-- **Consistent patterns**: Follow established query patterns
+- **Consistent patterns**: Follow QueryHelpers patterns for common operations
 
 ---
 
@@ -639,7 +789,7 @@ throw new ValidationError("Field X is invalid", {
 **Frontend reacts to error codes:**
 
 ```typescript
-import { ERROR_CODES } from "~/server/error/codes";
+import { ERROR_CODES } from "#shared/error/codes";
 
 if (error.code === ERROR_CODES.PASSWORD_SAME_AS_OLD) {
   toast.error(t("errors.passwordSameAsOld"));

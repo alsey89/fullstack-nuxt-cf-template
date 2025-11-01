@@ -2,6 +2,7 @@ import { eq, and, desc, inArray } from "drizzle-orm";
 import * as schema from "#server/database/schema";
 import type { PermissionCode } from "#server/database/schema/identity";
 import { BaseRepository } from "#server/repositories/base";
+import { QueryHelpers } from "#server/repositories/helpers/query-builder";
 import type { Filter, SortOrder } from "#server/types/api";
 
 // ========================================
@@ -50,7 +51,7 @@ export class RoleRepository extends BaseRepository {
     const [role] = await this.drizzle
       .select()
       .from(schema.roles)
-      .where(and(eq(schema.roles.id, roleId), this.notDeleted(schema.roles)));
+      .where(QueryHelpers.notDeleted(schema.roles, eq(schema.roles.id, roleId)));
 
     return role || null;
   }
@@ -62,7 +63,7 @@ export class RoleRepository extends BaseRepository {
     const [role] = await this.drizzle
       .select()
       .from(schema.roles)
-      .where(and(eq(schema.roles.name, name), this.notDeleted(schema.roles)));
+      .where(QueryHelpers.notDeleted(schema.roles, eq(schema.roles.name, name)));
 
     return role || null;
   }
@@ -74,7 +75,7 @@ export class RoleRepository extends BaseRepository {
     filters?: Filter[],
     options?: { includeSystem?: boolean }
   ): Promise<number> {
-    const conditions = [this.notDeleted(schema.roles)];
+    const conditions = [QueryHelpers.notDeleted(schema.roles)];
 
     // Optionally exclude system roles
     if (options?.includeSystem === false) {
@@ -96,7 +97,7 @@ export class RoleRepository extends BaseRepository {
     sortOrder?: SortOrder,
     options?: { includeSystem?: boolean }
   ) {
-    const conditions = [this.notDeleted(schema.roles)];
+    const conditions = [QueryHelpers.notDeleted(schema.roles)];
 
     // Optionally exclude system roles
     if (options?.includeSystem === false) {
@@ -155,7 +156,7 @@ export class RoleRepository extends BaseRepository {
         ...data,
         updatedAt: new Date(),
       })
-      .where(and(eq(schema.roles.id, roleId), this.notDeleted(schema.roles)))
+      .where(QueryHelpers.notDeleted(schema.roles, eq(schema.roles.id, roleId)))
       .returning();
 
     return role || null;
@@ -180,7 +181,7 @@ export class RoleRepository extends BaseRepository {
       .set({
         deletedAt: new Date(),
       })
-      .where(and(eq(schema.roles.id, roleId), this.notDeleted(schema.roles)))
+      .where(QueryHelpers.notDeleted(schema.roles, eq(schema.roles.id, roleId)))
       .returning();
 
     return !!deleted;
@@ -246,10 +247,10 @@ export class UserRoleRepository extends BaseRepository {
       .select()
       .from(schema.userRoles)
       .where(
-        and(
+        QueryHelpers.notDeleted(
+          schema.userRoles,
           eq(schema.userRoles.userId, userId),
-          eq(schema.userRoles.roleId, roleId),
-          this.notDeleted(schema.userRoles)
+          eq(schema.userRoles.roleId, roleId)
         )
       );
 
@@ -282,10 +283,10 @@ export class UserRoleRepository extends BaseRepository {
         deletedAt: new Date(),
       })
       .where(
-        and(
+        QueryHelpers.notDeleted(
+          schema.userRoles,
           eq(schema.userRoles.userId, userId),
-          eq(schema.userRoles.roleId, roleId),
-          this.notDeleted(schema.userRoles)
+          eq(schema.userRoles.roleId, roleId)
         )
       )
       .returning();
@@ -304,12 +305,12 @@ export class UserRoleRepository extends BaseRepository {
       .from(schema.userRoles)
       .innerJoin(
         schema.roles,
-        and(
-          eq(schema.userRoles.roleId, schema.roles.id),
-          this.notDeleted(schema.roles)
+        QueryHelpers.notDeleted(
+          schema.roles,
+          eq(schema.userRoles.roleId, schema.roles.id)
         )
       )
-      .where(and(eq(schema.userRoles.userId, userId), this.notDeleted(schema.userRoles)));
+      .where(QueryHelpers.notDeleted(schema.userRoles, eq(schema.userRoles.userId, userId)));
 
     return userRoleAssignments.map((ur) => ur.role);
   }
@@ -350,12 +351,12 @@ export class UserRoleRepository extends BaseRepository {
       .from(schema.userRoles)
       .innerJoin(
         schema.users,
-        and(
-          eq(schema.userRoles.userId, schema.users.id),
-          this.notDeleted(schema.users)
+        QueryHelpers.notDeleted(
+          schema.users,
+          eq(schema.userRoles.userId, schema.users.id)
         )
       )
-      .where(and(eq(schema.userRoles.roleId, roleId), this.notDeleted(schema.userRoles)));
+      .where(QueryHelpers.notDeleted(schema.userRoles, eq(schema.userRoles.roleId, roleId)));
 
     return userRoleAssignments.map((ur) => ur.user);
   }
@@ -368,7 +369,7 @@ export class UserRoleRepository extends BaseRepository {
     const existing = await this.drizzle
       .select()
       .from(schema.userRoles)
-      .where(and(eq(schema.userRoles.userId, userId), this.notDeleted(schema.userRoles)));
+      .where(QueryHelpers.notDeleted(schema.userRoles, eq(schema.userRoles.userId, userId)));
 
     // Soft delete all existing assignments
     for (const assignment of existing) {
@@ -401,7 +402,7 @@ export class PermissionRepository extends BaseRepository {
     const [permission] = await this.drizzle
       .select()
       .from(schema.permissions)
-      .where(and(eq(schema.permissions.code, code), this.notDeleted(schema.permissions)));
+      .where(QueryHelpers.notDeleted(schema.permissions, eq(schema.permissions.code, code)));
 
     return permission || null;
   }
@@ -412,7 +413,7 @@ export class PermissionRepository extends BaseRepository {
   async countPermissions(filters?: Filter[]): Promise<number> {
     return this.countRecords(
       schema.permissions,
-      this.notDeleted(schema.permissions),
+      QueryHelpers.notDeleted(schema.permissions),
       filters
     );
   }
@@ -427,7 +428,7 @@ export class PermissionRepository extends BaseRepository {
     sortBy?: string,
     sortOrder?: SortOrder
   ) {
-    const conditions = [this.notDeleted(schema.permissions)];
+    const conditions = [QueryHelpers.notDeleted(schema.permissions)];
 
     // Add filters
     if (filters && filters.length > 0) {
@@ -472,7 +473,7 @@ export class PermissionRepository extends BaseRepository {
       .select()
       .from(schema.permissions)
       .where(
-        and(eq(schema.permissions.category, category), this.notDeleted(schema.permissions))
+        QueryHelpers.notDeleted(schema.permissions, eq(schema.permissions.category, category))
       )
       .orderBy(schema.permissions.code);
   }
@@ -489,10 +490,7 @@ export class PermissionRepository extends BaseRepository {
       .select()
       .from(schema.permissions)
       .where(
-        and(
-          inArray(schema.permissions.code, codes),
-          this.notDeleted(schema.permissions)
-        )
+        QueryHelpers.notDeleted(schema.permissions, inArray(schema.permissions.code, codes))
       )
 
     // All codes must exist in registry
