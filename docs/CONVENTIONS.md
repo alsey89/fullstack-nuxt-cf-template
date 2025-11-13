@@ -20,25 +20,256 @@ This document consolidates all coding conventions, architectural patterns, and b
 
 ## Table of Contents
 
-1. [Architecture Overview](#architecture-overview)
-2. [Import Aliases](#import-aliases)
-3. [Environment Detection](#environment-detection)
-4. [Service Layer Pattern](#service-layer-pattern)
-5. [Repository Layer](#repository-layer)
-6. [API Response Format](#api-response-format)
-7. [Error Handling](#error-handling)
-8. [Pagination](#pagination)
-9. [Route Handlers](#route-handlers)
-10. [Testing](#testing)
-11. [Database Access](#database-access)
-12. [Field Naming](#field-naming)
-13. [Frontend Component Organization](#frontend-component-organization)
-14. [Frontend Architecture & State Management](#frontend-architecture--state-management)
+1. [Common Pitfalls](#common-pitfalls)
+2. [Development Checklists](#development-checklists)
+3. [Architecture Overview](#architecture-overview)
+4. [Import Aliases](#import-aliases)
+5. [Environment Detection](#environment-detection)
+6. [Service Layer Pattern](#service-layer-pattern)
+7. [Repository Layer](#repository-layer)
+8. [API Response Format](#api-response-format)
+9. [Error Handling](#error-handling)
+10. [Pagination](#pagination)
+11. [Route Handlers](#route-handlers)
+12. [Testing](#testing)
+13. [Database Access](#database-access)
+14. [Field Naming](#field-naming)
+15. [Naming Conventions](#naming-conventions)
+16. [Frontend Component Organization](#frontend-component-organization)
+17. [Frontend Architecture & State Management](#frontend-architecture--state-management)
     - [Forms Convention](#1-forms-convention)
     - [State Management Architecture](#2-state-management-architecture)
     - [API Call Patterns](#3-api-call-patterns)
     - [Migration Checklist](#4-migration-checklist)
     - [Decision Trees](#5-decision-trees)
+18. [Essential Code Templates](#essential-code-templates)
+19. [Environment & Configuration](#environment--configuration)
+20. [Logging Patterns](#logging-patterns)
+
+---
+
+## Common Pitfalls
+
+This section lists frequent mistakes to avoid. Review this before starting any development task.
+
+### Backend Pitfalls
+
+#### Database & Repositories
+- ❌ **Forgetting soft delete checks** → ALWAYS use `this.notDeleted(schema.table)` helper in queries
+  ```typescript
+  // ❌ WRONG
+  .where(eq(schema.users.id, id))
+
+  // ✅ CORRECT
+  .where(and(eq(schema.users.id, id), this.notDeleted(schema.users)))
+  ```
+
+- ❌ **Using `isNull(schema.table.deletedAt)` directly** → Use `this.notDeleted()` from BaseRepository
+
+#### Imports & Aliases
+- ❌ **Using relative imports** (`../../services/identity`) → Use `#server` alias
+- ❌ **Using `../` more than one level** → Use path aliases
+- ❌ **Inconsistent alias usage** → Frontend: `@`, Backend: `#server`, Cross-boundary: `~~`
+
+#### Environment Detection
+- ❌ **Hardcoding environment strings** (`"development"`) → Use `isDevelopment()`, `ENV.DEVELOPMENT`
+- ❌ **Not passing event to environment functions** → Pass `event` parameter when available
+- ❌ **Checking environment multiple times inline** → Assign to variable if used 2+ times
+
+#### Services & Business Logic
+- ❌ **Missing userId validation** → Check `if (!this.userId)` at start of service methods
+- ❌ **Not logging significant actions** → Add audit logs for create/update/delete operations
+- ❌ **Skipping permission checks** → Validate permissions before sensitive operations
+- ❌ **Creating service singletons** → Services must be request-scoped (via factory functions)
+- ❌ **Missing context validation in constructor** → Validate `db` and required context in constructor
+
+#### API Routes & Validation
+- ❌ **No input validation** → ALWAYS use Zod schemas for request validation
+- ❌ **Not using factory functions** → Use `createExampleService(event)` pattern
+- ❌ **Not using response helpers** → Use `createSuccessResponse()` for consistency
+- ❌ **Handling errors manually** → Let error middleware handle errors (just throw)
+
+#### Error Handling
+- ❌ **Including redundant error details** → Don't add `tenantId`, `path`, `method` (already logged)
+- ❌ **Using generic errors** → Use specific error classes when available
+- ❌ **Not including field names in validation errors** → Add `{ field: 'email' }` to details
+
+### Frontend Pitfalls
+
+#### API Calls & State Management
+- ❌ **Direct `$fetch` in pages/components** → ALL API calls must go through store actions
+- ❌ **Using `$fetch` in stores** → Use `extendedFetch` for centralized error handling
+- ❌ **Duplicating store state locally** → Single source of truth in stores
+- ❌ **Creating wrapper composables for stores** → Use stores directly in pages
+- ❌ **API calls outside store actions** → Store actions are the ONLY place for API calls
+
+#### State Management
+- ❌ **Putting library instances in stores** → Use composables (Marzipano viewer, etc.)
+- ❌ **Putting high-frequency state in stores** → Use component-local refs for drag coordinates, etc.
+- ❌ **Putting DOM references in stores** → Use composables or component-local
+- ❌ **Not returning boolean from store actions** → Return true/false for success/failure
+
+#### Forms
+- ❌ **Creating local form state** (`form.value`) → vee-validate IS the state
+- ❌ **Direct API calls from form submission** → Call store actions
+- ❌ **Manual validation** → Let Zod schemas handle validation
+- ❌ **Not using shared validators** → Import from `#shared/validators/*`
+- ❌ **Forgetting i18n for error messages** → Extend schemas with `t()` messages
+
+#### Components & Auto-Imports
+- ❌ **Importing components explicitly** → Nuxt auto-imports them
+- ❌ **Lowercase folder names** → Use PascalCase (App, Tours, not app, tours)
+- ❌ **Deeply nested components** (3+ levels) → Keep 2 levels max
+- ❌ **Using index.vue** → Name files explicitly (Sidebar.vue, not index.vue)
+- ❌ **Creating components for single-use UI** → Only extract when used 2+ times
+
+#### Composables
+- ❌ **Missing `use` prefix** → Composables must start with `use`
+- ❌ **Creating store wrappers** → Use stores directly
+- ❌ **Using composables for state management** → Use stores for state
+
+#### General
+- ❌ **Not using auto-imports** → Don't import composables, utils, stores, components
+- ❌ **Default exports in utils/composables** → Use named exports
+- ❌ **Forgetting to update loading state** → Track loading in store actions
+
+---
+
+## Development Checklists
+
+Use these checklists to ensure consistent implementation across the codebase.
+
+### New API Endpoint Checklist
+
+When creating a new API endpoint:
+
+- [ ] Create Zod validator in `#shared/validators/` (shared with frontend)
+- [ ] Add repository method in `server/repositories/` if data access is needed
+- [ ] Implement service method with:
+  - [ ] Permission check (`if (!this.userId)` or RBAC check)
+  - [ ] Business logic
+  - [ ] Audit log for sensitive operations
+- [ ] Create route handler in `server/api/v1/`:
+  - [ ] Validate request with Zod schema
+  - [ ] Use factory function to create service
+  - [ ] Call service method
+  - [ ] Return standardized response via `createSuccessResponse()`
+- [ ] Add integration test in `server/api/__tests__/`
+- [ ] Update API documentation if needed
+- [ ] Test manually in development
+
+### New Database Table Checklist
+
+When adding a new database table:
+
+- [ ] Define schema in `server/database/schema/`:
+  - [ ] Include `baseFields` (id, createdAt, updatedAt, deletedAt)
+  - [ ] Use `text()` for IDs with `createId()`
+  - [ ] Use `integer()` with `mode: "timestamp"` for dates
+  - [ ] Use `integer()` with `mode: "boolean"` for booleans
+  - [ ] Add foreign key constraints with `onDelete: "cascade"` where appropriate
+- [ ] Add indexes:
+  - [ ] Foreign keys
+  - [ ] Commonly queried fields
+  - [ ] Unique constraints where needed
+- [ ] Run `npm run db:generate` to create migration
+- [ ] Review generated migration in `server/database/migrations/`
+- [ ] Test migration locally: `npm run db:migrate:local:staging`
+- [ ] Create repository class extending `BaseRepository`
+- [ ] Add CRUD methods to repository
+- [ ] ALWAYS use `this.notDeleted(schema.table)` in queries
+- [ ] Create service class if business logic is needed
+- [ ] Add tests for repository methods
+
+### New Feature Checklist
+
+When implementing a complete feature:
+
+- [ ] **Planning**:
+  - [ ] Review requirements and acceptance criteria
+  - [ ] Identify required database changes
+  - [ ] Identify required API endpoints
+  - [ ] Identify required frontend pages/components
+- [ ] **Backend**:
+  - [ ] Database schema changes (see Database Table Checklist)
+  - [ ] Repository layer implementation
+  - [ ] Service layer implementation
+  - [ ] API endpoints (see API Endpoint Checklist)
+  - [ ] Error handling with specific error classes
+  - [ ] Audit logging for sensitive operations
+- [ ] **Frontend**:
+  - [ ] Store actions for API calls (using `extendedFetch`)
+  - [ ] Store state management
+  - [ ] Form components with vee-validate + shared validators
+  - [ ] UI components (only if reused 2+ times)
+  - [ ] Page implementation
+- [ ] **Testing**:
+  - [ ] Unit tests for service methods
+  - [ ] Integration tests for API endpoints
+  - [ ] Manual testing in development
+- [ ] **Documentation**:
+  - [ ] Update relevant docs if patterns changed
+  - [ ] Add JSDoc comments for complex logic
+
+### New Store Action Checklist
+
+When adding a new store action:
+
+- [ ] Use `extendedFetch` from `useExtendedFetch()` (NEVER `$fetch`)
+- [ ] Update loading state (`this.loading = true` at start)
+- [ ] Clear error state (`this.error = null`)
+- [ ] Make API call with proper method and body
+- [ ] Update store state immediately on success
+- [ ] Show success toast with descriptive message
+- [ ] Return boolean (true for success, false for failure)
+- [ ] Clear loading state in `finally` block
+- [ ] Let `extendedFetch` handle error toasts (don't duplicate)
+
+**Template:**
+```typescript
+async myAction(data: MyData) {
+  try {
+    this.loading = true
+    this.error = null
+
+    const { extendedFetch } = useExtendedFetch()
+    const { ok, payload } = await extendedFetch('/v1/endpoint', {
+      method: 'POST',
+      body: data
+    })
+
+    if (ok) {
+      this.myState = payload.data
+      toast.success('Action completed')
+      return true
+    }
+    return false
+  } catch (error: any) {
+    this.error = error.message
+    return false
+  } finally {
+    this.loading = false
+  }
+}
+```
+
+### New Form Component Checklist
+
+When creating a form:
+
+- [ ] Import shared validator from `#shared/validators/*`
+- [ ] Extend validator with i18n messages using `t()`
+- [ ] Use `useForm()` from vee-validate with `toTypedSchema()`
+- [ ] Destructure needed properties: `handleSubmit`, `isSubmitting`, `setValues`, `isFieldDirty`
+- [ ] Set initial values in `useForm()` config
+- [ ] Create submit handler with `handleSubmit(async (values) => ...)`
+- [ ] Call store action (NOT direct API call)
+- [ ] Use `<FormField>`, `<FormItem>`, `<FormLabel>`, `<FormControl>`, `<FormMessage>` components
+- [ ] Use `v-bind="field"` on input components
+- [ ] Use `:validate-on-blur="!isFieldDirty"` for better UX
+- [ ] Show loading spinner when `isSubmitting` is true
+- [ ] Disable submit button when `isSubmitting` is true
+- [ ] Populate form with `setValues()` if editing existing data
 
 ---
 
@@ -1074,38 +1305,576 @@ export default defineEventHandler(async (event) => {
 
 ## Testing
 
-### Test Structure
+Comprehensive testing patterns for services, repositories, and API routes.
 
-```typescript
-describe("ExampleService", () => {
-  let service: ExampleService;
-  let mockEvent: H3Event;
+### Testing Philosophy
 
-  beforeEach(() => {
-    mockEvent = createMockEvent({
-      db: mockD1Database,
-      userId: "test-user-id",
-    });
-    service = createExampleService(mockEvent);
-  });
+- **Unit Tests**: Test business logic in services and repositories in isolation
+- **Integration Tests**: Test full API request flow including middleware
+- **Mock External Dependencies**: Database, external APIs, Cloudflare services
+- **Test Error Cases**: Validate error handling and edge cases
+- **Test Permissions**: Ensure RBAC checks work correctly
 
-  it("should create example", async () => {
-    const result = await service.createExample({
-      name: "Test Example",
-    });
+### Test File Organization
 
-    expect(result.name).toBe("Test Example");
-    expect(result.userId).toBe("test-user-id");
-  });
-});
+```
+server/
+├── services/__tests__/
+│   ├── identity.test.ts
+│   └── rbac.test.ts
+├── repositories/__tests__/
+│   ├── identity.test.ts
+│   └── rbac.test.ts
+└── api/__tests__/
+    ├── auth/
+    │   ├── signin.test.ts
+    │   └── signout.test.ts
+    └── v1/
+        └── user/
+            └── index.test.ts
 ```
 
-### Testing Rules
+### Unit Tests: Services
 
-- **Unit tests**: Test business logic in services
-- **Integration tests**: Test API endpoints
-- **Mock external dependencies**: Database, external APIs
-- **Test error cases**: Validate error handling
+Services contain business logic and should be tested in isolation.
+
+```typescript
+// server/services/__tests__/identity.test.ts
+import { describe, it, expect, beforeEach, vi } from 'vitest'
+import { IdentityService } from '#server/services/identity'
+import { UserRepository } from '#server/repositories/identity'
+import { AuditLogRepository } from '#server/repositories/audit-log'
+import { AuthenticationError, EmailAlreadyExistsError } from '#server/error/errors'
+import type { H3Event } from 'h3'
+
+describe('IdentityService', () => {
+  let service: IdentityService
+  let mockUserRepo: UserRepository
+  let mockAuditRepo: AuditLogRepository
+  let mockEvent: H3Event
+
+  beforeEach(() => {
+    // Mock repositories
+    mockUserRepo = {
+      findByEmail: vi.fn(),
+      create: vi.fn(),
+      update: vi.fn(),
+    } as any
+
+    mockAuditRepo = {
+      log: vi.fn(),
+    } as any
+
+    // Mock H3 event
+    mockEvent = {
+      context: {
+        userId: 'test-user-id',
+        cloudflare: {
+          env: {
+            DB: {} // Mock D1 database
+          }
+        }
+      }
+    } as any
+
+    service = new IdentityService(
+      mockEvent,
+      mockEvent.context.cloudflare.env.DB,
+      mockUserRepo,
+      mockAuditRepo
+    )
+  })
+
+  describe('createUser', () => {
+    it('should create user successfully', async () => {
+      const userData = {
+        email: 'test@example.com',
+        password: 'password123',
+        firstName: 'Test',
+        lastName: 'User'
+      }
+
+      const createdUser = {
+        id: 'user-123',
+        ...userData,
+        passwordHash: 'hashed',
+        createdAt: new Date()
+      }
+
+      vi.mocked(mockUserRepo.findByEmail).mockResolvedValue(null)
+      vi.mocked(mockUserRepo.create).mockResolvedValue(createdUser as any)
+
+      const result = await service.createUser(userData)
+
+      expect(result.id).toBe('user-123')
+      expect(result.email).toBe('test@example.com')
+      expect(mockAuditRepo.log).toHaveBeenCalledWith(
+        'test-user-id',
+        'USER_CREATED',
+        'User',
+        'user-123'
+      )
+    })
+
+    it('should throw if email already exists', async () => {
+      const userData = {
+        email: 'existing@example.com',
+        password: 'password123'
+      }
+
+      vi.mocked(mockUserRepo.findByEmail).mockResolvedValue({
+        id: 'existing-user',
+        email: 'existing@example.com'
+      } as any)
+
+      await expect(service.createUser(userData)).rejects.toThrow(EmailAlreadyExistsError)
+    })
+
+    it('should throw if user not authenticated', async () => {
+      mockEvent.context.userId = undefined
+
+      await expect(service.createUser({
+        email: 'test@example.com',
+        password: 'password123'
+      })).rejects.toThrow(AuthenticationError)
+    })
+  })
+})
+```
+
+### Unit Tests: Repositories
+
+Repositories handle data access and should test Drizzle queries.
+
+```typescript
+// server/repositories/__tests__/identity.test.ts
+import { describe, it, expect, beforeEach } from 'vitest'
+import { UserRepository } from '#server/repositories/identity'
+import { createTestDatabase } from '#server/__tests__/helpers/database'
+
+describe('UserRepository', () => {
+  let repo: UserRepository
+  let testDb: D1Database
+
+  beforeEach(async () => {
+    testDb = await createTestDatabase()
+    repo = new UserRepository(testDb)
+  })
+
+  describe('findById', () => {
+    it('should find user by id', async () => {
+      // Insert test user
+      const user = await repo.create({
+        email: 'test@example.com',
+        passwordHash: 'hashed',
+        firstName: 'Test',
+        lastName: 'User'
+      })
+
+      // Find user
+      const found = await repo.findById(user.id)
+
+      expect(found).toBeDefined()
+      expect(found?.email).toBe('test@example.com')
+    })
+
+    it('should return null for non-existent user', async () => {
+      const found = await repo.findById('non-existent-id')
+      expect(found).toBeNull()
+    })
+
+    it('should not return soft-deleted users', async () => {
+      // Create and soft-delete user
+      const user = await repo.create({
+        email: 'deleted@example.com',
+        passwordHash: 'hashed'
+      })
+      await repo.softDelete(user.id)
+
+      // Should not find soft-deleted user
+      const found = await repo.findById(user.id)
+      expect(found).toBeNull()
+    })
+  })
+
+  describe('findByEmail', () => {
+    it('should find user by email', async () => {
+      await repo.create({
+        email: 'unique@example.com',
+        passwordHash: 'hashed'
+      })
+
+      const found = await repo.findByEmail('unique@example.com')
+      expect(found).toBeDefined()
+      expect(found?.email).toBe('unique@example.com')
+    })
+
+    it('should be case-insensitive', async () => {
+      await repo.create({
+        email: 'CaseSensitive@example.com',
+        passwordHash: 'hashed'
+      })
+
+      const found = await repo.findByEmail('casesensitive@example.com')
+      expect(found).toBeDefined()
+    })
+  })
+})
+```
+
+### Integration Tests: API Routes
+
+Integration tests verify the full request/response flow.
+
+```typescript
+// server/api/__tests__/auth/signin.test.ts
+import { describe, it, expect, beforeEach } from 'vitest'
+import { createTestFetch } from '#server/__tests__/helpers/fetch'
+import { createTestDatabase, clearDatabase } from '#server/__tests__/helpers/database'
+
+describe('POST /api/v1/auth/signin', () => {
+  let testFetch: ReturnType<typeof createTestFetch>
+  let testDb: D1Database
+
+  beforeEach(async () => {
+    testDb = await createTestDatabase()
+    testFetch = createTestFetch(testDb)
+    await clearDatabase(testDb)
+  })
+
+  it('should sign in with valid credentials', async () => {
+    // Create test user
+    await testFetch('/api/v1/auth/signup', {
+      method: 'POST',
+      body: {
+        email: 'test@example.com',
+        password: 'password123',
+        firstName: 'Test',
+        lastName: 'User'
+      }
+    })
+
+    // Sign in
+    const response = await testFetch('/api/v1/auth/signin', {
+      method: 'POST',
+      body: {
+        email: 'test@example.com',
+        password: 'password123'
+      }
+    })
+
+    expect(response.status).toBe(200)
+    expect(response.data.user).toBeDefined()
+    expect(response.data.user.email).toBe('test@example.com')
+    expect(response.headers.get('set-cookie')).toContain('session')
+  })
+
+  it('should reject invalid credentials', async () => {
+    const response = await testFetch('/api/v1/auth/signin', {
+      method: 'POST',
+      body: {
+        email: 'nonexistent@example.com',
+        password: 'wrongpassword'
+      }
+    })
+
+    expect(response.status).toBe(401)
+    expect(response.error.code).toBe('INVALID_CREDENTIALS')
+  })
+
+  it('should validate request body', async () => {
+    const response = await testFetch('/api/v1/auth/signin', {
+      method: 'POST',
+      body: {
+        email: 'invalid-email', // Invalid email format
+        password: '123' // Too short
+      }
+    })
+
+    expect(response.status).toBe(400)
+    expect(response.error.code).toBe('VALIDATION_ERROR')
+  })
+
+  it('should reject inactive users', async () => {
+    // Create and deactivate user
+    const signupResponse = await testFetch('/api/v1/auth/signup', {
+      method: 'POST',
+      body: {
+        email: 'inactive@example.com',
+        password: 'password123'
+      }
+    })
+
+    await testFetch(`/api/v1/user/${signupResponse.data.user.id}`, {
+      method: 'PATCH',
+      body: { isActive: false }
+    })
+
+    // Try to sign in
+    const response = await testFetch('/api/v1/auth/signin', {
+      method: 'POST',
+      body: {
+        email: 'inactive@example.com',
+        password: 'password123'
+      }
+    })
+
+    expect(response.status).toBe(403)
+    expect(response.error.code).toBe('USER_INACTIVE')
+  })
+})
+```
+
+### Test Helpers
+
+Create reusable test utilities in `server/__tests__/helpers/`.
+
+```typescript
+// server/__tests__/helpers/database.ts
+import { drizzle } from 'drizzle-orm/d1'
+import * as schema from '#server/database/schema'
+
+export async function createTestDatabase(): Promise<D1Database> {
+  // Create in-memory SQLite database for testing
+  const db = await createInMemoryD1()
+  await runMigrations(db)
+  return db
+}
+
+export async function clearDatabase(db: D1Database) {
+  const drizzleDb = drizzle(db, { schema })
+
+  // Clear all tables in reverse order (to respect foreign keys)
+  await drizzleDb.delete(schema.auditLogs)
+  await drizzleDb.delete(schema.userRoles)
+  await drizzleDb.delete(schema.roles)
+  await drizzleDb.delete(schema.users)
+}
+
+// server/__tests__/helpers/fetch.ts
+import type { H3Event } from 'h3'
+
+export function createTestFetch(db: D1Database) {
+  return async (path: string, options?: RequestInit & { body?: any }) => {
+    const event = createMockEvent({
+      method: options?.method || 'GET',
+      path,
+      body: options?.body,
+      db
+    })
+
+    // Execute route handler
+    const response = await handleRequest(event)
+
+    return {
+      status: response.status,
+      data: response.data,
+      error: response.error,
+      headers: response.headers
+    }
+  }
+}
+
+// server/__tests__/helpers/event.ts
+export function createMockEvent(options: {
+  method?: string
+  path?: string
+  body?: any
+  userId?: string
+  db?: D1Database
+}): H3Event {
+  return {
+    node: {
+      req: {},
+      res: {}
+    },
+    context: {
+      userId: options.userId,
+      cloudflare: {
+        env: {
+          DB: options.db
+        }
+      }
+    },
+    method: options.method || 'GET',
+    path: options.path || '/',
+    // ... other H3Event properties
+  } as any
+}
+```
+
+### Mocking Patterns
+
+```typescript
+// Mock Drizzle queries
+vi.mock('drizzle-orm/d1', () => ({
+  drizzle: vi.fn(() => ({
+    select: vi.fn().mockReturnThis(),
+    from: vi.fn().mockReturnThis(),
+    where: vi.fn().mockReturnThis(),
+    limit: vi.fn().mockResolvedValue([mockUser])
+  }))
+}))
+
+// Mock external services
+vi.mock('#server/lib/email', () => ({
+  sendEmail: vi.fn().mockResolvedValue(true)
+}))
+
+// Mock Cloudflare env
+const mockEnv = {
+  DB: mockD1Database,
+  KV: mockKVNamespace,
+  R2: mockR2Bucket
+}
+```
+
+### Testing Best Practices
+
+1. **Isolate Tests**: Each test should be independent
+2. **Clear Test Names**: Use descriptive test names (should/when pattern)
+3. **Arrange-Act-Assert**: Structure tests clearly
+4. **Test Edge Cases**: Null values, empty arrays, boundary conditions
+5. **Test Error Paths**: Ensure errors are thrown correctly
+6. **Mock External Services**: Don't make real API calls in tests
+7. **Use Test Helpers**: Create reusable test utilities
+8. **Clean Up**: Clear database state between tests
+
+### Running Tests
+
+```bash
+# Run all tests
+npm test
+
+# Run specific test file
+npm test -- identity.test.ts
+
+# Run tests in watch mode
+npm test -- --watch
+
+# Run with coverage
+npm test -- --coverage
+```
+
+---
+
+## Naming Conventions
+
+Consistent naming patterns across the codebase for files, functions, classes, and variables.
+
+| Type | Convention | Examples | Notes |
+|------|-----------|----------|-------|
+| **Files** | | | |
+| API Routes | `kebab-case.{method}.ts` | `user-profile.get.ts`<br>`signin.post.ts` | HTTP method as extension |
+| Services | `camelCase.ts` | `identityService.ts`<br>`rbacService.ts` | Descriptive, domain-focused |
+| Repositories | `camelCase.ts` | `identityRepository.ts`<br>`auditLogRepository.ts` | Match service naming |
+| Components | `PascalCase.vue` | `UserCard.vue`<br>`AppSidebar.vue` | Folders also PascalCase |
+| Composables | `useCamelCase.ts` | `useMarzipano.ts`<br>`useRetry.ts` | Must start with `use` |
+| Stores | `camelCaseStore.ts` | `userStore.ts`<br>`projectStore.ts` | End with `Store` |
+| Utils | `camelCase.ts` | `stringUtils.ts`<br>`dateUtils.ts` | Any case works, prefer camelCase |
+| Types | `camelCase.ts` or `PascalCase.ts` | `api.ts`<br>`User.ts` | Context-dependent |
+| **Functions** | | | |
+| Regular Functions | `camelCase` | `createUser()`<br>`validateEmail()` | Verb-first |
+| Async Functions | `camelCase` | `async fetchUsers()`<br>`async saveProject()` | Same as regular |
+| Event Handlers | `handleCamelCase` | `handleSubmit()`<br>`handleClick()` | Prefix with `handle` |
+| Composables | `useCamelCase` | `useMarzipano()`<br>`useRetry()` | Must start with `use` |
+| Store Actions | `camelCase` | `fetchUser()`<br>`updateProject()` | Verb-first |
+| **Classes** | | | |
+| Services | `PascalCase` + `Service` | `IdentityService`<br>`RBACService` | Suffix with `Service` |
+| Repositories | `PascalCase` + `Repository` | `UserRepository`<br>`AuditLogRepository` | Suffix with `Repository` |
+| Errors | `PascalCase` + `Error` | `ValidationError`<br>`AuthenticationError` | Suffix with `Error` |
+| **Constants** | | | |
+| Global Constants | `SCREAMING_SNAKE_CASE` | `MAX_PAGE_SIZE`<br>`DEFAULT_TIMEOUT` | All caps with underscores |
+| Enum Values | `SCREAMING_SNAKE_CASE` | `ENV.DEVELOPMENT`<br>`ERROR_CODES.VALIDATION_ERROR` | All caps |
+| Config Keys | `SCREAMING_SNAKE_CASE` | `JWT_SECRET`<br>`DATABASE_URL` | Environment variables |
+| **Variables** | | | |
+| Local Variables | `camelCase` | `userId`<br>`currentProject` | Descriptive names |
+| Boolean Variables | `is/has/should` + `CamelCase` | `isActive`<br>`hasPermission`<br>`shouldRedirect` | Prefix for booleans |
+| Private Class Fields | `camelCase` | `private userId`<br>`private db` | No underscore prefix |
+| **Types & Interfaces** | | | |
+| Types | `PascalCase` | `User`<br>`ApiResponse<T>` | Singular, descriptive |
+| Interfaces | `PascalCase` | `IUser`<br>`IRepository` | Optional `I` prefix |
+| Generic Types | `T`, `K`, `V` | `Array<T>`<br>`Record<K, V>` | Single uppercase letter |
+| **Database** | | | |
+| Table Names | `snake_case` (plural) | `users`<br>`audit_logs` | Lowercase, plural |
+| Column Names | `snake_case` | `user_id`<br>`created_at` | Lowercase with underscores |
+| Primary Keys | `id` | `id` | Always just `id` |
+| Foreign Keys | `{table}_id` | `user_id`<br>`role_id` | Singular table name + `_id` |
+| Timestamps | `{action}_at` | `created_at`<br>`updated_at`<br>`deleted_at` | Past tense + `_at` |
+| Booleans | `is_{adjective}` | `is_active`<br>`is_verified` | Prefix with `is_` |
+
+### File Naming Examples
+
+```
+✅ GOOD:
+server/api/v1/auth/signin.post.ts
+server/services/identityService.ts
+server/repositories/userRepository.ts
+app/components/User/ProfileCard.vue
+app/composables/useMarzipano.ts
+app/stores/userStore.ts
+
+❌ BAD:
+server/api/v1/auth/SignIn.post.ts          // Should be kebab-case
+server/services/identity-service.ts        // Should be camelCase
+app/components/user/profile-card.vue       // Folder should be PascalCase
+app/composables/marzipano.ts               // Missing 'use' prefix
+app/stores/user.ts                         // Missing 'Store' suffix
+```
+
+### Function Naming Examples
+
+```typescript
+// ✅ GOOD
+function createUser(data: CreateUserRequest) { }
+async function fetchUserById(id: string) { }
+function handleSubmit(values: FormValues) { }
+export function useMarzipano() { }
+
+// ❌ BAD
+function CreateUser(data: CreateUserRequest) { }  // Should be camelCase
+async function getUserById(id: string) { }        // Prefer 'fetch' for async
+function onSubmit(values: FormValues) { }         // Prefer 'handle' prefix
+export function marzipano() { }                   // Missing 'use' prefix
+```
+
+### Variable Naming Examples
+
+```typescript
+// ✅ GOOD
+const userId = event.context.userId
+const isAuthenticated = computed(() => user.value !== null)
+const hasPermission = await checkPermission(userId, 'users:create')
+const shouldRedirect = !isAuthenticated.value
+
+// ❌ BAD
+const user_id = event.context.userId              // Should be camelCase
+const authenticated = computed(...)               // Should be 'isAuthenticated'
+const permission = await checkPermission(...)     // Unclear, use 'hasPermission'
+const redirect = !isAuthenticated.value           // Should be 'shouldRedirect'
+```
+
+### Database Naming Examples
+
+```typescript
+// ✅ GOOD
+export const users = sqliteTable('users', {
+  id: text('id').primaryKey(),
+  userId: text('user_id'),
+  firstName: text('first_name'),
+  isActive: integer('is_active', { mode: 'boolean' }),
+  createdAt: integer('created_at', { mode: 'timestamp' })
+})
+
+// ❌ BAD
+export const Users = sqliteTable('Users', {       // Table should be lowercase
+  ID: text('ID').primaryKey(),                    // Column should be lowercase
+  user_id: text('userID'),                        // Inconsistent
+  FirstName: text('FirstName'),                   // Should be snake_case
+  active: integer('active'),                      // Should be 'is_active'
+  created: integer('created')                     // Should be 'created_at'
+})
+```
 
 ---
 
@@ -2088,6 +2857,602 @@ Zod schemas are available in `server/validators/query.ts`:
 2. **Index Optimization**: Ensure indexes on filtered/sorted fields
 3. **Max Page Size**: Enforced limit of 100 items per page
 4. **Validated Fields**: Only allowed fields can be filtered/sorted
+
+---
+
+## Essential Code Templates
+
+Minimal but complete templates for the most common patterns. Copy and adapt these as starting points.
+
+### New Service Class
+
+```typescript
+// server/services/exampleService.ts
+import type { H3Event } from 'h3'
+import type { D1Database } from '@cloudflare/workers-types'
+import { ExampleRepository } from '#server/repositories/exampleRepository'
+import { AuditLogRepository } from '#server/repositories/auditLogRepository'
+import { AuthenticationError, InternalServerError } from '#server/error/errors'
+import type { NewExample, Example } from '#server/database/schema/example'
+
+export class ExampleService {
+  private readonly userId?: string
+
+  constructor(
+    private readonly event: H3Event,
+    private readonly db: D1Database,
+    private readonly exampleRepo: ExampleRepository,
+    private readonly auditLogRepo: AuditLogRepository
+  ) {
+    // Extract context once
+    this.userId = event.context.userId
+
+    // Validate database
+    if (!this.db) {
+      throw new InternalServerError('Database not available')
+    }
+  }
+
+  async createExample(data: Omit<NewExample, 'userId'>): Promise<Example> {
+    // Validate authentication
+    if (!this.userId) {
+      throw new AuthenticationError('User not authenticated')
+    }
+
+    // Create entity
+    const example = await this.exampleRepo.create({
+      ...data,
+      userId: this.userId
+    })
+
+    // Log action
+    await this.auditLogRepo.log(
+      this.userId,
+      'EXAMPLE_CREATED',
+      'Example',
+      example.id
+    )
+
+    return example
+  }
+
+  async getExample(id: string): Promise<Example | null> {
+    return this.exampleRepo.findById(id)
+  }
+
+  async updateExample(id: string, data: Partial<Example>): Promise<Example> {
+    if (!this.userId) {
+      throw new AuthenticationError('User not authenticated')
+    }
+
+    const updated = await this.exampleRepo.update(id, data)
+
+    await this.auditLogRepo.log(
+      this.userId,
+      'EXAMPLE_UPDATED',
+      'Example',
+      id
+    )
+
+    return updated
+  }
+}
+
+// Factory function
+export function createExampleService(event: H3Event): ExampleService {
+  const db = event.context.cloudflare?.env?.DB as D1Database
+
+  if (!db) {
+    throw new InternalServerError('Database not available in context')
+  }
+
+  return new ExampleService(
+    event,
+    db,
+    new ExampleRepository(db),
+    new AuditLogRepository(db)
+  )
+}
+```
+
+### New Repository Class
+
+```typescript
+// server/repositories/exampleRepository.ts
+import { BaseRepository } from '#server/repositories/base'
+import { eq, and } from 'drizzle-orm'
+import * as schema from '#server/database/schema'
+import type { Example, NewExample } from '#server/database/schema/example'
+
+export class ExampleRepository extends BaseRepository {
+  constructor(db: D1Database) {
+    super(db)
+  }
+
+  async findById(id: string): Promise<Example | null> {
+    const result = await this.drizzle
+      .select()
+      .from(schema.examples)
+      .where(and(
+        eq(schema.examples.id, id),
+        this.notDeleted(schema.examples)  // ALWAYS use this.notDeleted()
+      ))
+      .limit(1)
+
+    return result[0] || null
+  }
+
+  async findAll(): Promise<Example[]> {
+    return this.drizzle
+      .select()
+      .from(schema.examples)
+      .where(this.notDeleted(schema.examples))
+      .orderBy(schema.examples.createdAt)
+  }
+
+  async create(data: NewExample): Promise<Example> {
+    const [example] = await this.drizzle
+      .insert(schema.examples)
+      .values(data)
+      .returning()
+
+    return example
+  }
+
+  async update(id: string, data: Partial<Example>): Promise<Example> {
+    const [updated] = await this.drizzle
+      .update(schema.examples)
+      .set({
+        ...data,
+        updatedAt: new Date()
+      })
+      .where(and(
+        eq(schema.examples.id, id),
+        this.notDeleted(schema.examples)
+      ))
+      .returning()
+
+    return updated
+  }
+
+  async softDelete(id: string): Promise<void> {
+    await this.drizzle
+      .update(schema.examples)
+      .set({ deletedAt: new Date() })
+      .where(eq(schema.examples.id, id))
+  }
+}
+```
+
+### New API Route Handler
+
+```typescript
+// server/api/v1/examples/index.post.ts
+import { createExampleService } from '#server/services/exampleService'
+import { createSuccessResponse } from '#server/lib/response'
+import { createExampleSchema } from '#shared/validators/example'
+
+export default defineEventHandler(async (event) => {
+  // 1. Parse and validate request
+  const body = await readBody(event)
+  const validated = createExampleSchema.parse(body)
+
+  // 2. Create service
+  const exampleService = createExampleService(event)
+
+  // 3. Execute business logic
+  const example = await exampleService.createExample(validated)
+
+  // 4. Return standardized response
+  return createSuccessResponse('Example created successfully', example)
+})
+```
+
+### New Store Action
+
+```typescript
+// app/stores/exampleStore.ts
+import { defineStore } from 'pinia'
+import { ref } from 'vue'
+import { toast } from 'vue-sonner'
+
+export const useExampleStore = defineStore('example', () => {
+  // State
+  const examples = ref<Example[]>([])
+  const currentExample = ref<Example | null>(null)
+  const loading = ref(false)
+  const error = ref<string | null>(null)
+
+  // Actions
+  async function fetchExamples() {
+    try {
+      loading.value = true
+      error.value = null
+
+      const { extendedFetch } = useExtendedFetch()
+      const { ok, payload } = await extendedFetch('/v1/examples')
+
+      if (ok) {
+        examples.value = payload.data
+        return true
+      }
+      return false
+    } catch (err: any) {
+      error.value = err.message
+      return false
+    } finally {
+      loading.value = false
+    }
+  }
+
+  async function createExample(data: CreateExampleRequest) {
+    try {
+      loading.value = true
+      error.value = null
+
+      const { extendedFetch } = useExtendedFetch()
+      const { ok, payload } = await extendedFetch('/v1/examples', {
+        method: 'POST',
+        body: data
+      })
+
+      if (ok) {
+        examples.value.push(payload.data)
+        toast.success('Example created')
+        return true
+      }
+      return false
+    } catch (err: any) {
+      error.value = err.message
+      return false
+    } finally {
+      loading.value = false
+    }
+  }
+
+  function reset() {
+    examples.value = []
+    currentExample.value = null
+    loading.value = false
+    error.value = null
+  }
+
+  return {
+    // State
+    examples,
+    currentExample,
+    loading,
+    error,
+    // Actions
+    fetchExamples,
+    createExample,
+    reset
+  }
+})
+```
+
+### New Shared Validator
+
+```typescript
+// shared/validators/example.ts
+import { z } from 'zod'
+
+export const createExampleSchema = z.object({
+  name: z.string().min(1).max(255),
+  description: z.string().optional(),
+  isActive: z.boolean().optional().default(true)
+})
+
+export const updateExampleSchema = createExampleSchema.partial()
+
+export type CreateExampleRequest = z.infer<typeof createExampleSchema>
+export type UpdateExampleRequest = z.infer<typeof updateExampleSchema>
+```
+
+---
+
+## Environment & Configuration
+
+How to access and manage environment variables and configuration in different parts of the application.
+
+### Accessing Environment Variables
+
+#### In API Routes / Services
+
+```typescript
+// Access Cloudflare env bindings
+const env = event.context.cloudflare?.env
+
+// Database
+const db = env?.DB as D1Database
+
+// KV namespace
+const kv = env?.KV as KVNamespace
+
+// R2 bucket
+const r2 = env?.R2 as R2Bucket
+
+// Environment variables
+const jwtSecret = env?.JWT_SECRET as string
+const apiKey = env?.EXTERNAL_API_KEY as string
+```
+
+#### Required vs Optional Environment Variables
+
+```typescript
+// ✅ GOOD: Required - throw if missing
+export function createAuthService(event: H3Event) {
+  const env = event.context.cloudflare?.env
+  const secret = env?.JWT_SECRET
+
+  if (!secret) {
+    throw new InternalServerError('JWT_SECRET not configured')
+  }
+
+  // Use secret with confidence
+  return new AuthService(secret)
+}
+
+// ✅ GOOD: Optional - provide fallback or feature flag
+export function createAnalyticsService(event: H3Event) {
+  const env = event.context.cloudflare?.env
+  const apiKey = env?.ANALYTICS_API_KEY
+
+  if (!apiKey) {
+    // Return no-op service or disable feature
+    return new DisabledAnalyticsService()
+  }
+
+  return new AnalyticsService(apiKey)
+}
+```
+
+#### Environment-Specific Configuration
+
+```typescript
+import { isDevelopment, isProduction } from '#server/utils/environment'
+
+// Development-only features
+if (isDevelopment(event)) {
+  // Allow test headers, extended logging, etc.
+  const tenantId = getHeader(event, 'x-tenant-id')
+}
+
+// Production-only validation
+if (isProduction(event)) {
+  if (!jwtSecret || jwtSecret === 'default-secret-change-me') {
+    throw new InternalServerError('JWT_SECRET must be set in production')
+  }
+}
+```
+
+### Configuration Patterns
+
+#### Service Configuration
+
+```typescript
+// server/config/services.ts
+import { ENV, getEnvironment } from '#server/utils/environment'
+
+export function getServiceConfig(event: H3Event) {
+  const env = getEnvironment(event)
+
+  return {
+    rateLimits: {
+      [ENV.DEVELOPMENT]: { requests: 1000, window: 60 },
+      [ENV.STAGING]: { requests: 500, window: 60 },
+      [ENV.PRODUCTION]: { requests: 100, window: 60 }
+    }[env],
+
+    features: {
+      enableDebugMode: env === ENV.DEVELOPMENT,
+      enableAnalytics: env === ENV.PRODUCTION,
+      enableTestEndpoints: env !== ENV.PRODUCTION
+    }
+  }
+}
+```
+
+#### Validation Schema
+
+```typescript
+// Validate all required env vars on startup
+export function validateEnvironment(env: any) {
+  const required = [
+    'DB',
+    'JWT_SECRET',
+    'SESSION_SECRET'
+  ]
+
+  const missing = required.filter(key => !env[key])
+
+  if (missing.length > 0) {
+    throw new Error(`Missing required environment variables: ${missing.join(', ')}`)
+  }
+}
+```
+
+### Frontend Configuration Access
+
+```typescript
+// nuxt.config.ts - Expose specific vars to frontend
+export default defineNuxtConfig({
+  runtimeConfig: {
+    // Private (server-only)
+    jwtSecret: '',
+
+    // Public (exposed to frontend)
+    public: {
+      apiBase: '/api',
+      environment: process.env.ENVIRONMENT || 'development'
+    }
+  }
+})
+
+// Access in components/pages
+const config = useRuntimeConfig()
+console.log(config.public.environment) // 'development' | 'staging' | 'production'
+```
+
+---
+
+## Logging Patterns
+
+Consistent logging patterns for debugging and monitoring.
+
+### When to Log
+
+**✅ DO log:**
+- Permission denials (security audit trail)
+- Service initialization failures
+- External API failures
+- Significant state changes (via audit logs)
+- Development-only debug information
+
+**❌ DON'T log:**
+- Normal request flow (too noisy)
+- Already-handled validation errors (redundant)
+- Sensitive data (passwords, tokens, PII)
+- High-frequency operations (performance impact)
+
+### Logging Levels
+
+```typescript
+// Development debug logging
+if (isDevelopment()) {
+  console.log('[ServiceName] Action:', { userId, metadata })
+}
+
+// Warnings (unusual but not error)
+console.warn('[Auth] User attempted action without permission:', {
+  userId,
+  permission,
+  resource
+})
+
+// Errors (actual problems)
+console.error('[Database] Query failed:', {
+  error: error.message,
+  query: sanitizedQuery
+})
+```
+
+### Structured Logging Pattern
+
+```typescript
+// ✅ GOOD: Structured with context
+if (isDevelopment()) {
+  console.log('[RBAC] Permission check:', {
+    userId,
+    permission: 'users:create',
+    result: hasPermission,
+    roles: userRoles
+  })
+}
+
+// ❌ BAD: Unstructured string
+console.log('Checking permission for user ' + userId)
+```
+
+### Service-Specific Logging
+
+```typescript
+export class ExampleService {
+  private log(action: string, data?: any) {
+    if (isDevelopment()) {
+      console.log(`[ExampleService] ${action}:`, {
+        userId: this.userId,
+        ...data
+      })
+    }
+  }
+
+  async createExample(data: CreateExampleRequest) {
+    this.log('createExample', { data })
+
+    // Business logic...
+
+    this.log('createExample:success', { exampleId: example.id })
+    return example
+  }
+}
+```
+
+### Error Logging
+
+```typescript
+// Let error middleware handle most logging
+// Only log additional context if needed
+
+try {
+  await externalApiCall()
+} catch (error) {
+  // Log context before re-throwing
+  console.error('[ExternalAPI] Call failed:', {
+    endpoint: '/api/resource',
+    userId: this.userId,
+    error: error.message
+  })
+  throw error // Let error middleware handle response
+}
+```
+
+### Audit Logging (Persistent)
+
+Use audit logs for persistent records of sensitive operations:
+
+```typescript
+// Significant actions that need audit trail
+await this.auditLogRepo.log(
+  userId,
+  'USER_DELETED',
+  'User',
+  deletedUserId,
+  {
+    stateBefore: { email: user.email, role: user.role },
+    stateAfter: null,
+    metadata: { reason: deletionReason }
+  }
+)
+```
+
+### Performance Logging
+
+```typescript
+// Development-only performance tracking
+if (isDevelopment()) {
+  const startTime = Date.now()
+
+  await expensiveOperation()
+
+  const duration = Date.now() - startTime
+  if (duration > 1000) {
+    console.warn('[Performance] Slow operation:', {
+      operation: 'expensiveOperation',
+      duration: `${duration}ms`,
+      threshold: '1000ms'
+    })
+  }
+}
+```
+
+### Sanitizing Sensitive Data
+
+```typescript
+function sanitizeForLogging(data: any) {
+  const sensitiveFields = ['password', 'token', 'secret', 'apiKey']
+
+  return Object.keys(data).reduce((acc, key) => {
+    acc[key] = sensitiveFields.includes(key) ? '[REDACTED]' : data[key]
+    return acc
+  }, {} as any)
+}
+
+// Usage
+if (isDevelopment()) {
+  console.log('[Auth] Signin attempt:', sanitizeForLogging(signInData))
+}
+```
 
 ---
 
