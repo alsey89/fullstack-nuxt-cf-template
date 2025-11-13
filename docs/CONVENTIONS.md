@@ -1,7 +1,7 @@
 # Development Conventions & Guidelines
 
 **Project:** Cloudflare Full-Stack Template
-**Last Updated:** 2025-10-21
+**Last Updated:** 2025-10-28
 
 This document consolidates all coding conventions, architectural patterns, and best practices for the Cloudflare Full-Stack Template.
 
@@ -23,16 +23,22 @@ This document consolidates all coding conventions, architectural patterns, and b
 1. [Architecture Overview](#architecture-overview)
 2. [Import Aliases](#import-aliases)
 3. [Environment Detection](#environment-detection)
-4. [Configuration & Environment Variables](#configuration--environment-variables)
-5. [Service Layer Pattern](#service-layer-pattern)
-6. [Repository Layer](#repository-layer)
-7. [API Response Format](#api-response-format)
-8. [Error Handling](#error-handling)
-9. [Pagination](#pagination)
-10. [Route Handlers](#route-handlers)
-11. [Testing](#testing)
-12. [Database Access](#database-access)
-13. [Field Naming](#field-naming)
+4. [Service Layer Pattern](#service-layer-pattern)
+5. [Repository Layer](#repository-layer)
+6. [API Response Format](#api-response-format)
+7. [Error Handling](#error-handling)
+8. [Pagination](#pagination)
+9. [Route Handlers](#route-handlers)
+10. [Testing](#testing)
+11. [Database Access](#database-access)
+12. [Field Naming](#field-naming)
+13. [Frontend Component Organization](#frontend-component-organization)
+14. [Frontend Architecture & State Management](#frontend-architecture--state-management)
+    - [Forms Convention](#1-forms-convention)
+    - [State Management Architecture](#2-state-management-architecture)
+    - [API Call Patterns](#3-api-call-patterns)
+    - [Migration Checklist](#4-migration-checklist)
+    - [Decision Trees](#5-decision-trees)
 
 ---
 
@@ -52,58 +58,40 @@ This document consolidates all coding conventions, architectural patterns, and b
 
 ```
 ┌─────────────────────────────────────────────────────────┐
-│  Frontend (app/)                                        │
-│  - Vue components, pages, layouts                       │
-│  - Client-side form validation                          │
-│  - Pinia stores, composables                            │
-└──────────────────┬──────────────────────────────────────┘
-                   │ imports ↓
-                   ├───────────────────────────────────────┐
-                   │                                       │
-┌──────────────────▼──────────────────────────────────────▼┐
-│  Shared Layer (shared/)                                  │
-│  - shared/validators/*.ts (Zod schemas)                  │
-│  - shared/constants/*.ts (business rules)                │
-│  - shared/types/*.ts (shared TypeScript types)           │
-│  ⚠️  NO dependencies on server/ or app/                  │
-│  ⚠️  Use relative imports within shared/                 │
-└──────────────────▲──────────────────────────────────────┬┘
-                   │ imports ↑                    imports ↓
-┌──────────────────┴──────────────────────────────────────▼┐
-│  API Layer (Route Handlers)                              │
-│  - server/api/**/*.{get,post,put,delete}.ts              │
-│  - Request validation using #shared validators           │
-│  - Response formatting                                   │
-│  - Session management (nuxt-auth-utils)                  │
+│  API Layer (Route Handlers)                             │
+│  - server/api/**/*.{get,post,put,delete}.ts             │
+│  - Request validation & parsing                         │
+│  - Response formatting                                  │
+│  - Session management (nuxt-auth-utils)                 │
 └──────────────────┬──────────────────────────────────────┘
                    │ calls ↓
 ┌──────────────────▼──────────────────────────────────────┐
-│  Middleware Layer                                        │
-│  - server/middleware/01.tenant.ts (tenant resolution)    │
-│  - server/middleware/02.auth.ts (authentication)         │
+│  Middleware Layer                                       │
+│  - server/middleware/01.tenant.ts (tenant resolution)   │
+│  - server/middleware/02.auth.ts (authentication)        │
 └──────────────────┬──────────────────────────────────────┘
                    │ calls ↓
 ┌──────────────────▼──────────────────────────────────────┐
-│  Service Layer (Business Logic)                          │
-│  - server/services/*.ts                                  │
-│  - Request-scoped instances (no singletons)              │
-│  - Context validation in constructors                    │
-│  - Uses #shared validators for business logic validation │
+│  Service Layer (Business Logic)                         │
+│  - server/services/*.ts                                 │
+│  - Request-scoped instances (no singletons)             │
+│  - Context validation in constructors                   │
+│  - Factory functions for dependency injection           │
 └──────────────────┬──────────────────────────────────────┘
                    │ calls ↓
 ┌──────────────────▼──────────────────────────────────────┐
-│  Repository Layer (Data Access)                          │
-│  - server/repositories/*.ts                              │
-│  - Database-scoped queries with batch operations         │
-│  - No business logic (data access only)                  │
-│  - Type-safe Drizzle ORM operations                      │
+│  Repository Layer (Data Access)                         │
+│  - server/repositories/*.ts                             │
+│  - Database-scoped queries with batch operations        │
+│  - No business logic (data access only)                 │
+│  - Type-safe Drizzle ORM operations                     │
 └──────────────────┬──────────────────────────────────────┘
                    │ queries ↓
 ┌──────────────────▼──────────────────────────────────────┐
-│  Database Layer (Cloudflare D1)                          │
-│  - Drizzle schema definitions                            │
-│  - Type-safe SQL generation                              │
-│  - Multi-tenant data isolation                           │
+│  Database Layer (Cloudflare D1)                         │
+│  - Drizzle schema definitions                           │
+│  - Type-safe SQL generation                             │
+│  - Multi-tenant data isolation                          │
 └─────────────────────────────────────────────────────────┘
 ```
 
@@ -128,7 +116,6 @@ This project uses TypeScript path aliases to simplify imports and avoid deeply n
 | ------------------ | -------------- | ------------------------------------------------- | -------------------------------------------------------- |
 | `~` or `@`         | `app/`         | Frontend code (components, pages, composables)    | `import Button from '@/components/ui/Button.vue'`        |
 | `#server`          | `server/`      | Backend code (services, repositories, middleware) | `import { getRBACService } from '#server/services/rbac'` |
-| `#shared`          | `shared/`      | Shared code (validators, constants, types)        | `import { signinSchema } from '#shared/validators/auth'` |
 | `~~` or `@@`       | Project root   | Cross-boundary imports (rare)                     | `import type { ApiResponse } from '~~/server/types/api'` |
 | `#app`, `#imports` | Nuxt internals | Framework auto-imports                            | `import { useAsyncData } from '#app'`                    |
 
@@ -139,93 +126,15 @@ This project uses TypeScript path aliases to simplify imports and avoid deeply n
 Use `~` or `@` for all imports within the frontend:
 
 ```typescript
-// ✅ GOOD: Use @ alias for utilities and composables
+// ✅ GOOD: Use @ alias
+import { Button } from "@/components/ui/button";
 import { useAuth } from "@/composables/useAuth";
 import { formatDate } from "@/lib/utils";
 
 // ❌ BAD: Relative imports
+import { Button } from "../../../components/ui/button";
 import { useAuth } from "../../composables/useAuth";
 ```
-
-##### Component Auto-Import Convention
-
-**Important:** Nuxt automatically imports all Vue components from the `app/components/` directory. **Do NOT explicitly import components** - they are globally available based on their folder structure and filename.
-
-**How Nuxt Auto-Import Works:**
-- Components are auto-imported based on their **folder structure** and **filename**
-- Component names are derived using **PascalCase** from the path
-- Both `.vue` components and shadcn-vue components are auto-imported
-
-**Examples:**
-
-```
-app/components/
-├── App/
-│   ├── IconButton.vue        → <AppIconButton />
-│   └── ThemeToggle.vue       → <AppThemeToggle />
-├── Generic/
-│   ├── SubmitButton.vue      → <GenericSubmitButton />
-│   └── ConfirmationDialog.vue → <GenericConfirmationDialog />
-└── ui/                       (shadcn-vue components)
-    ├── button/
-    │   └── Button.vue        → <Button />
-    ├── card/
-    │   ├── Card.vue          → <Card />
-    │   ├── CardHeader.vue    → <CardHeader />
-    │   └── CardTitle.vue     → <CardTitle />
-    └── form/
-        ├── FormField.vue     → <FormField />
-        └── FormLabel.vue     → <FormLabel />
-```
-
-**Usage in Vue files:**
-
-```vue
-<!-- ✅ GOOD: Components are auto-imported -->
-<template>
-  <Card>
-    <CardHeader>
-      <CardTitle>Sign In</CardTitle>
-    </CardHeader>
-    <CardContent>
-      <FormField v-slot="{ field }" name="email">
-        <FormLabel>Email</FormLabel>
-        <FormControl>
-          <Input type="email" v-bind="field" />
-        </FormControl>
-      </FormField>
-      <Button type="submit">Sign In</Button>
-    </CardContent>
-  </Card>
-</template>
-
-<script setup>
-// ❌ BAD: Don't import components (they're auto-imported)
-// import { Button } from "@/components/ui/button"
-// import { Card } from "@/components/ui/card"
-
-// ✅ GOOD: Only import utilities, composables, and non-component code
-import { useAuth } from "@/composables/useAuth"
-import { signinSchema } from "#shared/validators/auth"
-</script>
-```
-
-**Component Naming Rules:**
-1. **Single-level components**: `components/Button.vue` → `<Button />`
-2. **Nested components**: `components/ui/button/Button.vue` → `<Button />`
-3. **Folder-prefixed**: `components/App/IconButton.vue` → `<AppIconButton />`
-4. **Multi-word**: Always use multi-word component names per Vue style guide
-
-**What to import explicitly:**
-- ✅ Composables (`useAuth`, `useForm`, etc.)
-- ✅ Utilities (`formatDate`, `cn`, etc.)
-- ✅ Validators and types from `#shared`
-- ✅ Store actions/getters
-- ❌ Vue components (auto-imported)
-- ❌ Nuxt components like `NuxtLink`, `NuxtPage` (auto-imported)
-
-**shadcn-vue components:**
-All shadcn-vue components in `app/components/ui/` are auto-imported. Reference the [shadcn-vue documentation](https://www.shadcn-vue.com/) for component APIs, but never import them explicitly.
 
 #### Backend (server/) Code
 
@@ -243,56 +152,17 @@ import { createIdentityService } from "../../../services/identity";
 import { ValidationError } from "../../error/errors";
 ```
 
-#### Shared Code (shared/)
-
-**The `shared/` directory contains code that is used by BOTH frontend and backend.**
-
-Use `#shared` when importing from outside the shared directory:
-
-```typescript
-// From backend API routes
-import { signinSchema } from "#shared/validators/auth";
-import { MAX_PER_PAGE } from "#shared/constants/api";
-
-// From frontend pages
-import { signupSchema } from "#shared/validators/auth";
-import { DEFAULT_PER_PAGE } from "#shared/constants/api";
-```
-
-**Within the `shared/` directory itself, use relative imports:**
-
-```typescript
-// shared/validators/auth.ts
-import { passwordSchema } from './password';  // ✅ relative import within shared/
-
-// shared/validators/query.ts
-import { MAX_PER_PAGE } from '../constants/api';  // ✅ relative import within shared/
-```
-
-**Why relative imports within shared/?**
-- TypeScript path resolution works differently for files inside vs outside the shared directory
-- Relative imports are more reliable and work consistently across all contexts
-- Simpler and more explicit for files in the same directory structure
-
-**What goes in `shared/`?**
-- ✅ **Validators**: Zod schemas for form and API validation
-- ✅ **Constants**: Business rules that apply to both FE/BE (pagination limits, validation rules)
-- ✅ **Types**: TypeScript types/interfaces used across boundaries
-- ✅ **Utilities**: Pure functions with no side effects or platform dependencies
-- ❌ **NOT server-specific code**: Database queries, H3 event handlers, middleware
-- ❌ **NOT frontend-specific code**: Vue components, composables, stores
-
 #### Cross-Boundary Imports
 
-Use `~~` (project root) when importing across app/server boundaries, or `#shared` for shared code:
+Use `~~` (project root) when importing across app/server boundaries:
 
 ```typescript
-// Frontend importing shared constants/types
-import { ERROR_CODES } from "#shared/error/codes";
-import type { PaginationParams } from "#shared/validators/query";
+// Frontend importing shared server types
+import type { ApiResponse } from "~~/server/types/api";
+import { ERROR_CODES } from "~~/server/error/codes";
 
-// Server importing shared constants
-import { ERROR_CODES } from "#shared/error/codes";
+// Server importing from project root (rare)
+import { someUtil } from "~~/utils/shared";
 ```
 
 ### Rules & Best Practices
@@ -366,6 +236,310 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useAuth } from "@/composables/useAuth";
 import type { ApiResponse } from "~~/server/types/api";
+```
+
+### Auto-Import Conventions
+
+Nuxt 4 automatically imports components, composables, utilities, and stores based on directory structure and naming conventions. Understanding these patterns is crucial for maintaining a clean and consistent codebase.
+
+#### Auto-Import Directories
+
+| Directory | Auto-imports | Naming Convention | Case Requirement | Import Needed? |
+|-----------|--------------|-------------------|------------------|----------------|
+| `app/components/` | Yes | Folder/File.vue → `<FolderFile />` | PascalCase folders/files | ❌ No (auto-imported) |
+| `app/composables/` | Yes | `use` prefix required | camelCase | ❌ No (auto-imported) |
+| `app/utils/` | Yes | No prefix required | Any case | ❌ No (auto-imported) |
+| `app/stores/` | Yes | `use[Name]Store` pattern | camelCase | ❌ No (auto-imported) |
+| `server/utils/` | Yes (server-only) | No prefix required | Any case | ❌ No (auto-imported) |
+| `app/plugins/` | Auto-registered | `defineNuxtPlugin()` | Any case | N/A (auto-registered) |
+| `app/middleware/` | Auto-registered | Route-based | kebab-case | N/A (auto-registered) |
+
+**Note:** All components including UI library components (shadcn-vue in `app/components/ui/`) are auto-imported by Nuxt.
+
+#### Component Auto-Import Rules
+
+Components are auto-imported based on their **folder path**, using folder-based naming:
+
+```
+File path: app/components/Folder/File.vue
+Component name in template: <FolderFile />
+```
+
+**Examples from this codebase:**
+```
+app/components/App/Sidebar.vue        → <AppSidebar />
+app/components/Tours/SceneManager.vue → <ToursSceneManager />
+app/components/Billing/TierBadge.vue  → <BillingTierBadge />
+```
+
+**Component Naming Rules:**
+```vue
+<!-- ✅ GOOD: Capitalized folder, PascalCase file -->
+<script setup>
+// No imports needed - auto-imported!
+const userStore = useUserStore()
+const route = useRoute()
+</script>
+
+<template>
+  <AppSidebar />
+  <ToursSceneManager />
+  <BillingTierBadge />
+</template>
+
+<!-- ❌ BAD: Lowercase folder names -->
+app/components/app/sidebar.vue  <!-- Won't work correctly -->
+
+<!-- ❌ BAD: Deeply nested (3+ levels) -->
+app/components/Tours/Editor/Scene/Card.vue  <!-- Too nested -->
+
+<!-- ❌ BAD: Using index.vue -->
+app/components/App/index.vue  <!-- Nuxt won't auto-import correctly -->
+
+<!-- ✅ GOOD: UI library components also auto-imported -->
+<script setup>
+// No imports needed - UI components are auto-imported
+</script>
+
+<template>
+  <Button>Click</Button>  <!-- Auto-imported -->
+  <Card>Content</Card>    <!-- Auto-imported -->
+</template>
+```
+
+**Best Practices:**
+- ✅ Keep folders 2 levels max: `Category/ComponentName.vue`
+- ✅ Capitalize folder names for components (App, Tours, Billing)
+- ✅ Use PascalCase for file names (Sidebar.vue, SceneManager.vue)
+- ✅ Only create components when reused 2+ times
+- ❌ Don't import custom components explicitly (auto-imported)
+- ❌ Don't use lowercase folder names for components
+
+#### Composable Auto-Import Rules
+
+Composables MUST follow the `use` prefix convention to be auto-imported:
+
+```typescript
+// ✅ GOOD: Proper composable structure
+// File: app/composables/useMarzipano.ts
+export function useMarzipano() {
+  const viewer = ref(null)
+  const loadViewer = () => { /* ... */ }
+  return { viewer, loadViewer }
+}
+
+// Usage (no import needed):
+const { viewer, loadViewer } = useMarzipano()
+
+// ❌ BAD: Missing 'use' prefix
+// File: app/composables/marzipano.ts
+export function marzipano() { /* ... */ }  // Won't auto-import
+
+// ❌ BAD: Wrong export pattern
+export default function() { /* ... */ }  // Won't auto-import
+```
+
+**Composables in this codebase:**
+```typescript
+useErrorHandler()     // app/composables/useErrorHandler.ts
+useExtendedFetch()    // app/composables/useExtendedFetch.ts
+useMarzipano()        // app/composables/useMarzipano.ts
+useRetry()            // app/composables/useRetry.ts
+useShowToast()        // app/composables/useShowToast.js
+```
+
+**Best Practices:**
+- ✅ Always use `use` prefix
+- ✅ Export named function matching filename (without extension)
+- ✅ Use composition API patterns (ref, computed, reactive)
+- ❌ Don't create composables that are just single functions (use utils instead)
+- ❌ Don't wrap stores in composables (use stores directly)
+
+#### Store Auto-Import Rules
+
+Pinia stores MUST follow the `use[Name]Store` convention:
+
+```typescript
+// ✅ GOOD: Proper store structure
+// File: app/stores/userStore.ts
+import { defineStore } from 'pinia'
+import { ref, computed } from 'vue'
+
+export const useUserStore = defineStore('user', () => {
+  // State
+  const user = ref(null)
+
+  // Getters
+  const isAuthenticated = computed(() => user.value !== null)
+
+  // Actions
+  async function fetchUser() { /* ... */ }
+
+  return { user, isAuthenticated, fetchUser }
+})
+
+// Usage (no import needed):
+const userStore = useUserStore()
+
+// ❌ BAD: Wrong naming pattern
+export const userStore = defineStore(...)  // Missing 'use' prefix
+export const useUser = defineStore(...)    // Missing 'Store' suffix
+```
+
+**Stores in this codebase:**
+```typescript
+useBillingStore()  // app/stores/billingStore.ts
+useProjectStore()  // app/stores/projectStore.ts
+useUserStore()     // app/stores/userStore.ts
+```
+
+**Best Practices:**
+- ✅ Use composition API: `defineStore('name', () => { ... })`
+- ✅ ALL API calls use `extendedFetch` (automatic error handling)
+- ✅ Return state, getters, and actions
+- ✅ Include reset() function for signout
+- ❌ Don't use options API for stores
+- ❌ Don't make direct API calls in pages (use stores)
+
+#### Utils Auto-Import Rules
+
+Utils have no naming requirements and are auto-imported:
+
+```typescript
+// ✅ GOOD: Simple util function
+// File: app/utils/stringutils.js
+export function convertToInitials(str) {
+  return str.split(' ').map(word => word[0]).join('')
+}
+
+// Usage (no import needed):
+const initials = convertToInitials("John Doe")
+
+// ❌ BAD: Default export
+export default function convertToInitials(str) { /* ... */ }  // Won't auto-import
+```
+
+**Server Utils** (server-side only):
+```typescript
+// File: server/utils/pagination.ts
+export function parsePaginationParams(query: any) {
+  // Utility logic
+}
+
+// Usage in API routes (no import needed):
+const { page, perPage } = parsePaginationParams(query)
+```
+
+**Best Practices:**
+- ✅ Use for simple, reusable functions
+- ✅ Export named functions
+- ✅ Keep utils pure (no side effects)
+- ❌ Don't use for complex stateful logic (use composables)
+- ❌ Don't export default
+
+#### Plugin Auto-Registration
+
+Plugins are automatically registered based on file naming:
+
+```typescript
+// File: app/plugins/theme.client.ts  (client-side only)
+export default defineNuxtPlugin(() => {
+  // Plugin logic runs automatically
+})
+
+// File: app/plugins/analytics.server.ts  (server-side only)
+// File: app/plugins/myPlugin.ts  (both sides)
+```
+
+**File naming conventions:**
+- `.client.ts` - Client-side only
+- `.server.ts` - Server-side only
+- `.ts` - Both client and server
+
+#### When Imports ARE Required
+
+Despite auto-imports, you still need explicit imports for:
+
+1. **Type-only Imports** (optimization):
+```typescript
+import type { User } from '@/stores/userStore'
+import type { ApiResponse } from '~~/server/types/api'
+```
+
+2. **Third-party Libraries**:
+```typescript
+import { format } from 'date-fns'
+import { z } from 'zod'
+```
+
+3. **Shared Validators** (cross-boundary):
+```typescript
+import { signinSchema } from '#shared/validators/auth'
+```
+
+#### Auto-Import Verification
+
+Nuxt generates type definitions for all auto-imports in `.nuxt/`:
+
+```
+.nuxt/
+├── components.d.ts  # Component auto-imports
+├── imports.d.ts     # Composables, utils, stores
+└── tsconfig.json    # TypeScript configuration
+```
+
+If auto-imports stop working:
+1. Restart dev server: `npm run dev`
+2. Check `.nuxt/` folder exists
+3. Restart TypeScript server in IDE
+4. Verify file naming matches conventions
+
+#### Complete Auto-Import Example
+
+```vue
+<script setup lang="ts">
+// ============================================
+// AUTO-IMPORTED (no import statements needed)
+// ============================================
+
+// Nuxt composables
+const route = useRoute()
+const router = useRouter()
+const { t } = useI18n()
+
+// Custom composables
+const { viewer } = useMarzipano()
+const { retry } = useRetry()
+
+// Stores
+const userStore = useUserStore()
+const projectStore = useProjectStore()
+
+// Utils
+const initials = convertToInitials("John Doe")
+
+// ============================================
+// EXPLICIT IMPORTS (required)
+// ============================================
+
+// Type imports (optimization)
+import type { Project } from '@/stores/projectStore'
+import type { ApiResponse } from '~~/server/types/api'
+
+// Third-party libraries
+import { z } from 'zod'
+
+// Shared validators
+import { createProjectSchema } from '#shared/validators/project'
+</script>
+
+<template>
+  <!-- All components auto-imported -->
+  <AppSidebar />
+  <ToursSceneManager />
+  <Button>Click me</Button>
+  <Card>Content</Card>
+</template>
 ```
 
 ---
@@ -513,224 +687,6 @@ const tenantId = isDev
 
 ---
 
-## Configuration & Environment Variables
-
-### Core Principle: Runtime Config as Single Source of Truth
-
-This template uses **Nuxt Runtime Config** exclusively for all configuration values. Direct access to `process.env` or `event.context.cloudflare?.env` for configuration is **prohibited** in application code.
-
-**Why this matters:**
-- ✅ Centralized configuration management
-- ✅ Type-safe access with IDE autocomplete
-- ✅ Consistent override pattern via `NUXT_` prefix
-- ✅ Works seamlessly across local dev and Cloudflare Workers
-- ✅ No scattered environment variable access throughout codebase
-
-### Correct Pattern
-
-#### ✅ Server-Side Configuration Access
-
-```typescript
-// API routes, middleware, server utils
-export default defineEventHandler((event) => {
-  const config = useRuntimeConfig(event);
-
-  // Private (server-only) config
-  const jwtSecret = config.jwtSecret;
-  const sessionPassword = config.session.password;
-  const emailProvider = config.email.provider;
-
-  // Public config (also available on client)
-  const environment = config.public.environment;
-  const apiUrl = config.public.apiUrl;
-});
-
-// Utility functions (pass event when available)
-function myUtil(event?: H3Event) {
-  const config = event ? useRuntimeConfig(event) : useRuntimeConfig();
-  return config.jwtSecret;
-}
-```
-
-#### ✅ Client-Side Configuration Access
-
-```typescript
-// Components, composables, pages
-const config = useRuntimeConfig();
-
-// Only public config is available
-const environment = config.public.environment; // ✅ Works
-const apiUrl = config.public.apiUrl; // ✅ Works
-
-// Private config will cause runtime error
-// const jwt = config.jwtSecret; // ❌ Throws error on client
-```
-
-#### ✅ Cloudflare Bindings (Exception)
-
-```typescript
-// Accessing D1, KV, R2 bindings is allowed
-const db = event.context.cloudflare?.env?.DB as D1Database; // ✅ OK
-const kv = event.context.cloudflare?.env?.KV; // ✅ OK
-const r2 = event.context.cloudflare?.env?.R2; // ✅ OK
-
-// Multi-tenant database selection
-const dbBinding = `DB_${tenantId.toUpperCase()}`;
-const tenantDb = cfEnv?.[dbBinding] as D1Database; // ✅ OK
-```
-
-### Incorrect Patterns
-
-#### ❌ Direct process.env Access
-
-```typescript
-// ❌ NEVER do this in application code
-const secret = process.env.JWT_SECRET;
-const provider = process.env.EMAIL_PROVIDER;
-
-// ✅ Use runtime config instead
-const config = useRuntimeConfig(event);
-const secret = config.jwtSecret;
-const provider = config.email.provider;
-```
-
-**Acceptable exceptions:**
-- Build/config time: `nuxt.config.ts` (e.g., `process.env.NODE_ENV`)
-- Scripts: `scripts/` directory (e.g., `safe-migrate.ts` for CI detection)
-- Test setup: `tests/setup.ts`
-
-#### ❌ Direct cloudflare.env for Configuration
-
-```typescript
-// ❌ NEVER access config via cloudflare.env
-const secret = event.context.cloudflare?.env?.JWT_SECRET;
-const provider = event.context.cloudflare?.env?.EMAIL_PROVIDER;
-
-// ✅ Use runtime config instead
-const config = useRuntimeConfig(event);
-const secret = config.jwtSecret;
-const provider = config.email.provider;
-```
-
-### Environment Variable Override Convention
-
-All `runtimeConfig` values can be overridden using environment variables with the `NUXT_` prefix:
-
-#### Private Configuration (Server-Only)
-
-Use `NUXT_<KEY>` for private server-side config:
-
-| Runtime Config Path | Environment Variable | Example |
-|---------------------|---------------------|---------|
-| `runtimeConfig.jwtSecret` | `NUXT_JWT_SECRET` | `NUXT_JWT_SECRET="abc123"` |
-| `runtimeConfig.session.password` | `NUXT_SESSION_PASSWORD` | `NUXT_SESSION_PASSWORD="xyz789"` |
-| `runtimeConfig.email.provider` | `NUXT_EMAIL_PROVIDER` | `NUXT_EMAIL_PROVIDER="resend"` |
-| `runtimeConfig.email.apiKey` | `NUXT_EMAIL_API_KEY` | `NUXT_EMAIL_API_KEY="re_xxx"` |
-| `runtimeConfig.turnstileSecretKey` | `NUXT_TURNSTILE_SECRET_KEY` | `NUXT_TURNSTILE_SECRET_KEY="0x4xxx"` |
-| `runtimeConfig.multitenancy.enabled` | `NUXT_MULTITENANCY_ENABLED` | `NUXT_MULTITENANCY_ENABLED="true"` |
-| `runtimeConfig.rbac.enabled` | `NUXT_RBAC_ENABLED` | `NUXT_RBAC_ENABLED="false"` |
-
-#### Public Configuration (Client + Server)
-
-Use `NUXT_PUBLIC_<KEY>` for public config accessible on both client and server:
-
-| Runtime Config Path | Environment Variable | Example |
-|---------------------|---------------------|---------|
-| `runtimeConfig.public.environment` | `NUXT_PUBLIC_ENVIRONMENT` | `NUXT_PUBLIC_ENVIRONMENT="production"` |
-| `runtimeConfig.public.apiUrl` | `NUXT_PUBLIC_API_URL` | `NUXT_PUBLIC_API_URL="/api"` |
-| `runtimeConfig.public.turnstileSiteKey` | `NUXT_PUBLIC_TURNSTILE_SITE_KEY` | `NUXT_PUBLIC_TURNSTILE_SITE_KEY="0x4xxx"` |
-| `runtimeConfig.public.multitenancy.enabled` | `NUXT_PUBLIC_MULTITENANCY_ENABLED` | `NUXT_PUBLIC_MULTITENANCY_ENABLED="true"` |
-
-#### OAuth Providers (nuxt-auth-utils)
-
-OAuth credentials follow the same pattern:
-
-| Provider | Environment Variables |
-|----------|----------------------|
-| **GitHub** | `NUXT_OAUTH_GITHUB_CLIENT_ID`<br>`NUXT_OAUTH_GITHUB_CLIENT_SECRET` |
-| **Google** | `NUXT_OAUTH_GOOGLE_CLIENT_ID`<br>`NUXT_OAUTH_GOOGLE_CLIENT_SECRET` |
-| **Discord** | `NUXT_OAUTH_DISCORD_CLIENT_ID`<br>`NUXT_OAUTH_DISCORD_CLIENT_SECRET` |
-| **Microsoft** | `NUXT_OAUTH_MICROSOFT_CLIENT_ID`<br>`NUXT_OAUTH_MICROSOFT_CLIENT_SECRET` |
-| **Others** | `NUXT_OAUTH_<PROVIDER>_CLIENT_ID`<br>`NUXT_OAUTH_<PROVIDER>_CLIENT_SECRET` |
-
-See [SECRETS.md](./SECRETS.md) for complete OAuth setup guide.
-
-### Configuration Workflow
-
-```
-┌─────────────────────────────────────────┐
-│  Environment Variables                  │
-│  (.env, .dev.vars, wrangler secrets)   │
-│  NUXT_* prefix convention              │
-└─────────────┬───────────────────────────┘
-              │ Overrides ↓
-┌─────────────▼───────────────────────────┐
-│  nuxt.config.ts runtimeConfig          │
-│  (Defaults + Type Definitions)         │
-└─────────────┬───────────────────────────┘
-              │ Accessed via ↓
-┌─────────────▼───────────────────────────┐
-│  useRuntimeConfig()                    │
-│  • Server: useRuntimeConfig(event)     │
-│  • Client: useRuntimeConfig().public   │
-└─────────────────────────────────────────┘
-```
-
-### Best Practices
-
-1. **Define all config in `nuxt.config.ts`**: Add all configuration keys to `runtimeConfig` with sensible defaults
-2. **Use environment variables to override**: Never hardcode production values in `nuxt.config.ts`
-3. **Document new variables**: Update `.env.example`, `.dev.vars.example`, and wrangler config comments
-4. **Pass event context**: Always pass `event` to `useRuntimeConfig(event)` in server code when available
-5. **Type safety**: Runtime config is fully typed - use IDE autocomplete to discover available values
-6. **Public vs Private**: Only use `public` for values that must be accessible on the client (security consideration)
-
-### Common Mistakes
-
-❌ **Forgetting to add to runtimeConfig**
-```typescript
-// Won't work - not defined in runtimeConfig
-const value = process.env.MY_NEW_SETTING;
-```
-
-❌ **Accessing private config on client**
-```typescript
-// Runtime error - jwtSecret is private
-const jwt = useRuntimeConfig().jwtSecret; // in component
-```
-
-❌ **Hardcoding production values**
-```typescript
-// Bad - production secret in source code
-runtimeConfig: {
-  jwtSecret: 'prod-secret-abc123' // ❌ Never do this
-}
-```
-
-✅ **Correct approach**
-```typescript
-// 1. Define in nuxt.config.ts with placeholder
-runtimeConfig: {
-  myNewSetting: 'default-value'
-}
-
-// 2. Set via environment variable
-// .dev.vars or wrangler secret
-NUXT_MY_NEW_SETTING="production-value"
-
-// 3. Access via runtime config
-const config = useRuntimeConfig(event);
-const value = config.myNewSetting;
-```
-
-### Related Documentation
-
-- **[SECRETS.md](./SECRETS.md)** - Complete secrets management guide
-- **[TEMPLATE_SETUP.md](./TEMPLATE_SETUP.md)** - Initial configuration setup
-- **[Nuxt Runtime Config Docs](https://nuxt.com/docs/guide/going-further/runtime-config)** - Official documentation
-
----
-
 ## Service Layer Pattern
 
 Services encapsulate business logic and are request-scoped.
@@ -819,8 +775,6 @@ Repositories handle data access with tenant isolation.
 ### Repository Structure
 
 ```typescript
-import { QueryHelpers } from "#server/repositories/helpers/query-builder";
-
 export class ExampleRepository extends BaseRepository {
   constructor(db: D1Database) {
     super(db);
@@ -830,45 +784,10 @@ export class ExampleRepository extends BaseRepository {
     const result = await this.drizzle
       .select()
       .from(schema.examples)
-      .where(QueryHelpers.notDeleted(schema.examples, eq(schema.examples.id, id)))
+      .where(and(eq(schema.examples.id, id), this.notDeleted(schema.examples)))
       .limit(1);
 
     return result[0] || null;
-  }
-
-  async list(
-    limit = 100,
-    offset = 0,
-    filters?: Filter[],
-    sortBy?: string,
-    sortOrder?: SortOrder,
-    searchTerm?: string
-  ): Promise<Example[]> {
-    const conditions: (SQL | undefined)[] = [
-      QueryHelpers.notDeleted(schema.examples),
-    ];
-
-    // Add filters
-    if (filters && filters.length > 0) {
-      conditions.push(this.buildFilters(schema.examples, filters));
-    }
-
-    // Add search
-    if (searchTerm) {
-      conditions.push(
-        QueryHelpers.search([schema.examples.name, schema.examples.description], searchTerm)
-      );
-    }
-
-    const validConditions = conditions.filter((c): c is SQL => c !== undefined);
-    const query = this.drizzle
-      .select()
-      .from(schema.examples)
-      .where(and(...validConditions))
-      .limit(limit)
-      .offset(offset);
-
-    return query;
   }
 
   async create(data: NewExample): Promise<Example> {
@@ -882,126 +801,22 @@ export class ExampleRepository extends BaseRepository {
 }
 ```
 
-### QueryHelpers Pattern
-
-**Architectural Decision:** This template uses **QueryHelpers** as the single source of truth for common query utilities. This pattern was chosen for scalability and consistency in list APIs.
-
-#### Why QueryHelpers?
-
-1. **Scalable for growing webapps**: All production apps need pagination, search, and filtering
-2. **Single source of truth**: No redundancy between repository helpers
-3. **Usable anywhere**: Not limited to repository classes (works in services, utils)
-4. **Consistent patterns**: Standardized query building across the codebase
-5. **Easy to extend**: Add new helpers as needs grow
-
-#### Available Helpers
-
-**File:** `server/repositories/helpers/query-builder.ts`
-
-```typescript
-// Soft delete filtering
-QueryHelpers.notDeleted(table, ...additionalConditions)
-
-// Multi-column search
-QueryHelpers.search(columns, searchTerm)
-
-// Date range filtering
-QueryHelpers.dateRange(column, startDate, endDate)
-
-// Pagination with metadata
-QueryHelpers.paginated(baseQuery, totalCount, { page, limit })
-
-// Active records (isActive + notDeleted)
-QueryHelpers.activeOnly(table, ...additionalConditions)
-```
-
-#### Usage Examples
-
-**Simple soft delete check:**
-```typescript
-// Get all non-deleted users
-const users = await db
-  .select()
-  .from(schema.users)
-  .where(QueryHelpers.notDeleted(schema.users));
-```
-
-**Combining multiple helpers:**
-```typescript
-// Search users by name/email, exclude deleted
-const searchCondition = QueryHelpers.search(
-  [schema.users.name, schema.users.email],
-  "john"
-);
-
-const users = await db
-  .select()
-  .from(schema.users)
-  .where(QueryHelpers.notDeleted(schema.users, searchCondition));
-```
-
-**Pagination with total count:**
-```typescript
-// Build base query
-const condition = QueryHelpers.notDeleted(schema.users);
-const baseQuery = db.select().from(schema.users).where(condition);
-
-// Count total records
-const [{ count: total }] = await db
-  .select({ count: drizzleCount() })
-  .from(schema.users)
-  .where(condition);
-
-// Return paginated results with metadata
-return QueryHelpers.paginated(baseQuery, total, { page: 1, limit: 10 });
-// Returns: { data: [...], total: 150, pages: 15, page: 1, limit: 10 }
-```
-
-**Date range filtering:**
-```typescript
-// Get users created in 2024
-const dateCondition = QueryHelpers.dateRange(
-  schema.users.createdAt,
-  new Date("2024-01-01"),
-  new Date("2024-12-31")
-);
-
-const users = await db
-  .select()
-  .from(schema.users)
-  .where(QueryHelpers.notDeleted(schema.users, dateCondition));
-```
-
-#### Extending QueryHelpers
-
-Add new helpers to `server/repositories/helpers/query-builder.ts`:
-
-```typescript
-export class QueryHelpers {
-  // ... existing helpers
-
-  // NEW: Tenant isolation helper
-  static byTenant<T extends { tenantId: any; deletedAt: any }>(
-    table: T,
-    tenantId: string,
-    ...additionalConditions: (SQL | undefined)[]
-  ): SQL {
-    return this.notDeleted(
-      table,
-      eq(table.tenantId, tenantId),
-      ...additionalConditions
-    );
-  }
-}
-```
-
 ### Repository Rules
 
-- **Use QueryHelpers**: Always use `QueryHelpers.notDeleted()` for soft delete checks
+- **Soft deletes**: ALWAYS use `this.notDeleted(schema.table)` helper for soft delete checks (inherited from BaseRepository). Never use `isNull(schema.table.deletedAt)` directly.
 - **Type safety**: Use Drizzle schema types
 - **No business logic**: Data access only
 - **Atomic operations**: Use batch operations from `server/utils/database.ts` for multi-record operations
-- **Consistent patterns**: Follow QueryHelpers patterns for common operations
+- **Consistent patterns**: Follow established query patterns
+
+**Example of correct soft delete usage:**
+```typescript
+// ✅ CORRECT - Use notDeleted() helper
+.where(and(eq(schema.examples.id, id), this.notDeleted(schema.examples)))
+
+// ❌ WRONG - Don't use isNull directly
+.where(and(eq(schema.examples.id, id), isNull(schema.examples.deletedAt)))
+```
 
 ---
 
@@ -1086,7 +901,7 @@ throw new ValidationError("Field X is invalid", {
 **Frontend reacts to error codes:**
 
 ```typescript
-import { ERROR_CODES } from "#shared/error/codes";
+import { ERROR_CODES } from "~/server/error/codes";
 
 if (error.code === ERROR_CODES.PASSWORD_SAME_AS_OLD) {
   toast.error(t("errors.passwordSameAsOld"));
@@ -1257,156 +1072,6 @@ export default defineEventHandler(async (event) => {
 
 ---
 
-## Validation Strategy
-
-### Shared Validators (`shared/validators/`)
-
-**All validation schemas are defined in the `shared/` directory** to ensure consistency between frontend and backend validation.
-
-#### Directory Structure
-
-```
-shared/
-├── validators/
-│   ├── auth.ts          # Authentication schemas (signin, signup, password reset)
-│   ├── password.ts      # Password strength validation
-│   ├── user.ts          # User profile schemas
-│   └── query.ts         # Query parameter schemas (pagination, filtering, sorting)
-└── constants/
-    └── api.ts           # Shared constants (MAX_PER_PAGE, DEFAULT_PER_PAGE, etc.)
-```
-
-#### Benefits of Shared Validators
-
-1. **Single Source of Truth**: Validation logic defined once, used everywhere
-2. **Consistent Validation**: Frontend and backend enforce identical rules
-3. **Type Safety**: Zod schemas generate TypeScript types automatically
-4. **Better UX**: Frontend catches errors before submission
-5. **Security**: Backend re-validates even if frontend bypassed
-6. **Maintainability**: Update validation in one place
-
-#### Backend Usage
-
-```typescript
-// server/api/v1/auth/signin.post.ts
-import { signinSchema } from "#shared/validators/auth";
-
-export default defineEventHandler(async (event) => {
-  const body = await readBody(event);
-
-  // Validate with shared schema
-  const validated = signinSchema.parse(body);  // ✅ Throws ValidationError if invalid
-
-  // ... rest of handler
-});
-```
-
-#### Frontend Usage
-
-```vue
-<!-- app/pages/auth/signin.vue -->
-<script setup>
-import { useForm } from 'vee-validate';
-import { toTypedSchema } from '@vee-validate/zod';
-import { signinSchema } from '#shared/validators/auth';
-
-// Use shared schema for form validation
-const formSchema = toTypedSchema(signinSchema);
-const { handleSubmit, isSubmitting } = useForm({
-  validationSchema: formSchema,
-});
-</script>
-```
-
-#### Example Schemas
-
-**Authentication** (`shared/validators/auth.ts`):
-- `signinSchema`: Email + password
-- `signupSchema`: Email, password, names (with password confirmation)
-- `passwordResetRequestSchema`: Email only
-- `passwordResetSchema`: Token + new password (with confirmation)
-- `emailConfirmSchema`: Token only
-
-**Password** (`shared/validators/password.ts`):
-- `passwordSchema`: Reusable password validation with strength requirements
-- `validatePasswordStrength()`: Programmatic validation function
-- `PASSWORD_RULES`: Configurable password policy constants
-
-**User Profile** (`shared/validators/user.ts`):
-- `updateProfileSchema`: Optional fields for profile updates
-
-**Query Parameters** (`shared/validators/query.ts`):
-- `paginationSchema`: Page + perPage validation
-- `sortSchema`: Sort field + order validation
-- `filterSchema`: Field + operator + value validation
-- `listQuerySchema`: Combined pagination + sorting + filtering
-
-#### Validation Best Practices
-
-1. **Always validate on backend**: Never trust client-side validation alone
-2. **Use `.parse()` for sync validation**: Throws `ZodError` on failure
-3. **Use `.safeParse()` for custom error handling**: Returns `{ success, data/error }`
-4. **Keep schemas focused**: One schema per endpoint/form
-5. **Reuse base schemas**: Compose larger schemas from smaller ones
-6. **Add helpful error messages**: Users should understand what's wrong
-7. **Use relative imports within shared/**: TypeScript path resolution works better
-
-#### Password Validation Example
-
-```typescript
-// shared/validators/password.ts
-export const PASSWORD_RULES = {
-  minLength: 8,
-  maxLength: 128,
-  requireNumber: true,
-  requireUppercase: false,
-  requireLowercase: false,
-  requireSpecial: false,
-} as const;
-
-export const passwordSchema = z
-  .string()
-  .min(PASSWORD_RULES.minLength, `Password must be at least ${PASSWORD_RULES.minLength} characters`)
-  .max(PASSWORD_RULES.maxLength, `Password must be less than ${PASSWORD_RULES.maxLength} characters`)
-  .refine(
-    (password) => validatePasswordStrength(password).valid,
-    (password) => ({
-      message: validatePasswordStrength(password).errors.join(", "),
-    })
-  );
-```
-
-#### Schema Composition Example
-
-```typescript
-// shared/validators/auth.ts
-import { passwordSchema } from './password';  // ✅ relative import within shared/
-
-export const signupSchema = z.object({
-  email: z.string().min(1, 'Email is required').email('Invalid email format'),
-  password: passwordSchema,  // ✅ Reuse password schema
-  passwordConfirmation: z.string().min(1, 'Password confirmation is required'),
-  firstName: z.string().min(1, 'First name is required').max(100),
-  lastName: z.string().min(1, 'Last name is required').max(100),
-}).refine((data) => data.password === data.passwordConfirmation, {
-  message: 'Passwords must match',
-  path: ['passwordConfirmation'],
-});
-```
-
-#### Error Handling
-
-```typescript
-// Backend: Let Zod errors be caught by error middleware
-const validated = signinSchema.parse(body);  // Throws ZodError → caught by middleware
-
-// Frontend: Use vee-validate for inline error display
-const formSchema = toTypedSchema(signinSchema);
-const { handleSubmit, errors } = useForm({ validationSchema: formSchema });
-```
-
----
-
 ## Testing
 
 ### Test Structure
@@ -1479,6 +1144,781 @@ type Example = {
   createdAt: Date;
   isActive: boolean;
 };
+```
+
+---
+
+## Frontend Component Organization
+
+### Nuxt Component Naming Convention
+
+Nuxt automatically imports components based on their file path using a **folder-based naming convention**. Components are auto-imported without explicit import statements.
+
+**Naming Pattern:**
+- File path: `app/components/Folder/File.vue`
+- Component name: `<FolderFile />`
+- No explicit imports needed
+
+**Examples:**
+```
+app/components/App/Sidebar.vue        → <AppSidebar />
+app/components/Tours/SceneManager.vue → <ToursSceneManager />
+app/components/Billing/TierBadge.vue  → <BillingTierBadge />
+app/components/ui/button.vue          → <UiButton /> (shadcn uses lowercase)
+```
+
+**Important Rules:**
+1. ✅ **DO**: Use folder structure to namespace components
+2. ✅ **DO**: Use PascalCase for component files (except ui/ library which uses kebab-case)
+3. ✅ **DO**: Capitalize folder names (App, Tours, Billing, not app, tours, billing)
+4. ❌ **DON'T**: Create deeply nested folders (2 levels max: `Category/ComponentName.vue`)
+5. ❌ **DON'T**: Use index.vue files (Nuxt won't auto-import them correctly)
+6. ❌ **DON'T**: Import components explicitly (Nuxt does this automatically)
+
+**Benefits:**
+- No import statements needed
+- Clear component namespacing
+- Better organization by feature/domain
+- Prevents naming collisions
+
+### Component Splitting Philosophy
+
+Components should **only** be created when they are reusable across multiple pages or features. Non-reusable UI should remain in page templates to improve code discoverability and reduce unnecessary abstraction.
+
+**Create a component when:**
+- Used in 2+ different pages/routes
+- Part of a shared design system (UI library components like buttons, inputs, cards)
+- Truly reusable utility or widget across the application
+
+**Keep in page template when:**
+- Only used once in a single page/feature
+- Specific to a single page's functionality
+- Doesn't need to be shared with other parts of the application
+
+**Exception:** Very large single-use sections (500+ lines) may be extracted for maintainability, but should be:
+- Clearly documented as page-specific components
+- Co-located with or near their parent page
+- Named to indicate their specific usage (e.g., `ToursSceneManager` for the editor page)
+
+### Examples
+
+**Good Practice:**
+```vue
+<!-- ✅ MarzipanoViewer.vue - Used in 3 places (public/preview/edit) -->
+<!-- Keep as reusable component -->
+
+<!-- ✅ ProjectCard - Only used in projects/index.vue -->
+<!-- Inline directly into the page template -->
+```
+
+**Component Organization:**
+```
+app/components/
+├── ui/                          # Shared UI library (shadcn-vue, lowercase)
+│   ├── button.vue              # → <UiButton />
+│   └── card.vue                # → <UiCard />
+├── App/                         # Application-level components (capitalized)
+│   ├── Sidebar.vue             # → <AppSidebar />
+│   ├── PageHeader.vue          # → <AppPageHeader />
+│   └── ThemeToggle.vue         # → <AppThemeToggle />
+├── Tours/                       # Tour-specific components (capitalized)
+│   ├── MarzipanoViewer.vue     # → <ToursMarzipanoViewer /> ✅ Reusable (3+ uses)
+│   ├── PublishDialog.vue       # → <ToursPublishDialog /> ✅ Reusable (2+ uses)
+│   ├── SceneManager.vue        # → <ToursSceneManager /> ⚠️ Exception (large, editor-specific)
+│   └── HotspotDialogs.vue      # → <ToursHotspotDialogs /> ⚠️ Exception (large, editor-specific)
+└── Billing/                     # Billing components (capitalized)
+    ├── TierBadge.vue           # → <BillingTierBadge /> ✅ Reusable (3+ uses)
+    ├── UsageBar.vue            # → <BillingUsageBar /> ✅ Reusable (2+ uses)
+    └── PlanComparisonTable.vue # → <BillingPlanComparisonTable /> ✅ Reusable (3+ uses)
+```
+
+### Benefits of This Approach
+
+1. **Code Discoverability**: Page-specific code lives in pages, making it easier to find and understand
+2. **Reduced Abstraction**: Fewer unnecessary component boundaries to navigate
+3. **Clearer Intent**: Components that exist are truly reusable, making architecture clearer
+4. **Easier Refactoring**: When changing page-specific UI, no need to worry about breaking other pages
+
+### Refactoring Checklist
+
+Before creating a new component, ask:
+1. Is this used in 2+ different places?
+2. Will this realistically be reused in the future?
+3. Is this part of a shared design system?
+
+If all answers are "no", keep it in the page template.
+
+---
+
+## Frontend Architecture & State Management
+
+### Overview
+
+The frontend uses **Nuxt 4 + Vue 3 + Pinia** for state management. This section defines conventions for forms, state management, and API calls to ensure consistency across the application.
+
+**Core Principles:**
+1. **Single source of truth**: Stores manage all domain data and API calls
+2. **Forms use shared validators**: Same Zod schemas as backend
+3. **No API calls in pages**: All API calls go through store actions
+4. **No store wrappers**: Pages use stores directly, not through composables
+5. **Component extraction only when reused**: Keep UI inline until truly reusable
+
+---
+
+### 1. Forms Convention
+
+All forms must use **vee-validate + shadcn-vue + shared validators + i18n** for consistency and validation.
+
+#### Form Setup Pattern
+
+```typescript
+// ✅ CORRECT PATTERN (signin.vue, account.vue, settings.vue)
+<script setup lang="ts">
+import { useForm } from 'vee-validate'
+import { toTypedSchema } from '@vee-validate/zod'
+import { signinSchema } from '#shared/validators/auth'
+
+const { t } = useI18n()
+const userStore = useUserStore()
+
+// Extend shared schema with i18n error messages
+const formSchema = toTypedSchema(
+  signinSchema.extend({
+    email: z.string()
+      .min(1, t('auth.signin.email.requiredMessage'))
+      .email(t('auth.signin.email.formatErrMessage')),
+    password: z.string()
+      .min(1, t('auth.signin.password.requiredMessage'))
+  })
+)
+
+const { handleSubmit, isSubmitting, isFieldDirty, setValues } = useForm({
+  validationSchema: formSchema,
+  initialValues: {
+    email: '',
+    password: ''
+  }
+})
+
+const onSubmit = handleSubmit(async (values) => {
+  await userStore.signin(values) // Call store action, NOT API directly
+})
+</script>
+```
+
+#### Form Template Pattern
+
+```vue
+<template>
+  <form @submit.prevent="onSubmit">
+    <FormField v-slot="{ field }" name="email" :validate-on-blur="!isFieldDirty">
+      <FormItem>
+        <FormLabel class="flex items-center justify-between">
+          <span>{{ t('auth.signin.email.title') }}</span>
+          <FormMessage />
+        </FormLabel>
+        <FormControl>
+          <Input
+            v-bind="field"
+            type="email"
+            :placeholder="t('auth.signin.email.placeholder')"
+          />
+        </FormControl>
+      </FormItem>
+    </FormField>
+
+    <Button type="submit" :disabled="isSubmitting">
+      <Icon v-if="isSubmitting" name="lucide:loader-2" class="w-4 h-4 animate-spin" />
+      {{ t('auth.signin.submitButton') }}
+    </Button>
+  </form>
+</template>
+```
+
+#### Form Rules
+
+**Always:**
+- ✅ Use shared validators from `#shared/validators/*`
+- ✅ Extend schemas with i18n error messages in component
+- ✅ Use `handleSubmit`, `isSubmitting`, `v-bind="field"`
+- ✅ Call store actions for submission (NOT API directly)
+- ✅ Use `:validate-on-blur="!isFieldDirty"` for better UX
+- ✅ Display loading state with `isSubmitting`
+
+**Never:**
+- ❌ Create local form state (like `form.value`) - vee-validate IS the state
+- ❌ Make API calls directly from form submission
+- ❌ Write manual validation - let Zod schema handle it
+- ❌ Duplicate validation logic from backend
+
+#### Populating Forms from Store
+
+```typescript
+// Load data and populate form
+onMounted(async () => {
+  await userStore.fetchUserProfile()
+
+  // Use setValues to populate form
+  setValues({
+    firstName: userStore.firstName || '',
+    lastName: userStore.lastName || ''
+  })
+})
+```
+
+---
+
+### 2. State Management Architecture
+
+**Architecture Overview:**
+
+```
+Pages
+  ↓ consume state via computed
+Stores (Pinia)
+  ↓ ALL API calls
+  ↓ update state
+Backend API
+```
+
+#### State Classification: Domain vs View vs Temporary
+
+**IMPORTANT:** Not all state belongs in stores. Understanding what goes where is critical for performance and maintainability.
+
+**Use this decision tree:**
+
+```
+Is this state...
+├─ Domain data that needs to persist to database?
+│  └─ YES → Pinia Store
+├─ A library instance or DOM reference?
+│  └─ YES → Composable (NEVER Store)
+├─ Temporary high-frequency state (60+ updates/second)?
+│  └─ YES → Component-local ref
+├─ UI state that multiple components need?
+│  └─ YES → Composable (or Store if needs persistence)
+└─ UI state only one component needs?
+   └─ YES → Component-local ref
+```
+
+**Examples by Category:**
+
+| State Type | Where | Example | Why |
+|------------|-------|---------|-----|
+| **Domain State** | Store | Hotspot positions, user data, project settings | Needs to persist, shared across app, part of data model |
+| **Library Instances** | Composable | Marzipano viewer, scene objects, DOM elements | Not serializable, can't be reactive, library internals |
+| **High-Frequency Temporary** | Component-local | Drag position during drag (60+ updates/sec) | Performance critical, no other component needs it |
+| **Shared UI State** | Composable | Auto-rotate enabled, fullscreen mode, dialog visibility | Multiple components access, doesn't need persistence |
+| **Local UI State** | Component-local | Modal open/closed, selected tab, search filter | Only one component needs it |
+
+**Anti-Patterns to Avoid:**
+
+- ❌ **NEVER** put library instances in store (Marzipano viewer, etc.) - not serializable
+- ❌ **NEVER** put high-frequency temporary state in store (drag coordinates) - performance killer
+- ❌ **NEVER** put DOM element references in store - will break
+- ❌ **NEVER** duplicate domain state locally in components - single source of truth
+
+**Real-World Example: Marzipano Panorama Viewer**
+
+```typescript
+// ✅ CORRECT: Domain State (Store)
+projectStore {
+  currentProject        // Persistent business data
+  scenes               // Scene list
+  linkHotspots         // Hotspot positions (persisted to DB)
+  infoHotspots         // Hotspot content (persisted to DB)
+  saveProject()        // API call to save changes
+}
+
+// ✅ CORRECT: Library State (Composable)
+useMarzipano() {
+  viewer               // Marzipano.Viewer instance (not serializable)
+  scene                // Marzipano.Scene instance (library object)
+  currentHotspots      // Map<string, {element, hotspot}> (DOM + library)
+  initViewer()         // Initialize library
+  updateHotspots()     // Update library objects
+}
+
+// ✅ CORRECT: Shared UI State (Composable)
+useTourViewer() {
+  autoRotateEnabled    // UI preference (doesn't need to persist)
+  isFullscreen         // UI state
+  showSceneSelector    // Dialog visibility
+  toggleFullscreen()   // UI action
+}
+
+// ✅ CORRECT: Temporary Interaction State (Component-local)
+MarzipanoViewer.vue {
+  localDragPosition    // Drag coordinates (updates 60+ times/sec)
+  isDragging           // Temporary flag
+  draggedElement       // Temporary DOM ref
+}
+```
+
+**Why This Matters:**
+
+❌ **BAD: Putting drag position in store**
+```typescript
+// This would cause:
+// - 60+ store mutations per second during drag
+// - 60+ Vue reactivity evaluations
+// - 60+ watcher triggers
+// - 60+ immutable array operations
+// - Significant performance degradation
+projectStore.updateHotspotPosition(id, yaw, pitch) // Called on every mousemove!
+```
+
+✅ **GOOD: Local position tracking**
+```typescript
+// During drag:
+localDragPosition.value = coords                    // Local ref only
+hotspotEntry.hotspot.setPosition(coords)           // Direct Marzipano API
+
+// On drag end:
+emit('hotspotPositionUpdate', coords)              // Single store update
+projectStore.updateHotspotPosition(id, yaw, pitch) // One mutation
+```
+
+**Benefits of Proper State Classification:**
+- 🎯 Clear separation of concerns
+- ⚡ Better performance (no reactivity overhead for transient state)
+- 🔧 Easier testing (mock library instances separately)
+- 📦 Smaller store (only domain data)
+- 🚀 Scales better (as app grows)
+
+#### A. Stores (Pinia) - Single Source of Truth
+
+**Stores are responsible for:**
+- ALL API calls (no exceptions)
+- All domain data state (projects, users, billing, etc.)
+- Loading/error states
+- Getters for computed values
+- Success/error toasts
+
+**Critical Store Rules:**
+- ✅ **ALWAYS** use `extendedFetch` from `useExtendedFetch()` for ALL API calls in store actions
+- ❌ **NEVER** use `$fetch` directly in stores - it lacks centralized error handling
+- ❌ **NEVER** use `$fetch` in components/pages - ALL API calls must go through store actions
+
+**Store Pattern:**
+
+```typescript
+// ✅ CORRECT PATTERN
+import { defineStore } from 'pinia'
+import { toast } from 'vue-sonner'
+
+export const useProjectStore = defineStore('project', {
+  state: () => ({
+    currentProject: null as Project | null,
+    projects: [] as Project[],
+    loading: false,
+    error: null as string | null
+  }),
+
+  getters: {
+    // Computed values based on state
+    currentScene: (state) => {
+      if (!state.currentProject) return undefined
+      return state.currentProject.scenes.find(s => s.id === state.currentSceneId)
+    },
+
+    projectCount: (state) => state.projects.length
+  },
+
+  actions: {
+    // ALL API calls go here
+    async loadProject(projectId: string) {
+      try {
+        this.loading = true
+        this.error = null
+
+        // Use extendedFetch for consistent error handling
+        const { extendedFetch } = useExtendedFetch()
+        const { ok, payload } = await extendedFetch(`/v1/projects/${projectId}/load`)
+
+        if (ok) {
+          this.currentProject = payload.data
+          toast.success('Project loaded')
+          return true
+        }
+        return false
+      } catch (error: any) {
+        this.error = error.message
+        // extendedFetch already handled error display
+        return false
+      } finally {
+        this.loading = false
+      }
+    },
+
+    async updateProject(projectId: string, data: Partial<Project>) {
+      try {
+        const { extendedFetch } = useExtendedFetch()
+        const { ok, payload } = await extendedFetch(`/v1/projects/${projectId}`, {
+          method: 'PATCH',
+          body: data
+        })
+
+        if (ok) {
+          // Update state immediately
+          if (this.currentProject?.id === projectId) {
+            this.currentProject = { ...this.currentProject, ...payload.data }
+          }
+          toast.success('Project updated')
+          return true
+        }
+        return false
+      } catch (error) {
+        // extendedFetch already handled error display
+        return false
+      }
+    }
+  }
+})
+```
+
+**Store Rules:**
+- ✅ Use `extendedFetch` for ALL API calls (consistent error handling)
+- ✅ Store actions show success toasts
+- ✅ Store actions update state immediately after success
+- ✅ Return success/failure boolean from actions
+- ✅ Keep loading/error state in store
+- ❌ NEVER make API calls outside store actions
+
+#### B. Composables - Reusable Logic ONLY
+
+**Composables are for:**
+- Reusable business logic WITHOUT state
+- DOM/browser interactions (useMarzipano, useRetry)
+- Complex algorithms or calculations
+- NOT for wrapping stores
+
+**When to create composables:**
+- ✅ Reusable logic (e.g., `useMarzipano` for viewer setup)
+- ✅ Browser APIs (e.g., `useOnlineStatus`)
+- ✅ Complex utilities (e.g., `usePanoramaTiler`)
+
+**When NOT to create composables:**
+- ❌ Simple store wrappers (just use store directly)
+- ❌ Single-use logic (keep in page/component)
+- ❌ State management (use stores)
+
+**Examples:**
+
+```typescript
+// ❌ BAD - Just a store wrapper (remove this)
+export function useBilling() {
+  const billingStore = useBillingStore()
+  return {
+    tier: computed(() => billingStore.tier),
+    limits: computed(() => billingStore.limits)
+  }
+}
+
+// ✅ GOOD - Actual reusable logic
+export function useMarzipano() {
+  const initViewer = (container: HTMLElement) => {
+    // Complex Marzipano initialization logic
+  }
+
+  const addHotspot = (scene: Scene, hotspot: Hotspot) => {
+    // Hotspot manipulation logic
+  }
+
+  return { initViewer, addHotspot }
+}
+
+// ✅ GOOD - Browser API interaction
+export function useOnlineStatus() {
+  const isOnline = ref(navigator.onLine)
+
+  const updateOnlineStatus = () => {
+    isOnline.value = navigator.onLine
+  }
+
+  onMounted(() => {
+    window.addEventListener('online', updateOnlineStatus)
+    window.addEventListener('offline', updateOnlineStatus)
+  })
+
+  onUnmounted(() => {
+    window.removeEventListener('online', updateOnlineStatus)
+    window.removeEventListener('offline', updateOnlineStatus)
+  })
+
+  return { isOnline }
+}
+```
+
+#### C. Pages - Consume Store State
+
+**Pages are responsible for:**
+- Consuming store state via computed
+- Calling store actions for operations
+- Local UI state ONLY (modals, filters, search, selected items)
+- Rendering components
+
+**Page Pattern:**
+
+```typescript
+// ✅ CORRECT PATTERN
+<script setup lang="ts">
+const projectStore = useProjectStore()
+const billingStore = useBillingStore()
+const route = useRoute()
+
+// Consume store state via computed
+const projects = computed(() => projectStore.projects)
+const loading = computed(() => projectStore.loading)
+const canCreate = computed(() => billingStore.canCreateProject)
+const tier = computed(() => billingStore.tier)
+
+// Local UI state ONLY
+const showDialog = ref(false)
+const searchQuery = ref('')
+const selectedProject = ref<string | null>(null)
+
+// Computed filters (derived from local UI state)
+const filteredProjects = computed(() => {
+  if (!searchQuery.value) return projects.value
+  return projects.value.filter(p =>
+    p.name.toLowerCase().includes(searchQuery.value.toLowerCase())
+  )
+})
+
+// Call store actions for operations
+const handleCreate = async () => {
+  const success = await projectStore.createProject({
+    name: 'New Project'
+  })
+  if (success) {
+    showDialog.value = false
+  }
+}
+
+const handleDelete = async (id: string) => {
+  await projectStore.deleteProject(id)
+}
+
+// Load data on mount
+onMounted(async () => {
+  await projectStore.loadProjects()
+  await billingStore.fetchSubscription()
+})
+</script>
+```
+
+**Page Rules:**
+- ✅ Use stores directly (e.g., `billingStore.tier`, not `useBilling().tier`)
+- ✅ Consume state via computed props
+- ✅ Call store actions for ALL operations
+- ✅ Keep local UI state for modals, filters, search
+- ❌ NEVER call `$fetch` or API directly
+- ❌ NEVER duplicate store state locally
+- ❌ NEVER create "wrapper" composables for stores
+
+**Bad Pattern (DO NOT DO THIS):**
+
+```typescript
+// ❌ BAD - Direct API call in page
+const handleSave = async () => {
+  const response = await $fetch(`/api/v1/projects/${projectId}`, {
+    method: 'PATCH',
+    body: formData
+  })
+  // ...
+}
+
+// ❌ BAD - Duplicating store state
+const projects = ref([]) // This should come from store!
+const fetchProjects = async () => {
+  const data = await $fetch('/api/v1/projects')
+  projects.value = data
+}
+
+// ❌ BAD - Using wrapper composable
+const { tier, limits } = useBilling() // Just use billingStore directly!
+```
+
+---
+
+### 3. API Call Patterns
+
+**All API calls must:**
+1. Go through store actions (no exceptions)
+2. Use `extendedFetch` for consistent error handling
+3. Update store state on success
+4. Show success/error toasts
+
+**API Call Pattern:**
+
+```typescript
+// In store actions
+async someAction() {
+  try {
+    // 1. Use extendedFetch (not $fetch)
+    const { extendedFetch } = useExtendedFetch()
+
+    // 2. Make API call
+    const { ok, payload } = await extendedFetch('/v1/endpoint', {
+      method: 'POST',
+      body: data
+    })
+
+    // 3. Update state on success
+    if (ok) {
+      this.someState = payload.data
+      toast.success('Operation successful')
+      return true
+    }
+    return false
+  } catch (error) {
+    // extendedFetch already handled error display
+    return false
+  }
+}
+```
+
+**Why extendedFetch?**
+- Centralized error handling
+- Automatic error toasts
+- Consistent request headers (tenant ID, request ID)
+- Handles authentication redirects
+
+---
+
+### 4. Migration Checklist
+
+#### Current Issues
+
+**Problem 1: API Calls in Pages**
+- `app/pages/projects/[id]/settings.vue` makes direct API calls
+- `app/pages/tours/[slug].vue` may have direct API calls
+
+**Solution:**
+1. Move all `$fetch` calls to store actions
+2. Pages should call store actions instead
+3. Store actions handle API calls and state updates
+
+**Problem 2: Unnecessary Composable Wrappers**
+- `app/composables/useBilling.ts` - just wraps billingStore
+- `app/composables/useQuota.ts` - just wraps billingStore
+
+**Solution:**
+1. Remove these composables entirely
+2. Update all pages to use stores directly:
+   ```typescript
+   // Before
+   const { tier, limits } = useBilling()
+
+   // After
+   const billingStore = useBillingStore()
+   const tier = computed(() => billingStore.tier)
+   const limits = computed(() => billingStore.limits)
+   ```
+
+**Problem 3: Inconsistent API Patterns**
+- `projectStore` uses `$fetch` directly
+- `userStore` uses `extendedFetch`
+- Settings page uses `$fetch` directly
+
+**Solution:**
+1. Update `projectStore` to use `extendedFetch`
+2. Remove all `$fetch` from pages
+3. Standardize on `extendedFetch` for consistency
+
+**Problem 4: State Duplication**
+- settings.vue has both `form.value` AND vee-validate state
+- Some pages have local state that duplicates store state
+
+**Solution:**
+1. Remove local form state - use vee-validate only
+2. Remove any local state that duplicates store state
+3. Only keep local UI state (modals, filters, etc.)
+
+#### Refactoring Example: settings.vue
+
+**Before (BAD):**
+```typescript
+// Multiple sources of state
+const form = ref({
+  name: '',
+  description: ''
+})
+
+// Direct API call
+const handleSave = async () => {
+  await $fetch(`/api/v1/projects/${projectId}`, {
+    method: 'PATCH',
+    body: form.value
+  })
+}
+
+// Load project directly
+const loadProject = async () => {
+  const response = await $fetch(`/api/v1/projects/${projectId}`)
+  form.value = response.data
+}
+```
+
+**After (GOOD):**
+```typescript
+// Single source of truth - vee-validate
+const { handleSubmit, isSubmitting, setValues } = useForm({
+  validationSchema: formSchema
+})
+
+// Call store action
+const onSubmit = handleSubmit(async (values) => {
+  await projectStore.updateProject(projectId, values)
+})
+
+// Load from store
+onMounted(async () => {
+  await projectStore.loadProject(projectId)
+
+  setValues({
+    name: projectStore.currentProject?.name || '',
+    description: projectStore.currentProject?.description || ''
+  })
+})
+```
+
+---
+
+### 5. Decision Trees
+
+#### Should I Create a Composable?
+
+```
+Is this reusable logic without state?
+├─ YES: Is it used in 2+ places?
+│  ├─ YES → Create composable (e.g., useMarzipano)
+│  └─ NO → Keep inline in component
+└─ NO: Does it manage state or make API calls?
+   └─ YES → Use Pinia store instead
+```
+
+#### Should I Extract a Component?
+
+```
+Is this UI used in 2+ different pages/features?
+├─ YES → Extract to components/
+├─ NO: Is it a single-use section over 200 lines?
+│  ├─ YES → Consider extracting for maintainability
+│  └─ NO → Keep inline in page
+└─ Is it part of a design system (buttons, cards)?
+   └─ YES → Extract to components/ui/
+```
+
+#### Where Should This API Call Go?
+
+```
+API call
+└─ ALWAYS → Store action
+   └─ Page calls store action
+      └─ Store updates state
+         └─ Page consumes via computed
 ```
 
 ---
@@ -1696,6 +2136,13 @@ Zod schemas are available in `server/validators/query.ts`:
 - **Error handling**: Use custom error classes
 - **Documentation**: Keep docs updated
 - **Testing**: Maintain good test coverage
+
+### Frontend
+
+- **Marzipano hotspot lifecycle**: Create hotspots once and track by ID. Use `setPosition()` for updates; never destroy/recreate during position changes. This prevents DOM reference errors when the view changes. See [MARZIPANO.md Section VI](./MARZIPANO.md#vi-hotspot-lifecycle-management---best-practices) for detailed implementation.
+- **Reactive data**: Use Vue's reactivity system properly
+- **Component composition**: Follow single responsibility principle
+- **State management**: Use Pinia stores for shared state
 
 ---
 
