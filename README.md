@@ -27,6 +27,7 @@ Complete documentation is available in the [`docs/`](docs/) folder:
 
 ### Core Documentation
 - **[docs/CONVENTIONS.md](docs/CONVENTIONS.md)** - Complete architectural patterns and coding conventions
+  - Includes Nuxt component auto-import conventions (no explicit imports needed)
 - **[docs/ERROR_HANDLING.md](docs/ERROR_HANDLING.md)** - Structured error handling system
 - **[docs/RBAC.md](docs/RBAC.md)** - Enterprise role-based access control guide
 - **[docs/SECURITY.md](docs/SECURITY.md)** - Security architecture and threat model

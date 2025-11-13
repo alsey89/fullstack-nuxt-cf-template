@@ -139,15 +139,93 @@ This project uses TypeScript path aliases to simplify imports and avoid deeply n
 Use `~` or `@` for all imports within the frontend:
 
 ```typescript
-// ✅ GOOD: Use @ alias
-import { Button } from "@/components/ui/button";
+// ✅ GOOD: Use @ alias for utilities and composables
 import { useAuth } from "@/composables/useAuth";
 import { formatDate } from "@/lib/utils";
 
 // ❌ BAD: Relative imports
-import { Button } from "../../../components/ui/button";
 import { useAuth } from "../../composables/useAuth";
 ```
+
+##### Component Auto-Import Convention
+
+**Important:** Nuxt automatically imports all Vue components from the `app/components/` directory. **Do NOT explicitly import components** - they are globally available based on their folder structure and filename.
+
+**How Nuxt Auto-Import Works:**
+- Components are auto-imported based on their **folder structure** and **filename**
+- Component names are derived using **PascalCase** from the path
+- Both `.vue` components and shadcn-vue components are auto-imported
+
+**Examples:**
+
+```
+app/components/
+├── App/
+│   ├── IconButton.vue        → <AppIconButton />
+│   └── ThemeToggle.vue       → <AppThemeToggle />
+├── Generic/
+│   ├── SubmitButton.vue      → <GenericSubmitButton />
+│   └── ConfirmationDialog.vue → <GenericConfirmationDialog />
+└── ui/                       (shadcn-vue components)
+    ├── button/
+    │   └── Button.vue        → <Button />
+    ├── card/
+    │   ├── Card.vue          → <Card />
+    │   ├── CardHeader.vue    → <CardHeader />
+    │   └── CardTitle.vue     → <CardTitle />
+    └── form/
+        ├── FormField.vue     → <FormField />
+        └── FormLabel.vue     → <FormLabel />
+```
+
+**Usage in Vue files:**
+
+```vue
+<!-- ✅ GOOD: Components are auto-imported -->
+<template>
+  <Card>
+    <CardHeader>
+      <CardTitle>Sign In</CardTitle>
+    </CardHeader>
+    <CardContent>
+      <FormField v-slot="{ field }" name="email">
+        <FormLabel>Email</FormLabel>
+        <FormControl>
+          <Input type="email" v-bind="field" />
+        </FormControl>
+      </FormField>
+      <Button type="submit">Sign In</Button>
+    </CardContent>
+  </Card>
+</template>
+
+<script setup>
+// ❌ BAD: Don't import components (they're auto-imported)
+// import { Button } from "@/components/ui/button"
+// import { Card } from "@/components/ui/card"
+
+// ✅ GOOD: Only import utilities, composables, and non-component code
+import { useAuth } from "@/composables/useAuth"
+import { signinSchema } from "#shared/validators/auth"
+</script>
+```
+
+**Component Naming Rules:**
+1. **Single-level components**: `components/Button.vue` → `<Button />`
+2. **Nested components**: `components/ui/button/Button.vue` → `<Button />`
+3. **Folder-prefixed**: `components/App/IconButton.vue` → `<AppIconButton />`
+4. **Multi-word**: Always use multi-word component names per Vue style guide
+
+**What to import explicitly:**
+- ✅ Composables (`useAuth`, `useForm`, etc.)
+- ✅ Utilities (`formatDate`, `cn`, etc.)
+- ✅ Validators and types from `#shared`
+- ✅ Store actions/getters
+- ❌ Vue components (auto-imported)
+- ❌ Nuxt components like `NuxtLink`, `NuxtPage` (auto-imported)
+
+**shadcn-vue components:**
+All shadcn-vue components in `app/components/ui/` are auto-imported. Reference the [shadcn-vue documentation](https://www.shadcn-vue.com/) for component APIs, but never import them explicitly.
 
 #### Backend (server/) Code
 

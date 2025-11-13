@@ -77,13 +77,53 @@ import { createIdentityService } from '#server/services/identity'
 import { ValidationError } from '#server/error/errors'
 import type { User } from '#server/database/schema/identity'
 
-// ✅ Frontend imports
-import { Button } from '@/components/ui/button'
+// ✅ Frontend imports (utilities and composables only)
 import { useAuth } from '@/composables/useAuth'
+import { formatDate } from '@/lib/utils'
+
+// ❌ Don't import Vue components (they're auto-imported by Nuxt)
+// import { Button } from '@/components/ui/button'
+// import { Card } from '@/components/ui/card'
 
 // ❌ Don't use relative paths
 import { ValidationError } from '../../error/errors'
 ```
+
+### Component Auto-Import (Nuxt Convention)
+
+**Critical:** Nuxt auto-imports ALL components from `app/components/`. Never import components explicitly.
+
+```vue
+<!-- ✅ GOOD: Use components directly -->
+<template>
+  <Card>
+    <CardHeader>
+      <CardTitle>Title</CardTitle>
+    </CardHeader>
+    <CardContent>
+      <Button>Click Me</Button>
+    </CardContent>
+  </Card>
+</template>
+
+<script setup>
+// ✅ Import utilities and composables only
+import { useAuth } from '@/composables/useAuth'
+import { signinSchema } from '#shared/validators/auth'
+
+// ❌ NEVER import components
+// import { Button } from '@/components/ui/button'
+</script>
+```
+
+**Component naming pattern:**
+- `components/App/IconButton.vue` → `<AppIconButton />`
+- `components/ui/button/Button.vue` → `<Button />`
+- `components/Generic/ConfirmationDialog.vue` → `<GenericConfirmationDialog />`
+
+**What to import:**
+- ✅ Composables, utilities, types, validators
+- ❌ Vue components (auto-imported)
 
 ---
 
