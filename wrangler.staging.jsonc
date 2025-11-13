@@ -110,6 +110,27 @@
   // Database Seeding:
   //   wrangler secret put NUXT_SEED_SECRET --env staging
   //
+  // OAuth Providers (configure as needed):
+  //   GitHub: https://github.com/settings/developers
+  //     wrangler secret put NUXT_OAUTH_GITHUB_CLIENT_ID --env staging
+  //     wrangler secret put NUXT_OAUTH_GITHUB_CLIENT_SECRET --env staging
+  //
+  //   Google: https://console.cloud.google.com/apis/credentials
+  //     wrangler secret put NUXT_OAUTH_GOOGLE_CLIENT_ID --env staging
+  //     wrangler secret put NUXT_OAUTH_GOOGLE_CLIENT_SECRET --env staging
+  //
+  //   Discord: https://discord.com/developers/applications
+  //     wrangler secret put NUXT_OAUTH_DISCORD_CLIENT_ID --env staging
+  //     wrangler secret put NUXT_OAUTH_DISCORD_CLIENT_SECRET --env staging
+  //
+  //   Microsoft: https://portal.azure.com
+  //     wrangler secret put NUXT_OAUTH_MICROSOFT_CLIENT_ID --env staging
+  //     wrangler secret put NUXT_OAUTH_MICROSOFT_CLIENT_SECRET --env staging
+  //
+  //   Other providers: Follow pattern NUXT_OAUTH_<PROVIDER>_CLIENT_ID/SECRET
+  //   Supported: Facebook, GitLab, Linear, Slack, Spotify, Twitch, and 30+ more
+  //   See: https://github.com/atinux/nuxt-auth-utils
+  //
   // CONFIGURATION OVERRIDES:
   // ------------------------
   // Override runtime config via environment variables:

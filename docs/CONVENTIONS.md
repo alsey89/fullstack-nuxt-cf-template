@@ -23,15 +23,16 @@ This document consolidates all coding conventions, architectural patterns, and b
 1. [Architecture Overview](#architecture-overview)
 2. [Import Aliases](#import-aliases)
 3. [Environment Detection](#environment-detection)
-4. [Service Layer Pattern](#service-layer-pattern)
-5. [Repository Layer](#repository-layer)
-6. [API Response Format](#api-response-format)
-7. [Error Handling](#error-handling)
-8. [Pagination](#pagination)
-9. [Route Handlers](#route-handlers)
-10. [Testing](#testing)
-11. [Database Access](#database-access)
-12. [Field Naming](#field-naming)
+4. [Configuration & Environment Variables](#configuration--environment-variables)
+5. [Service Layer Pattern](#service-layer-pattern)
+6. [Repository Layer](#repository-layer)
+7. [API Response Format](#api-response-format)
+8. [Error Handling](#error-handling)
+9. [Pagination](#pagination)
+10. [Route Handlers](#route-handlers)
+11. [Testing](#testing)
+12. [Database Access](#database-access)
+13. [Field Naming](#field-naming)
 
 ---
 
@@ -431,6 +432,224 @@ const tenantId = isDev
   ? getHeader(event, "x-tenant-id") || subdomain
   : subdomain;
 ```
+
+---
+
+## Configuration & Environment Variables
+
+### Core Principle: Runtime Config as Single Source of Truth
+
+This template uses **Nuxt Runtime Config** exclusively for all configuration values. Direct access to `process.env` or `event.context.cloudflare?.env` for configuration is **prohibited** in application code.
+
+**Why this matters:**
+- ✅ Centralized configuration management
+- ✅ Type-safe access with IDE autocomplete
+- ✅ Consistent override pattern via `NUXT_` prefix
+- ✅ Works seamlessly across local dev and Cloudflare Workers
+- ✅ No scattered environment variable access throughout codebase
+
+### Correct Pattern
+
+#### ✅ Server-Side Configuration Access
+
+```typescript
+// API routes, middleware, server utils
+export default defineEventHandler((event) => {
+  const config = useRuntimeConfig(event);
+
+  // Private (server-only) config
+  const jwtSecret = config.jwtSecret;
+  const sessionPassword = config.session.password;
+  const emailProvider = config.email.provider;
+
+  // Public config (also available on client)
+  const environment = config.public.environment;
+  const apiUrl = config.public.apiUrl;
+});
+
+// Utility functions (pass event when available)
+function myUtil(event?: H3Event) {
+  const config = event ? useRuntimeConfig(event) : useRuntimeConfig();
+  return config.jwtSecret;
+}
+```
+
+#### ✅ Client-Side Configuration Access
+
+```typescript
+// Components, composables, pages
+const config = useRuntimeConfig();
+
+// Only public config is available
+const environment = config.public.environment; // ✅ Works
+const apiUrl = config.public.apiUrl; // ✅ Works
+
+// Private config will cause runtime error
+// const jwt = config.jwtSecret; // ❌ Throws error on client
+```
+
+#### ✅ Cloudflare Bindings (Exception)
+
+```typescript
+// Accessing D1, KV, R2 bindings is allowed
+const db = event.context.cloudflare?.env?.DB as D1Database; // ✅ OK
+const kv = event.context.cloudflare?.env?.KV; // ✅ OK
+const r2 = event.context.cloudflare?.env?.R2; // ✅ OK
+
+// Multi-tenant database selection
+const dbBinding = `DB_${tenantId.toUpperCase()}`;
+const tenantDb = cfEnv?.[dbBinding] as D1Database; // ✅ OK
+```
+
+### Incorrect Patterns
+
+#### ❌ Direct process.env Access
+
+```typescript
+// ❌ NEVER do this in application code
+const secret = process.env.JWT_SECRET;
+const provider = process.env.EMAIL_PROVIDER;
+
+// ✅ Use runtime config instead
+const config = useRuntimeConfig(event);
+const secret = config.jwtSecret;
+const provider = config.email.provider;
+```
+
+**Acceptable exceptions:**
+- Build/config time: `nuxt.config.ts` (e.g., `process.env.NODE_ENV`)
+- Scripts: `scripts/` directory (e.g., `safe-migrate.ts` for CI detection)
+- Test setup: `tests/setup.ts`
+
+#### ❌ Direct cloudflare.env for Configuration
+
+```typescript
+// ❌ NEVER access config via cloudflare.env
+const secret = event.context.cloudflare?.env?.JWT_SECRET;
+const provider = event.context.cloudflare?.env?.EMAIL_PROVIDER;
+
+// ✅ Use runtime config instead
+const config = useRuntimeConfig(event);
+const secret = config.jwtSecret;
+const provider = config.email.provider;
+```
+
+### Environment Variable Override Convention
+
+All `runtimeConfig` values can be overridden using environment variables with the `NUXT_` prefix:
+
+#### Private Configuration (Server-Only)
+
+Use `NUXT_<KEY>` for private server-side config:
+
+| Runtime Config Path | Environment Variable | Example |
+|---------------------|---------------------|---------|
+| `runtimeConfig.jwtSecret` | `NUXT_JWT_SECRET` | `NUXT_JWT_SECRET="abc123"` |
+| `runtimeConfig.session.password` | `NUXT_SESSION_PASSWORD` | `NUXT_SESSION_PASSWORD="xyz789"` |
+| `runtimeConfig.email.provider` | `NUXT_EMAIL_PROVIDER` | `NUXT_EMAIL_PROVIDER="resend"` |
+| `runtimeConfig.email.apiKey` | `NUXT_EMAIL_API_KEY` | `NUXT_EMAIL_API_KEY="re_xxx"` |
+| `runtimeConfig.turnstileSecretKey` | `NUXT_TURNSTILE_SECRET_KEY` | `NUXT_TURNSTILE_SECRET_KEY="0x4xxx"` |
+| `runtimeConfig.multitenancy.enabled` | `NUXT_MULTITENANCY_ENABLED` | `NUXT_MULTITENANCY_ENABLED="true"` |
+| `runtimeConfig.rbac.enabled` | `NUXT_RBAC_ENABLED` | `NUXT_RBAC_ENABLED="false"` |
+
+#### Public Configuration (Client + Server)
+
+Use `NUXT_PUBLIC_<KEY>` for public config accessible on both client and server:
+
+| Runtime Config Path | Environment Variable | Example |
+|---------------------|---------------------|---------|
+| `runtimeConfig.public.environment` | `NUXT_PUBLIC_ENVIRONMENT` | `NUXT_PUBLIC_ENVIRONMENT="production"` |
+| `runtimeConfig.public.apiUrl` | `NUXT_PUBLIC_API_URL` | `NUXT_PUBLIC_API_URL="/api"` |
+| `runtimeConfig.public.turnstileSiteKey` | `NUXT_PUBLIC_TURNSTILE_SITE_KEY` | `NUXT_PUBLIC_TURNSTILE_SITE_KEY="0x4xxx"` |
+| `runtimeConfig.public.multitenancy.enabled` | `NUXT_PUBLIC_MULTITENANCY_ENABLED` | `NUXT_PUBLIC_MULTITENANCY_ENABLED="true"` |
+
+#### OAuth Providers (nuxt-auth-utils)
+
+OAuth credentials follow the same pattern:
+
+| Provider | Environment Variables |
+|----------|----------------------|
+| **GitHub** | `NUXT_OAUTH_GITHUB_CLIENT_ID`<br>`NUXT_OAUTH_GITHUB_CLIENT_SECRET` |
+| **Google** | `NUXT_OAUTH_GOOGLE_CLIENT_ID`<br>`NUXT_OAUTH_GOOGLE_CLIENT_SECRET` |
+| **Discord** | `NUXT_OAUTH_DISCORD_CLIENT_ID`<br>`NUXT_OAUTH_DISCORD_CLIENT_SECRET` |
+| **Microsoft** | `NUXT_OAUTH_MICROSOFT_CLIENT_ID`<br>`NUXT_OAUTH_MICROSOFT_CLIENT_SECRET` |
+| **Others** | `NUXT_OAUTH_<PROVIDER>_CLIENT_ID`<br>`NUXT_OAUTH_<PROVIDER>_CLIENT_SECRET` |
+
+See [SECRETS.md](./SECRETS.md) for complete OAuth setup guide.
+
+### Configuration Workflow
+
+```
+┌─────────────────────────────────────────┐
+│  Environment Variables                  │
+│  (.env, .dev.vars, wrangler secrets)   │
+│  NUXT_* prefix convention              │
+└─────────────┬───────────────────────────┘
+              │ Overrides ↓
+┌─────────────▼───────────────────────────┐
+│  nuxt.config.ts runtimeConfig          │
+│  (Defaults + Type Definitions)         │
+└─────────────┬───────────────────────────┘
+              │ Accessed via ↓
+┌─────────────▼───────────────────────────┐
+│  useRuntimeConfig()                    │
+│  • Server: useRuntimeConfig(event)     │
+│  • Client: useRuntimeConfig().public   │
+└─────────────────────────────────────────┘
+```
+
+### Best Practices
+
+1. **Define all config in `nuxt.config.ts`**: Add all configuration keys to `runtimeConfig` with sensible defaults
+2. **Use environment variables to override**: Never hardcode production values in `nuxt.config.ts`
+3. **Document new variables**: Update `.env.example`, `.dev.vars.example`, and wrangler config comments
+4. **Pass event context**: Always pass `event` to `useRuntimeConfig(event)` in server code when available
+5. **Type safety**: Runtime config is fully typed - use IDE autocomplete to discover available values
+6. **Public vs Private**: Only use `public` for values that must be accessible on the client (security consideration)
+
+### Common Mistakes
+
+❌ **Forgetting to add to runtimeConfig**
+```typescript
+// Won't work - not defined in runtimeConfig
+const value = process.env.MY_NEW_SETTING;
+```
+
+❌ **Accessing private config on client**
+```typescript
+// Runtime error - jwtSecret is private
+const jwt = useRuntimeConfig().jwtSecret; // in component
+```
+
+❌ **Hardcoding production values**
+```typescript
+// Bad - production secret in source code
+runtimeConfig: {
+  jwtSecret: 'prod-secret-abc123' // ❌ Never do this
+}
+```
+
+✅ **Correct approach**
+```typescript
+// 1. Define in nuxt.config.ts with placeholder
+runtimeConfig: {
+  myNewSetting: 'default-value'
+}
+
+// 2. Set via environment variable
+// .dev.vars or wrangler secret
+NUXT_MY_NEW_SETTING="production-value"
+
+// 3. Access via runtime config
+const config = useRuntimeConfig(event);
+const value = config.myNewSetting;
+```
+
+### Related Documentation
+
+- **[SECRETS.md](./SECRETS.md)** - Complete secrets management guide
+- **[TEMPLATE_SETUP.md](./TEMPLATE_SETUP.md)** - Initial configuration setup
+- **[Nuxt Runtime Config Docs](https://nuxt.com/docs/guide/going-further/runtime-config)** - Official documentation
 
 ---
 

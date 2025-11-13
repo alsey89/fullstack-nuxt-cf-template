@@ -64,3 +64,40 @@ NUXT_EMAIL_FROM="noreply@localhost"
 # ========================================
 # Only needed if you want to seed production database via API
 # NUXT_SEED_SECRET="your-secret-for-production-seeding"
+
+# ========================================
+# OAUTH PROVIDERS (OPTIONAL)
+# ========================================
+# Configure OAuth providers you want to enable
+# Supported providers: GitHub, Google, Discord, Microsoft, Facebook, GitLab,
+# Linear, Slack, Spotify, Twitch, and 30+ more
+# See: https://github.com/atinux/nuxt-auth-utils for full list
+
+# GitHub OAuth - Get credentials from: https://github.com/settings/developers
+# NUXT_OAUTH_GITHUB_CLIENT_ID=""
+# NUXT_OAUTH_GITHUB_CLIENT_SECRET=""
+
+# Google OAuth - Get credentials from: https://console.cloud.google.com/apis/credentials
+# NUXT_OAUTH_GOOGLE_CLIENT_ID=""
+# NUXT_OAUTH_GOOGLE_CLIENT_SECRET=""
+
+# Discord OAuth - Get credentials from: https://discord.com/developers/applications
+# NUXT_OAUTH_DISCORD_CLIENT_ID=""
+# NUXT_OAUTH_DISCORD_CLIENT_SECRET=""
+
+# Microsoft OAuth - Get credentials from: https://portal.azure.com
+# NUXT_OAUTH_MICROSOFT_CLIENT_ID=""
+# NUXT_OAUTH_MICROSOFT_CLIENT_SECRET=""
+
+# Add other OAuth providers following the pattern:
+# NUXT_OAUTH_<PROVIDER>_CLIENT_ID=""
+# NUXT_OAUTH_<PROVIDER>_CLIENT_SECRET=""
+# Provider names must be in UPPERCASE
+
+# ========================================
+# ANALYTICS (OPTIONAL)
+# ========================================
+# PostHog Analytics - Currently commented out in nuxt.config.ts
+# Uncomment in nuxt.config.ts and set these to enable:
+# NUXT_PUBLIC_POSTHOG_PUBLIC_KEY=""
+# NUXT_PUBLIC_POSTHOG_HOST="https://us.i.posthog.com"
