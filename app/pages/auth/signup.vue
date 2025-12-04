@@ -155,6 +155,6 @@ const onSubmit = handleSubmit(async (values) => {
 const onGoToSignin = () => navigateTo('/auth/signin');
 
 onMounted(() => {
-  usePrimaryAnimation({ identifier: ".signup-card" })
+  primaryAnimation({ identifier: ".signup-card" })
 });
 </script>

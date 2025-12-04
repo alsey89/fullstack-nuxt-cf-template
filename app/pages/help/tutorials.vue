@@ -52,6 +52,6 @@
 <script setup>
 useHead({ title: 'Tutorials' })
 onMounted(() => {
-  usePrimaryAnimation({ identifier: '.main-content', stagger: 0.1 })
+  primaryAnimation({ identifier: '.main-content', stagger: 0.1 })
 })
 </script>

@@ -40,7 +40,7 @@ const description = ref('')
 const showToast = useShowToast()
 
 onMounted(() => {
-  usePrimaryAnimation({ identifier: '.main-content' })
+  primaryAnimation({ identifier: '.main-content' })
 })
 
 function submit() {

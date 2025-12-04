@@ -122,7 +122,7 @@ const onGoogleSignin = () => {
 
 
 onMounted(() => {
-  usePrimaryAnimation({ identifier: ".signin-card" })
+  primaryAnimation({ identifier: ".signin-card" })
   /*
   * Shows the authentication required message
   * when unauthenticated user is redirected to the signin page

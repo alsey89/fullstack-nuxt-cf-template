@@ -10,6 +10,6 @@ definePageMeta({
 });
 const userStore = useUserStore();
 onMounted(() => {
-    usePrimaryAnimation({ identifier: '.main-content' })
+    primaryAnimation({ identifier: '.main-content' })
 });
 </script>

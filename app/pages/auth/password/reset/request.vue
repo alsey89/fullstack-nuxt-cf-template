@@ -80,6 +80,6 @@ const onSubmit = handleSubmit(async (values) => {
 const onBackToSignin = () => navigateTo('/auth/signin');
 
 onMounted(() => {
-  usePrimaryAnimation({ identifier: ".password-reset-card" })
+  primaryAnimation({ identifier: ".password-reset-card" })
 });
 </script>

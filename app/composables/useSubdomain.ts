@@ -12,10 +12,16 @@ export function useSubdomain(): string | null {
     : window.location.host;
 
   // Strip off port if present
-  const hostname = host.split(":")[0];
+  const hostname = host.split(":")[0] || "";
+
+  // Handle empty hostname
+  if (!hostname) {
+    return null;
+  }
+
   // Split into domain segments
   const parts = hostname.split(".");
 
   // Return the subdomain string (or null)
-  return parts.length > 2 ? parts[0] : null;
+  return parts.length > 2 ? (parts[0] ?? null) : null;
 }

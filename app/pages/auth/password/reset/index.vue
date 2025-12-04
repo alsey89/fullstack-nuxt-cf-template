@@ -83,7 +83,7 @@ onMounted(() => {
     });
     navigateTo('/auth/password/reset/request');
   }
-  usePrimaryAnimation({ identifier: ".password-reset-form-card" })
+  primaryAnimation({ identifier: ".password-reset-form-card" })
 });
 
 /////////////////////////////////////////////////////////////////////

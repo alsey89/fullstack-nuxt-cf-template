@@ -33,7 +33,7 @@
   </Card>
 </template>
 
-<script setup>
+<script setup lang="ts">
 definePageMeta({
   title: 'Authentication Error',
   description: 'An error occurred during authentication',
@@ -43,6 +43,12 @@ definePageMeta({
 const route = useRoute();
 const error = route.query.error as string;
 const message = route.query.message as string;
+
+// Default error for unknown cases
+const defaultError = {
+  title: "Unexpected Error",
+  description: "An unexpected error occurred during authentication. Please try again or contact support if the problem persists."
+};
 
 // Error mapping
 const errorMap: Record<string, { title: string; description: string }> = {
@@ -70,13 +76,10 @@ const errorMap: Record<string, { title: string; description: string }> = {
     title: "Account Setup Failed",
     description: "An error occurred while setting up your account. This might be due to an existing account conflict or a system error."
   },
-  unknown: {
-    title: "Unexpected Error",
-    description: "An unexpected error occurred during authentication. Please try again or contact support if the problem persists."
-  }
+  unknown: defaultError
 };
 
-const errorInfo = computed(() => errorMap[error] || errorMap.unknown);
+const errorInfo = computed(() => errorMap[error] ?? defaultError);
 const errorTitle = computed(() => errorInfo.value.title);
 const errorDescription = computed(() => errorInfo.value.description);
 const errorMessage = computed(() => message || '');
