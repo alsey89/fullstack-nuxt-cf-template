@@ -6,6 +6,7 @@ import {
   like,
   gte,
   lte,
+  eq,
   count as drizzleCount,
 } from "drizzle-orm";
 import type { SQLiteColumn } from "drizzle-orm/sqlite-core";
@@ -206,5 +207,142 @@ export class QueryHelpers {
       (c): c is SQL => c !== undefined
     );
     return and(...validConditions);
+  }
+
+  // ========================================
+  // MULTI-TENANCY / WORKSPACE SCOPING
+  // ========================================
+  // These helpers are ready for when you add multi-tenancy
+  // or workspace support to your SaaS application
+  // ========================================
+
+  /**
+   * Tenant-scoped query filter (for multi-tenant SaaS)
+   * Combines notDeleted + tenantId check + additional conditions
+   *
+   * @param table - The table with deletedAt and tenantId columns
+   * @param tenantId - The tenant ID to scope to
+   * @param additionalConditions - Optional conditions to AND together
+   * @returns SQL condition
+   *
+   * @example
+   * // Tenant-scoped query
+   * .where(QueryHelpers.tenantScoped(users, tenantId))
+   *
+   * @example
+   * // Tenant-scoped with additional conditions
+   * .where(QueryHelpers.tenantScoped(
+   *   users,
+   *   tenantId,
+   *   eq(users.isActive, true)
+   * ))
+   *
+   * @note To enable multi-tenancy:
+   * 1. Add tenantId column to schema: tenantId: text("tenant_id").notNull()
+   * 2. Add index: index("idx_tenant_id").on(table.tenantId)
+   * 3. Use this helper in all tenant-scoped queries
+   */
+  static tenantScoped<T extends { deletedAt: any; tenantId?: any }>(
+    table: T,
+    tenantId: string,
+    ...additionalConditions: (SQL | undefined)[]
+  ): SQL {
+    if (!table.tenantId) {
+      throw new Error(
+        "tenantScoped() called on table without tenantId column. " +
+          "Add tenantId column to schema before using tenant scoping."
+      );
+    }
+
+    return QueryHelpers.notDeleted(
+      table,
+      eq(table.tenantId, tenantId),
+      ...additionalConditions
+    );
+  }
+
+  /**
+   * Workspace-scoped query filter (for workspace-based SaaS)
+   * Combines notDeleted + workspaceId check + additional conditions
+   *
+   * @param table - The table with deletedAt and workspaceId columns
+   * @param workspaceId - The workspace ID to scope to
+   * @param additionalConditions - Optional conditions to AND together
+   * @returns SQL condition
+   *
+   * @example
+   * // Workspace-scoped query
+   * .where(QueryHelpers.workspaceScoped(projects, workspaceId))
+   *
+   * @example
+   * // Workspace-scoped with additional conditions
+   * .where(QueryHelpers.workspaceScoped(
+   *   projects,
+   *   workspaceId,
+   *   eq(projects.status, 'active')
+   * ))
+   *
+   * @note To enable workspace scoping:
+   * 1. Add workspaceId column to schema: workspaceId: text("workspace_id").notNull()
+   * 2. Add index: index("idx_workspace_id").on(table.workspaceId)
+   * 3. Use this helper in all workspace-scoped queries
+   */
+  static workspaceScoped<T extends { deletedAt: any; workspaceId?: any }>(
+    table: T,
+    workspaceId: string,
+    ...additionalConditions: (SQL | undefined)[]
+  ): SQL {
+    if (!table.workspaceId) {
+      throw new Error(
+        "workspaceScoped() called on table without workspaceId column. " +
+          "Add workspaceId column to schema before using workspace scoping."
+      );
+    }
+
+    return QueryHelpers.notDeleted(
+      table,
+      eq(table.workspaceId, workspaceId),
+      ...additionalConditions
+    );
+  }
+
+  /**
+   * User-scoped query filter (for user-owned resources)
+   * Combines notDeleted + userId check + additional conditions
+   *
+   * @param table - The table with deletedAt and userId columns
+   * @param userId - The user ID to scope to
+   * @param additionalConditions - Optional conditions to AND together
+   * @returns SQL condition
+   *
+   * @example
+   * // User-owned resources
+   * .where(QueryHelpers.userOwned(projects, userId))
+   *
+   * @example
+   * // User-owned with additional conditions
+   * .where(QueryHelpers.userOwned(
+   *   projects,
+   *   userId,
+   *   eq(projects.status, 'published')
+   * ))
+   */
+  static userOwned<T extends { deletedAt: any; userId?: any }>(
+    table: T,
+    userId: string,
+    ...additionalConditions: (SQL | undefined)[]
+  ): SQL {
+    if (!table.userId) {
+      throw new Error(
+        "userOwned() called on table without userId column. " +
+          "Add userId column to schema before using user ownership scoping."
+      );
+    }
+
+    return QueryHelpers.notDeleted(
+      table,
+      eq(table.userId, userId),
+      ...additionalConditions
+    );
   }
 }

@@ -308,7 +308,8 @@ export class AuditLogRepository extends BaseRepository {
       .select()
       .from(schema.auditLogs)
       .where(
-        and(
+        QueryHelpers.notDeleted(
+          schema.auditLogs,
           eq(schema.auditLogs.entityType, entityType),
           eq(schema.auditLogs.entityId, entityId)
         )
@@ -324,6 +325,7 @@ export class AuditLogRepository extends BaseRepository {
     return this.drizzle
       .select()
       .from(schema.auditLogs)
+      .where(QueryHelpers.notDeleted(schema.auditLogs))
       .orderBy(schema.auditLogs.createdAt)
       .limit(limit);
   }

@@ -40,9 +40,7 @@
 </template>
 
 <script setup>
-import AlertDialog from '../ui/alert-dialog/AlertDialog.vue';
-import AlertDialogTrigger from '../ui/alert-dialog/AlertDialogTrigger.vue';
-
+// AlertDialog components are auto-imported by Nuxt
 const isOpen = ref(false);
 const userIsNotified = ref(true);
 const typedConfirmationText = ref("");
