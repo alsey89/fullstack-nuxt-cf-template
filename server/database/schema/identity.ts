@@ -28,6 +28,13 @@ export const users = sqliteTable(
       .default(false)
       .notNull(),
 
+    // OAuth Authentication
+    oauthProvider: text("oauth_provider"), // "google", "github", etc.
+    oauthProviderId: text("oauth_provider_id"), // Provider's user ID
+    picture: text("picture"), // Profile picture URL
+    lastLoginMethod: text("last_login_method"), // "password", "google", etc.
+    lastLoginAt: integer("last_login_at", { mode: "timestamp" }),
+
     // Personal Info
     firstName: text("first_name"),
     lastName: text("last_name"),
@@ -50,8 +57,12 @@ export const users = sqliteTable(
   (table) => ({
     // Unique: email per database (each database = one tenant)
     emailUnique: unique("users_email_unique").on(table.email),
+    // Unique: OAuth provider + provider ID (prevents duplicate OAuth accounts)
+    oauthUnique: unique("users_oauth_unique").on(table.oauthProvider, table.oauthProviderId),
     // Critical: email used for login
     emailIdx: index("users_email_idx").on(table.email),
+    // OAuth lookup
+    oauthIdx: index("users_oauth_idx").on(table.oauthProvider, table.oauthProviderId),
     // Common query indexes
     roleIdx: index("users_role_idx").on(table.role),
     activeIdx: index("users_active_idx").on(table.isActive),

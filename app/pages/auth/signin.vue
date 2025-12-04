@@ -65,12 +65,9 @@
       <div class="w-full h-0.5 bg-accent" />
     </div>
 
-    <div class="w-full flex justify-center items-center gap-8 px-4">
-      <button class="hover:cursor-pointer">
-        <Icon name="logos:google-icon" class="w-8 h-8 md:w-16 md:h-16" />
-      </button>
-      <button class="hover:cursor-pointer">
-        <Icon name="cib:line" class="w-8 h-8 md:w-16 md:h-16 text-green-500" />
+    <div class="w-full flex justify-center items-center gap-8 px-4 pb-4">
+      <button @click="onGoogleSignin" class="hover:cursor-pointer hover:opacity-80 transition-opacity">
+        <Icon name="logos:google-icon" class="w-12 h-12 md:w-16 md:h-16" />
       </button>
     </div>
 
@@ -118,6 +115,10 @@ const onSubmit = handleSubmit(async (values) => {
 
 const onGoToSignup = () => navigateTo('/auth/signup');
 const onForgotPassword = () => navigateTo('/auth/password/reset/request');
+const onGoogleSignin = () => {
+  // Redirect to Google OAuth authorization endpoint
+  window.location.href = '/api/auth/google/authorize';
+};
 
 
 onMounted(() => {

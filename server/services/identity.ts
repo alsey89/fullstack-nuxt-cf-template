@@ -186,6 +186,106 @@ export class IdentityService {
   }
 
   /**
+   * Find or create user from OAuth provider
+   */
+  async findOrCreateOAuthUser(data: {
+    provider: "google";
+    providerId: string;
+    email: string;
+    emailVerified: boolean;
+    firstName: string;
+    lastName: string;
+    picture?: string;
+  }) {
+    const { provider, providerId, email, emailVerified, firstName, lastName, picture } = data;
+
+    // Step 1: Try to find existing OAuth user
+    let user = await this.userRepo.findByOAuth(provider, providerId);
+
+    if (user) {
+      // Update login info
+      const updatedUser = await this.userRepo.update(user.id, {
+        picture: picture || user.picture,
+        lastLoginAt: new Date(),
+        lastLoginMethod: provider,
+      });
+
+      if (!updatedUser) {
+        throw new InternalServerError("Failed to update user login info");
+      }
+
+      const { passwordHash, ...userData } = updatedUser;
+      return { user: userData };
+    }
+
+    // Step 2: Check if email already exists (account linking)
+    user = await this.userRepo.findByEmail(email);
+
+    if (user) {
+      // Auto-link ONLY if OAuth email is verified
+      if (!emailVerified) {
+        throw new ValidationError(
+          "Cannot link accounts: Email not verified by OAuth provider",
+          { email, provider, emailVerified }
+        );
+      }
+
+      // Check if already linked to different provider
+      if (user.oauthProvider && user.oauthProvider !== provider) {
+        throw new ValidationError(
+          `This email is already linked to ${user.oauthProvider}. Please sign in with that provider.`,
+          { email, existingProvider: user.oauthProvider, attemptedProvider: provider }
+        );
+      }
+
+      // Link OAuth to existing account
+      const linkedUser = await this.userRepo.update(user.id, {
+        oauthProvider: provider,
+        oauthProviderId: providerId,
+        picture: picture || user.picture,
+        isEmailVerified: true,
+        lastLoginAt: new Date(),
+        lastLoginMethod: provider,
+      });
+
+      if (!linkedUser) {
+        throw new InternalServerError("Failed to link OAuth account");
+      }
+
+      await this.logAudit(user.id, "ACCOUNT_LINKED_OAUTH", "User", user.id, {
+        metadata: { provider, email, autoLinked: true },
+      });
+
+      const { passwordHash, ...userData } = linkedUser;
+      return { user: userData };
+    }
+
+    // Step 3: Create new OAuth-only user
+    const newUser = await this.userRepo.create({
+      email: email.toLowerCase(),
+      passwordHash: "", // Empty for OAuth-only accounts
+      firstName,
+      lastName,
+      picture,
+      oauthProvider: provider,
+      oauthProviderId: providerId,
+      isEmailVerified: emailVerified,
+      role: "user",
+      isActive: true,
+      lastLoginAt: new Date(),
+      lastLoginMethod: provider,
+    });
+
+    await this.logAudit(newUser.id, "USER_OAUTH_SIGNUP", "User", newUser.id, {
+      statusCode: 201,
+      metadata: { email: newUser.email, provider, emailVerified },
+    });
+
+    const { passwordHash, ...userData } = newUser;
+    return { user: userData };
+  }
+
+  /**
    * Confirm email address
    */
   async confirmEmail(token: string) {

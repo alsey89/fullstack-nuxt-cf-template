@@ -1,315 +1,185 @@
 # Database Migrations
 
-Complete reference for the migration and transaction safety system.
+Guide for managing database migrations with Drizzle ORM and Cloudflare D1.
 
 ---
 
-## 🏗️ Architecture
+## 🏗️ Overview
 
-### **Components Built:**
-
-1. **D1 Batch Transactions** ([server/repositories/base.ts](../server/repositories/base.ts))
-   - Atomic operations (up to 100 statements)
-   - `TransactionContext` API for SQL collection
-   - Auto-rollback on failure
-
-2. **Idempotency Keys** (Migration `0003_lumpy_ultimatum.sql`)
-   - `payments.idempotency_key` (unique)
-   - `adjustments.idempotency_key` (indexed)
-   - Prevents duplicate payment processing
-
-3. **Migration Tracking** ([server/database/schema/base.ts](../server/database/schema/base.ts))
-   - `_migrations` table tracks all migrations
-   - Stores Time Travel bookmarks for rollback
-   - Records status, hash, environment, errors
-
-4. **Safe Migration Script** ([scripts/safe-migrate.ts](../scripts/safe-migrate.ts))
-   - Auto-captures Time Travel bookmarks before migrations
-   - Validates migration count
-   - Records state in database
-   - Provides rollback commands on failure
-
-5. **CI Validation** ([.github/workflows/migrate-validation.yml](../.github/workflows/migrate-validation.yml))
-   - Creates temporary D1 database on Cloudflare
-   - Applies migrations automatically
-   - Runs validation tests
-   - **Only runs for PRs to `main` (production)**
+This template uses:
+- **Drizzle ORM** for schema definition and type safety
+- **Drizzle Kit** for generating SQL migrations
+- **Wrangler** for applying migrations to D1 databases
 
 ---
 
 ## 🔄 Migration Workflow
 
-### **Complete Flow:**
+### **Development Flow:**
 
 ```
-Local Development
-  ├─ Edit: server/database/schema/*.ts
-  ├─ Run: npm run db:generate
-  └─ Test: npm run db:migrate:local:staging
-         ↓
-Staging Deployment
-  ├─ Create PR → develop (NO CI)
-  ├─ Manual review & merge
-  ├─ Deploy: npm run db:migrate:safe:staging
-  └─ Monitor for 24h
-         ↓
-Production Deployment
-  ├─ Create PR → main (CI RUNS! ✅)
-  ├─ CI validates automatically
-  ├─ Wait for CI results
-  └─ Deploy: npm run db:migrate:safe:production
+1. Edit Schema
+   ├─ Modify: server/database/schema/*.ts
+   └─ Define tables, columns, indexes
+
+2. Generate Migration
+   ├─ Run: npm run db:generate
+   └─ Creates SQL migration file
+
+3. Test Locally
+   ├─ Run: npm run db:migrate
+   └─ Applies to local D1 database
+
+4. Deploy to Production
+   ├─ Run migration via wrangler
+   └─ Test application
 ```
-
-### **When CI Runs:**
-
-| PR Target | CI Runs? | Testing Method |
-|-----------|----------|----------------|
-| `main` (prod) | ✅ Automatic | GitHub Actions + manual |
-| `develop` (staging) | ❌ No | Manual only |
-| Feature branches | ❌ No | Manual only |
 
 ---
 
 ## 🚀 Commands
 
-### **Generate Migration:**
+### **1. Generate Migration:**
 ```bash
 npm run db:generate
 ```
+Creates a new migration file in `server/database/migrations/` based on schema changes.
 
-### **Test Locally:**
+### **2. Apply Migrations Locally:**
 ```bash
-npm run db:migrate:local:staging
-npm run dev
+npm run db:migrate
+```
+Applies all pending migrations to your local D1 database.
+
+### **3. Apply Migrations to Production:**
+```bash
+# Apply specific migration file
+wrangler d1 execute YOUR_DATABASE_NAME --file=server/database/migrations/0001_migration_name.sql
+
+# Or apply all migrations
+wrangler d1 migrations apply YOUR_DATABASE_NAME
 ```
 
-### **Deploy to Staging:**
+### **4. Check Migration Status:**
 ```bash
-npm run db:migrate:safe:staging
-# Captures bookmark, applies migrations, provides rollback command
-```
-
-### **Deploy to Production:**
-```bash
-npm run db:migrate:safe:production
-# Asks: "Have you tested on staging?"
-# Captures bookmark, applies migrations, provides rollback command
-```
-
-### **Rollback (Time Travel):**
-```bash
-# Get bookmark (provided by migration script)
-wrangler d1 time-travel restore ppm-staging --bookmark=<BOOKMARK>
-
-# Or restore to timestamp
-wrangler d1 time-travel restore ppm-staging --timestamp="2025-01-10T14:30:00Z"
+wrangler d1 migrations list YOUR_DATABASE_NAME
 ```
 
 ---
 
-## 📝 Migration Templates
+## 📝 Migration Examples
 
 ### **Add Column (Non-Breaking):**
 ```sql
--- 0003_add_column.sql
-ALTER TABLE payments ADD COLUMN new_field TEXT;
-CREATE INDEX payments_new_field_idx ON payments(new_field);
+-- Add a new optional column
+ALTER TABLE users ADD COLUMN phone TEXT;
+
+-- Add an index
+CREATE INDEX users_phone_idx ON users(phone);
 ```
 
-### **Modify Column (Breaking - Use Two-Phase):**
+### **Add Required Column (Two Steps):**
 
-**Phase 1: Expand (Week 1)**
+**Step 1: Add as optional**
 ```sql
--- 0004_expand_rename.sql
-ALTER TABLE users ADD COLUMN new_name TEXT;
-UPDATE users SET new_name = old_name WHERE new_name IS NULL;
+ALTER TABLE users ADD COLUMN status TEXT;
 ```
 
-**Phase 2: Contract (Week 2)**
+**Step 2: Populate and make required (in app code or separate migration)**
 ```sql
--- 0005_contract_rename.sql
--- SQLite requires table recreation to drop columns
-CREATE TABLE users_new AS
-  SELECT id, company_id, new_name, email, created_at, updated_at
-  FROM users;
+UPDATE users SET status = 'active' WHERE status IS NULL;
+-- Note: SQLite doesn't support ALTER COLUMN to add NOT NULL
+-- You'll need to recreate the table if you need NOT NULL
+```
 
+### **Rename Column (Recreate Table):**
+
+SQLite doesn't support direct column rename, so you need to recreate:
+
+```sql
+-- Create new table with correct schema
+CREATE TABLE users_new (
+  id TEXT PRIMARY KEY NOT NULL,
+  email TEXT NOT NULL,
+  new_column_name TEXT,  -- Renamed column
+  created_at INTEGER NOT NULL,
+  updated_at INTEGER NOT NULL
+);
+
+-- Copy data
+INSERT INTO users_new SELECT id, email, old_column_name, created_at, updated_at FROM users;
+
+-- Drop old table
 DROP TABLE users;
+
+-- Rename new table
 ALTER TABLE users_new RENAME TO users;
-CREATE INDEX users_company_idx ON users(company_id);
+
+-- Recreate indexes
+CREATE UNIQUE INDEX users_email_unique ON users(email);
+CREATE INDEX users_created_at_idx ON users(created_at);
 ```
 
 ---
 
 ## 🔒 Using Transactions
 
-### **Before (Unsafe):**
-```typescript
-await paymentRepo.create(payment)
-await adjustmentRepo.create(adjustment1)
-await adjustmentRepo.create(adjustment2)
-// ❌ If adjustment2 fails, payment & adjustment1 are committed
-```
+The template includes transaction support in the BaseRepository:
 
-### **After (Safe):**
 ```typescript
-await paymentRepo.transaction(async (tx) => {
-  await tx.prepare('INSERT INTO payments VALUES (...)').bind(...).run()
-  await tx.prepare('INSERT INTO adjustments VALUES (...)').bind(...).run()
-  await tx.prepare('INSERT INTO adjustments VALUES (...)').bind(...).run()
+// Example: Create multiple records atomically
+await baseRepo.transaction(async (tx) => {
+  await tx.prepare('INSERT INTO users VALUES (...)').bind(...).run();
+  await tx.prepare('INSERT INTO user_settings VALUES (...)').bind(...).run();
   // ✅ All-or-nothing: if any fails, all rollback
-})
+});
 ```
 
-### **Idempotency Example:**
-```typescript
-async calculatePayment(userId: string, payPeriodId: string) {
-  const key = `payment_${userId}_${payPeriodId}_${companyId}`
-
-  // Check if already processed
-  const existing = await paymentRepo.findByIdempotencyKey(key, companyId)
-  if (existing?.status !== 'CALCULATED') {
-    return existing // Already done
-  }
-
-  // Process with idempotency key
-  return await paymentRepo.create({
-    ...data,
-    idempotencyKey: key,
-  })
-}
-```
+**Limits:**
+- Maximum 100 statements per transaction
+- Only works within a single API request
+- BEGIN/COMMIT don't work across HTTP requests
 
 ---
 
-## ⚠️ Limitations & Gotchas
+## ⚠️ D1 Limitations
 
-### **D1 Limitations:**
-- ❌ **No multi-request transactions** - BEGIN/COMMIT don't work across API calls
-- ❌ **100 statement limit** - Batch operations max 100 statements
-- ❌ **30-day Time Travel** - Only 30 days of rollback history
-- ❌ **No DROP COLUMN** - SQLite requires table recreation
+### **Transaction Limitations:**
+- ❌ **No cross-request transactions** - BEGIN/COMMIT don't persist across API calls
+- ❌ **100 statement limit** - Batch operations limited to 100 statements
+- ✅ **Batch API** - Use `db.batch()` for atomic operations
 
-### **SQLite Quirks:**
-- Table recreation needed to drop columns
-- Foreign keys disabled by default in D1
-- No `ALTER TABLE ALTER COLUMN` support
+### **SQLite Limitations:**
+- ❌ **No ALTER COLUMN** - Can't modify column types directly
+- ❌ **No DROP COLUMN** - Must recreate table to remove columns
+- ❌ **No RENAME COLUMN** - Must recreate table to rename columns
+- ✅ **Table Recreation** - Use CREATE TABLE AS SELECT pattern
 
----
-
-## 🆘 Emergency Procedures
-
-### **If Production Migration Fails:**
-
-1. **Get rollback bookmark:**
-   ```bash
-   # From migration output, or query database:
-   wrangler d1 execute ppm-production --command="
-     SELECT timetravel_bookmark FROM _migrations
-     WHERE status='APPLIED'
-     ORDER BY applied_at DESC LIMIT 1
-   "
-   ```
-
-2. **Restore immediately:**
-   ```bash
-   wrangler d1 time-travel restore ppm-production --bookmark=<BOOKMARK>
-   ```
-
-3. **Verify:**
-   ```bash
-   wrangler d1 execute ppm-production --command="SELECT COUNT(*) FROM payments"
-   ```
-
-### **If Staging Migration Fails:**
-
-1. **Check error:**
-   ```bash
-   wrangler d1 execute ppm-staging --command="
-     SELECT * FROM _migrations
-     WHERE status='FAILED'
-     ORDER BY applied_at DESC LIMIT 1
-   "
-   ```
-
-2. **Rollback:**
-   ```bash
-   wrangler d1 time-travel restore ppm-staging --bookmark=<BOOKMARK>
-   ```
-
-3. **Fix and retry:**
-   ```bash
-   # Fix migration SQL
-   npm run db:generate
-   npm run db:migrate:safe:staging
-   ```
+### **Schema Changes:**
+- Foreign keys are disabled by default in D1
+- Indexes must be recreated when recreating tables
+- AUTOINCREMENT not supported (use UUIDs instead)
 
 ---
 
-## 🔐 CI/CD Setup
+## 📊 Checking Migration Status
 
-### **Required GitHub Secrets:**
-
-1. **Get Cloudflare API Token:**
-   - https://dash.cloudflare.com/profile/api-tokens
-   - Create Token → "Edit Cloudflare Workers"
-   - Permissions: `D1:Edit`, `Workers:Edit`
-
-2. **Add to GitHub:**
-   - Repository → Settings → Secrets → Actions
-   - Add `CLOUDFLARE_API_TOKEN`
-   - Add `CLOUDFLARE_ACCOUNT_ID` (from dashboard URL)
-
-### **CI Behavior:**
-
-**Runs For:**
-- ✅ PRs to `main` branch
-- ✅ Changes to `server/database/migrations/**`
-- ✅ Changes to `server/database/schema/**`
-
-**Does NOT Run For:**
-- ❌ PRs to `develop`, `staging`, feature branches
-- ❌ Direct pushes
-- ❌ Changes outside migration/schema
-
-**What It Does:**
-1. Creates `test-migration-<run-id>` on Cloudflare D1
-2. Applies all migrations
-3. Runs validation tests
-4. Validates schema integrity
-5. Cleans up test database
-6. Comments results on PR
-
----
-
-## 📊 Monitoring
-
-### **View Migration History:**
+### **List all databases:**
 ```bash
-wrangler d1 execute ppm-staging --command="
-  SELECT id, status, environment, applied_at, timetravel_bookmark
-  FROM _migrations
-  ORDER BY applied_at DESC
-  LIMIT 10
+wrangler d1 list
+```
+
+### **Execute SQL query:**
+```bash
+wrangler d1 execute YOUR_DATABASE_NAME --command="SELECT * FROM users LIMIT 5"
+```
+
+### **Check table schema:**
+```bash
+wrangler d1 execute YOUR_DATABASE_NAME --command="
+  SELECT sql FROM sqlite_master
+  WHERE type='table' AND name='users'
 "
-```
-
-### **Check for Failed Migrations:**
-```bash
-wrangler d1 execute ppm-production --command="
-  SELECT * FROM _migrations
-  WHERE status='FAILED'
-  ORDER BY applied_at DESC
-"
-```
-
-### **Get Current Bookmark:**
-```bash
-wrangler d1 time-travel info ppm-staging
-```
-
-### **Check for Orphaned Test DBs:**
-```bash
-wrangler d1 list | grep test-migration
 ```
 
 ---
@@ -317,83 +187,161 @@ wrangler d1 list | grep test-migration
 ## ✅ Best Practices
 
 ### **DO:**
-- ✅ Always test locally first
-- ✅ Deploy to staging before production
-- ✅ Monitor staging for 24h
-- ✅ Use idempotency keys for critical operations
-- ✅ Keep transactions under 100 statements
+- ✅ Always test migrations locally first
+- ✅ Generate migrations for all schema changes (don't write SQL manually)
+- ✅ Keep migrations small and focused
+- ✅ Use transactions for multi-step operations
+- ✅ Add indexes for frequently queried columns
 - ✅ Use two-phase migrations for breaking changes
-- ✅ Capture Time Travel bookmarks before risky changes
+- ✅ Back up production database before major migrations
 
 ### **DON'T:**
-- ❌ Skip local/staging testing
-- ❌ Deploy directly to production
-- ❌ Combine schema + data changes in one migration
+- ❌ Edit existing migration files after they're applied
+- ❌ Skip migration generation (don't modify SQL directly)
+- ❌ Combine schema and data changes in one migration
 - ❌ Exceed 100 statements per transaction
-- ❌ Delete Time Travel bookmarks within 30 days
-- ❌ Modify production without rollback plan
+- ❌ Deploy untested migrations to production
+- ❌ Delete migration files (they're the source of truth)
 
 ---
 
-## 📚 Schema Reference
+## 🆘 Troubleshooting
 
-### **Migration Tracking Table:**
-```sql
-CREATE TABLE _migrations (
-  id TEXT PRIMARY KEY,                    -- Migration name
-  hash TEXT NOT NULL,                     -- SHA-256 of SQL
-  applied_at INTEGER NOT NULL,            -- Timestamp
-  applied_by TEXT,                        -- User/CI
-  rolled_back_at INTEGER,                 -- Rollback timestamp
-  timetravel_bookmark TEXT,               -- D1 bookmark
-  status TEXT NOT NULL,                   -- PENDING|APPLIED|FAILED|ROLLED_BACK
-  error_message TEXT,                     -- Error details
-  environment TEXT NOT NULL               -- local|staging|production
-);
-```
+### **Migration Failed - How to Fix:**
 
-### **Idempotency Keys:**
-```sql
--- Payments (unique constraint)
-ALTER TABLE payments ADD COLUMN idempotency_key TEXT UNIQUE;
+1. **Check the error:**
+   ```bash
+   wrangler d1 migrations list YOUR_DATABASE_NAME
+   ```
 
--- Adjustments (indexed, not unique)
-ALTER TABLE adjustments ADD COLUMN idempotency_key TEXT;
-```
+2. **Fix the migration SQL file** in `server/database/migrations/`
+
+3. **Reapply:**
+   ```bash
+   wrangler d1 migrations apply YOUR_DATABASE_NAME
+   ```
+
+### **Schema Out of Sync:**
+
+If your local schema doesn't match the database:
+
+1. **Check current schema:**
+   ```bash
+   wrangler d1 execute YOUR_DATABASE_NAME --command="
+     SELECT name, sql FROM sqlite_master
+     WHERE type='table'
+     ORDER BY name
+   "
+   ```
+
+2. **Generate new migration:**
+   ```bash
+   npm run db:generate
+   ```
+
+3. **Review and apply:**
+   ```bash
+   npm run db:migrate
+   ```
+
+### **Need to Roll Back:**
+
+D1 doesn't have built-in rollback. Options:
+
+1. **Manual rollback** - Write a reverse migration:
+   ```sql
+   -- If you added a column, drop it:
+   -- Note: SQLite requires table recreation to drop columns
+   ```
+
+2. **Restore from backup** - If you backed up before migration
+
+3. **Fresh start** (development only):
+   ```bash
+   # Delete and recreate database
+   wrangler d1 delete YOUR_DATABASE_NAME
+   wrangler d1 create YOUR_DATABASE_NAME
+   npm run db:migrate
+   ```
 
 ---
 
-## 🔧 Customization
+## 🔧 Configuration
 
-### **Enable CI for Staging:**
-Edit [.github/workflows/migrate-validation.yml](../.github/workflows/migrate-validation.yml):
-```yaml
-on:
-  pull_request:
-    branches:
-      - main
-      - develop  # Add this
+### **Database Names:**
+
+Set in `wrangler.toml`:
+```toml
+[[d1_databases]]
+binding = "DB"
+database_name = "your-database-name"
+database_id = "your-database-id"
 ```
 
-### **Change Bookmark Retention:**
-Note: Time Travel is 30 days (Cloudflare limitation, not configurable)
+### **Migration Configuration:**
 
-### **Add Migration Validation:**
-Edit [scripts/safe-migrate.ts](../scripts/safe-migrate.ts):
+Set in `drizzle.config.ts`:
 ```typescript
-// Add custom validation
-if (statements.length > 50) {
-  console.warn('⚠️  Large migration detected')
+export default {
+  schema: "./server/database/schema/*.ts",
+  out: "./server/database/migrations",
+  dialect: "sqlite",
+  driver: "d1-http",
 }
 ```
 
 ---
 
-## 📖 Related Files
+## 📖 Related Documentation
 
-- **Transaction Implementation:** [server/repositories/base.ts](../server/repositories/base.ts)
-- **Migration Schema:** [server/database/schema/base.ts](../server/database/schema/base.ts)
-- **Idempotency Schema:** [server/database/schema/compensation.ts](../server/database/schema/compensation.ts)
-- **Safe Migration Script:** [scripts/safe-migrate.ts](../scripts/safe-migrate.ts)
-- **CI Workflow:** [.github/workflows/migrate-validation.yml](../.github/workflows/migrate-validation.yml)
-- **Test Suite:** [tests/migrations/idempotency.test.ts](../tests/migrations/idempotency.test.ts)
+- [Drizzle ORM Docs](https://orm.drizzle.team/)
+- [Cloudflare D1 Docs](https://developers.cloudflare.com/d1/)
+- [SQLite Docs](https://www.sqlite.org/docs.html)
+- [Wrangler CLI Docs](https://developers.cloudflare.com/workers/wrangler/)
+
+---
+
+## 📚 Example: Adding OAuth Fields
+
+Here's the complete workflow for adding new fields (like we did for OAuth):
+
+### 1. Update Schema
+
+Edit `server/database/schema/identity.ts`:
+```typescript
+export const users = sqliteTable("users", {
+  // ... existing fields
+  oauthProvider: text("oauth_provider"),
+  oauthProviderId: text("oauth_provider_id"),
+  picture: text("picture"),
+});
+```
+
+### 2. Generate Migration
+
+```bash
+npm run db:generate
+```
+
+This creates `server/database/migrations/0001_add_oauth_fields.sql`:
+```sql
+ALTER TABLE users ADD COLUMN oauth_provider TEXT;
+ALTER TABLE users ADD COLUMN oauth_provider_id TEXT;
+ALTER TABLE users ADD COLUMN picture TEXT;
+```
+
+### 3. Test Locally
+
+```bash
+npm run db:migrate
+npm run dev
+# Test OAuth functionality
+```
+
+### 4. Deploy to Production
+
+```bash
+wrangler d1 execute YOUR_DATABASE_NAME --file=server/database/migrations/0001_add_oauth_fields.sql
+```
+
+Done! ✨

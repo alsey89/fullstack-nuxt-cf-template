@@ -100,6 +100,11 @@ CREATE TABLE `users` (
 	`email` text NOT NULL,
 	`password_hash` text NOT NULL,
 	`is_email_verified` integer DEFAULT false NOT NULL,
+	`oauth_provider` text,
+	`oauth_provider_id` text,
+	`picture` text,
+	`last_login_method` text,
+	`last_login_at` integer,
 	`first_name` text,
 	`last_name` text,
 	`date_of_birth` integer,
@@ -114,7 +119,9 @@ CREATE TABLE `users` (
 );
 --> statement-breakpoint
 CREATE INDEX `users_email_idx` ON `users` (`email`);--> statement-breakpoint
+CREATE INDEX `users_oauth_idx` ON `users` (`oauth_provider`,`oauth_provider_id`);--> statement-breakpoint
 CREATE INDEX `users_role_idx` ON `users` (`role`);--> statement-breakpoint
 CREATE INDEX `users_active_idx` ON `users` (`is_active`);--> statement-breakpoint
 CREATE INDEX `users_deleted_idx` ON `users` (`deleted_at`);--> statement-breakpoint
-CREATE UNIQUE INDEX `users_email_unique` ON `users` (`email`);
+CREATE UNIQUE INDEX `users_email_unique` ON `users` (`email`);--> statement-breakpoint
+CREATE UNIQUE INDEX `users_oauth_unique` ON `users` (`oauth_provider`,`oauth_provider_id`);

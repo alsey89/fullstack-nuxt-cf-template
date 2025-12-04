@@ -43,6 +43,14 @@ export default defineNuxtConfig({
     // Cloudflare Turnstile (bot protection)
     turnstileSecretKey: "overwrite-this-with-environment-in-production", // Override with NUXT_TURNSTILE_SECRET_KEY
 
+    // OAuth Configuration
+    oauth: {
+      google: {
+        clientId: "", // Override with NUXT_OAUTH_GOOGLE_CLIENT_ID
+        clientSecret: "", // Override with NUXT_OAUTH_GOOGLE_CLIENT_SECRET
+      },
+    },
+
     // Public Keys
     public: {
       environment: "development", // "development" | "staging" | "production"

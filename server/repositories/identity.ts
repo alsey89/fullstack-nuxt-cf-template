@@ -56,6 +56,27 @@ export class UserRepository extends BaseRepository {
   }
 
   /**
+   * Find user by OAuth provider and provider ID
+   */
+  async findByOAuth(provider: string, providerId: string): Promise<User | null> {
+    const result = await this.drizzle
+      .select()
+      .from(schema.users)
+      .where(
+        QueryHelpers.notDeleted(
+          schema.users,
+          and(
+            eq(schema.users.oauthProvider, provider),
+            eq(schema.users.oauthProviderId, providerId)
+          )
+        )
+      )
+      .limit(1);
+
+    return result[0] || null;
+  }
+
+  /**
    * Count users with optional filters
    */
   async count(filters?: Filter[]): Promise<number> {

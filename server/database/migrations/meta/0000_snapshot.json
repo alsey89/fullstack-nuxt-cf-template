@@ -1,7 +1,7 @@
 {
   "version": "6",
   "dialect": "sqlite",
-  "id": "b56ae39f-9cee-402f-9b12-1e4da3fd9487",
+  "id": "8f78918a-901b-4392-bc5f-09cd3d7354e5",
   "prevId": "00000000-0000-0000-0000-000000000000",
   "tables": {
     "_migrations": {
@@ -687,6 +687,41 @@
           "autoincrement": false,
           "default": false
         },
+        "oauth_provider": {
+          "name": "oauth_provider",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "oauth_provider_id": {
+          "name": "oauth_provider_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "picture": {
+          "name": "picture",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "last_login_method": {
+          "name": "last_login_method",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "last_login_at": {
+          "name": "last_login_at",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
         "first_name": {
           "name": "first_name",
           "type": "text",
@@ -775,6 +810,14 @@
           ],
           "isUnique": false
         },
+        "users_oauth_idx": {
+          "name": "users_oauth_idx",
+          "columns": [
+            "oauth_provider",
+            "oauth_provider_id"
+          ],
+          "isUnique": false
+        },
         "users_role_idx": {
           "name": "users_role_idx",
           "columns": [
@@ -800,6 +843,14 @@
           "name": "users_email_unique",
           "columns": [
             "email"
+          ],
+          "isUnique": true
+        },
+        "users_oauth_unique": {
+          "name": "users_oauth_unique",
+          "columns": [
+            "oauth_provider",
+            "oauth_provider_id"
           ],
           "isUnique": true
         }
