@@ -1,9 +1,10 @@
 # Error Handling Guide
 
 > **Related Documentation:**
-> - [CLAUDE.md](CLAUDE.md) - Quick error handling reference
-> - [CONVENTIONS.md](CONVENTIONS.md) - Complete conventions guide
-> - [SECURITY.md](SECURITY.md) - Security considerations
+>
+> - [CLAUDE.md](../CLAUDE.md) - Quick error handling reference
+> - [CLAUDE.md](../CLAUDE.md) - Complete conventions guide
+> - [SECURITY.md](../OPERATIONS/SECURITY.md) - Security considerations
 
 ## Overview
 
@@ -23,6 +24,7 @@ The application uses a **structured error system** with specific error classes a
 ### Three-Part System
 
 #### 1. **Shared Error Codes** ([shared/error/codes.ts](../shared/error/codes.ts))
+
 - Single source of truth for all error codes
 - Importable by both frontend and backend
 - Type-safe with TypeScript
@@ -30,16 +32,17 @@ The application uses a **structured error system** with specific error classes a
 ```typescript
 export const ERROR_CODES = {
   // Auth errors
-  INVALID_CREDENTIALS: 'INVALID_CREDENTIALS',
-  PASSWORD_SAME_AS_OLD: 'PASSWORD_SAME_AS_OLD',
-  TENANT_MISMATCH: 'TENANT_MISMATCH',
+  INVALID_CREDENTIALS: "INVALID_CREDENTIALS",
+  PASSWORD_SAME_AS_OLD: "PASSWORD_SAME_AS_OLD",
+  TENANT_MISMATCH: "TENANT_MISMATCH",
   // ... etc
 } as const;
 
-export type ErrorCode = typeof ERROR_CODES[keyof typeof ERROR_CODES];
+export type ErrorCode = (typeof ERROR_CODES)[keyof typeof ERROR_CODES];
 ```
 
 #### 2. **Error Classes** ([server/error/errors.ts](../server/error/errors.ts))
+
 - Specific error classes for common errors (type-safe)
 - Generic error classes for edge cases
 - All use codes from `ERROR_CODES`
@@ -47,7 +50,7 @@ export type ErrorCode = typeof ERROR_CODES[keyof typeof ERROR_CODES];
 ```typescript
 // Specific error (FE can react to this)
 export class PasswordSameAsOldError extends AppError {
-  constructor(message = 'Password cannot be same as old', details?: any) {
+  constructor(message = "Password cannot be same as old", details?: any) {
     super(message, 400, ERROR_CODES.PASSWORD_SAME_AS_OLD, details);
   }
 }
@@ -61,6 +64,7 @@ export class ValidationError extends AppError {
 ```
 
 #### 3. **Error Handler** ([server/error/errorHandler.ts](../server/error/errorHandler.ts))
+
 - Automatically catches and formats all errors
 - Environment-aware (dev vs production)
 - Logs errors with context
@@ -70,6 +74,7 @@ export class ValidationError extends AppError {
 ## Error Response Format
 
 ### Production Response (400-level errors)
+
 ```json
 {
   "message": "Error occurred",
@@ -87,6 +92,7 @@ export class ValidationError extends AppError {
 ```
 
 ### Production Response (500-level errors)
+
 ```json
 {
   "message": "Error occurred",
@@ -102,6 +108,7 @@ export class ValidationError extends AppError {
 **Note:** `details` is hidden for 500-level errors in production (security).
 
 ### Development Response
+
 ```json
 {
   "message": "Error occurred",
@@ -128,10 +135,12 @@ export class ValidationError extends AppError {
 ### Response Structure Rules
 
 **400-level errors (Client errors):**
+
 -  Always send: `code`, `message`, `details` (production + dev)
 -  Dev only: `debug` block with stack trace
 
 **500-level errors (Server errors):**
+
 -  Always send: `code`, generic `message`, `traceId`
 - L Never send: `details` in production (security)
 -  Dev only: `message`, `details`, `debug` block
@@ -149,19 +158,19 @@ import {
   PasswordSameAsOldError,
   EmailAlreadyExistsError,
   InvalidCredentialsError,
-  UserNotFoundError
-} from '~/server/error/errors';
+  UserNotFoundError,
+} from "~/server/error/errors";
 
 //  Specific error (FE can react specially)
 throw new PasswordSameAsOldError(undefined, {
-  field: 'password',
-  userId: user.id
+  field: "password",
+  userId: user.id,
 });
 
 //  Generic error (FE shows generic message)
 throw new ValidationError("Field X is invalid", {
-  field: 'fieldX',
-  value: someValue
+  field: "fieldX",
+  value: someValue,
 });
 ```
 
@@ -170,23 +179,21 @@ throw new ValidationError("Field X is invalid", {
 **Frontend only uses `error.code`** to determine behavior:
 
 ```typescript
-import { ERROR_CODES } from '#shared/error/codes';
+import { ERROR_CODES } from "#shared/error/codes";
 
 // FE reacts based on code only
 if (error.code === ERROR_CODES.PASSWORD_SAME_AS_OLD) {
-  toast.error(t('errors.passwordSameAsOld'));
-  highlightField('password');
-}
-else if (error.code === ERROR_CODES.EMAIL_EXISTS) {
-  toast.error(t('errors.emailExists'));
+  toast.error(t("errors.passwordSameAsOld"));
+  highlightField("password");
+} else if (error.code === ERROR_CODES.EMAIL_EXISTS) {
+  toast.error(t("errors.emailExists"));
   showLoginLink();
-}
-else if (error.code === ERROR_CODES.TENANT_MISMATCH) {
-  navigateTo('/login?reason=session_mismatch');
+} else if (error.code === ERROR_CODES.TENANT_MISMATCH) {
+  navigateTo("/login?reason=session_mismatch");
 }
 // Generic fallback
 else {
-  toast.error(error.message || t('errors.generic'));
+  toast.error(error.message || t("errors.generic"));
 }
 ```
 
@@ -203,12 +210,14 @@ else {
 **Only include error-specific data that answers: "What caused this error?"**
 
  **Include:**
+
 - Field names (for validation errors)
 - Resource IDs (userId, email, etc.)
 - Conflicting values (existingUserId, tokenTenantId vs currentTenantId)
 - Error-specific context (expectedPurpose vs actualPurpose)
 
 L **Don't include** (errorHandler already logs this):
+
 - `tenantId` - Already in event.context
 - `path` - Already logged by errorHandler
 - `method` - Already logged by errorHandler
@@ -220,37 +229,37 @@ L **Don't include** (errorHandler already logs this):
 ```typescript
 //  Email conflict
 throw new EmailAlreadyExistsError(undefined, {
-  field: 'email',
-  email: 'user@example.com',
-  existingUserId: 'user_456'
+  field: "email",
+  email: "user@example.com",
+  existingUserId: "user_456",
 });
 
 //  Invalid credentials
 throw new InvalidCredentialsError(undefined, {
-  email: 'user@example.com'  // Just the email
+  email: "user@example.com", // Just the email
 });
 
 //  Token mismatch
 throw new InvalidTokenError("Token tenant mismatch", {
-  tokenTenantId: 'tenant_a',
-  currentTenantId: 'tenant_b'
+  tokenTenantId: "tenant_a",
+  currentTenantId: "tenant_b",
 });
 
 //  Password validation
 throw new PasswordSameAsOldError(undefined, {
-  field: 'password',
-  userId: 'user_123'
+  field: "password",
+  userId: "user_123",
 });
 
 // L TOO MUCH INFO (redundant)
 throw new EmailAlreadyExistsError(undefined, {
-  field: 'email',
+  field: "email",
   email: email,
   existingUserId: existingUser.id,
-  tenantId: tenantId,        // L Already in event.context
-  attemptedAction: 'signup', // L Obvious from context
-  ip: getRequestIP(event),   // L Already logged by errorHandler
-  path: event.path           // L Already logged by errorHandler
+  tenantId: tenantId, // L Already in event.context
+  attemptedAction: "signup", // L Obvious from context
+  ip: getRequestIP(event), // L Already logged by errorHandler
+  path: event.path, // L Already logged by errorHandler
 });
 ```
 
@@ -279,6 +288,7 @@ throw new EmailAlreadyExistsError(undefined, {
 ## Available Error Classes
 
 ### Authentication (401)
+
 - `AuthenticationError` - Generic auth required
 - `InvalidCredentialsError` - Wrong email/password
 - `InvalidTokenError` - Invalid/malformed token
@@ -289,35 +299,42 @@ throw new EmailAlreadyExistsError(undefined, {
 - `AccountInactiveError` - Account is inactive
 
 ### Authorization (403)
+
 - `AuthorizationError` - Generic permission denied
 - `PermissionDeniedError` - Specific permission missing
 
 ### Validation (400)
+
 - `ValidationError` - Generic validation failed
 - `InvalidInputError` - Invalid input format
 - `MissingFieldError` - Required field missing
 - `PasswordSameAsOldError` - Password same as current
 
 ### Not Found (404)
+
 - `NotFoundError` - Generic resource not found
 - `UserNotFoundError` - User not found
 - `CompanyNotFoundError` - Company not found
 
 ### Conflict (409)
+
 - `ConflictError` - Generic conflict
 - `DuplicateError` - Duplicate entry
 - `EmailAlreadyExistsError` - Email already exists
 - `TenantIdTakenError` - Tenant ID taken
 
 ### Rate Limit (429)
+
 - `RateLimitError` - Too many requests
 
 ### Server Errors (500)
+
 - `InternalServerError` - Generic server error
 - `DatabaseError` - Database operation failed
 - `ExternalServiceError` - External API failed
 
 ### Business Logic (422)
+
 - `BusinessRuleError` - Business rule violation
 - `InvalidStateError` - Invalid state transition
 
@@ -326,53 +343,57 @@ throw new EmailAlreadyExistsError(undefined, {
 ## Error Throwing Patterns
 
 ### Validation Errors
+
 ```typescript
 // Password validation
 throw new PasswordSameAsOldError(undefined, {
-  field: 'password',
-  userId: user.id
+  field: "password",
+  userId: user.id,
 });
 
 // Generic validation
 throw new ValidationError("Email format is invalid", {
-  field: 'email',
-  email: email
+  field: "email",
+  email: email,
 });
 ```
 
 ### Authentication Errors
+
 ```typescript
 // Invalid credentials
 throw new InvalidCredentialsError(undefined, {
-  email: email
+  email: email,
 });
 
 // Account inactive
 throw new AccountInactiveError(undefined, {
   userId: user.id,
-  email: user.email
+  email: user.email,
 });
 
 // Token errors
 throw new InvalidTokenPurposeError(undefined, {
-  expectedPurpose: 'email-confirm',
-  actualPurpose: payload.purpose
+  expectedPurpose: "email-confirm",
+  actualPurpose: payload.purpose,
 });
 ```
 
 ### Not Found Errors
+
 ```typescript
 throw new UserNotFoundError(undefined, {
-  userId: userId
+  userId: userId,
 });
 ```
 
 ### Conflict Errors
+
 ```typescript
 throw new EmailAlreadyExistsError(undefined, {
-  field: 'email',
+  field: "email",
   email: email,
-  existingUserId: existingUser.id
+  existingUserId: existingUser.id,
 });
 ```
 
@@ -383,30 +404,30 @@ throw new EmailAlreadyExistsError(undefined, {
 ### Using Error Codes
 
 ```typescript
-import { ERROR_CODES } from '#shared/error/codes';
+import { ERROR_CODES } from "#shared/error/codes";
 
 async function handlePasswordReset() {
   try {
-    await $fetch('/api/v1/auth/password/reset', {
-      method: 'POST',
-      body: { token, newPassword }
+    await $fetch("/api/v1/auth/password/reset", {
+      method: "POST",
+      body: { token, newPassword },
     });
-    toast.success(t('password.resetSuccess'));
+    toast.success(t("password.resetSuccess"));
   } catch (error: any) {
     // React based on error code only
     switch (error.data?.error?.code) {
       case ERROR_CODES.PASSWORD_SAME_AS_OLD:
-        toast.error(t('errors.passwordSameAsOld'));
+        toast.error(t("errors.passwordSameAsOld"));
         break;
       case ERROR_CODES.TOKEN_EXPIRED:
-        toast.error(t('errors.tokenExpired'));
-        navigateTo('/forgot-password');
+        toast.error(t("errors.tokenExpired"));
+        navigateTo("/forgot-password");
         break;
       case ERROR_CODES.INVALID_TOKEN_PURPOSE:
-        toast.error(t('errors.invalidLink'));
+        toast.error(t("errors.invalidLink"));
         break;
       default:
-        toast.error(error.data?.error?.message || t('errors.generic'));
+        toast.error(error.data?.error?.message || t("errors.generic"));
     }
   }
 }
@@ -418,24 +439,25 @@ async function handlePasswordReset() {
 // In your i18n files
 export default {
   errors: {
-    passwordSameAsOld: 'Your new password must be different from your current password',
-    emailExists: 'This email is already registered. Try logging in instead.',
-    invalidCredentials: 'Invalid email or password',
-    tokenExpired: 'This link has expired. Please request a new one.',
-    tenantMismatch: 'Your session has expired. Please sign in again.',
-    generic: 'Something went wrong. Please try again.',
-  }
-}
+    passwordSameAsOld:
+      "Your new password must be different from your current password",
+    emailExists: "This email is already registered. Try logging in instead.",
+    invalidCredentials: "Invalid email or password",
+    tokenExpired: "This link has expired. Please request a new one.",
+    tenantMismatch: "Your session has expired. Please sign in again.",
+    generic: "Something went wrong. Please try again.",
+  },
+};
 
 // Map codes to translations
 const errorMap = {
-  [ERROR_CODES.PASSWORD_SAME_AS_OLD]: 'errors.passwordSameAsOld',
-  [ERROR_CODES.EMAIL_EXISTS]: 'errors.emailExists',
-  [ERROR_CODES.INVALID_CREDENTIALS]: 'errors.invalidCredentials',
+  [ERROR_CODES.PASSWORD_SAME_AS_OLD]: "errors.passwordSameAsOld",
+  [ERROR_CODES.EMAIL_EXISTS]: "errors.emailExists",
+  [ERROR_CODES.INVALID_CREDENTIALS]: "errors.invalidCredentials",
   // ... etc
 };
 
-const message = t(errorMap[error.code] || 'errors.generic');
+const message = t(errorMap[error.code] || "errors.generic");
 ```
 
 ---
@@ -447,21 +469,21 @@ const message = t(errorMap[error.code] || 'errors.generic');
 ```typescript
 // Use specific error classes when FE needs special handling
 throw new PasswordSameAsOldError(undefined, {
-  field: 'password',
-  userId: user.id
+  field: "password",
+  userId: user.id,
 });
 
 // Use generic classes for truly generic cases
 throw new ValidationError("Field X is invalid", {
-  field: 'fieldX',
-  value: value
+  field: "fieldX",
+  value: value,
 });
 
 // Keep details minimal and error-specific
 throw new EmailAlreadyExistsError(undefined, {
-  field: 'email',
+  field: "email",
   email: email,
-  existingUserId: existingUser.id
+  existingUserId: existingUser.id,
 });
 
 // Frontend: Only check error codes
@@ -474,25 +496,27 @@ if (error.code === ERROR_CODES.PASSWORD_SAME_AS_OLD) {
 
 ```typescript
 // Don't use generic Error
-throw new Error('Something went wrong');
+throw new Error("Something went wrong");
 
 // Don't include redundant info in details
 throw new ValidationError("Error", {
-  field: 'email',
-  tenantId: tenantId,        // L Already in event.context
-  path: event.path,          // L Already logged
-  attemptedAction: 'signup'  // L Obvious from context
+  field: "email",
+  tenantId: tenantId, // L Already in event.context
+  path: event.path, // L Already logged
+  attemptedAction: "signup", // L Obvious from context
 });
 
 // Don't nest details unnecessarily
 throw new ValidationError("Error", {
-  context: {                 // L Redundant nesting
-    field: 'email'
-  }
+  context: {
+    // L Redundant nesting
+    field: "email",
+  },
 });
 
 // Frontend: Don't use details for business logic
-if (error.details?.field === 'password') {  // L Use error.code instead
+if (error.details?.field === "password") {
+  // L Use error.code instead
   // ...
 }
 ```
@@ -506,6 +530,7 @@ if (error.details?.field === 'password') {  // L Use error.code instead
 Ask: **"Does the frontend need to react differently to this error?"**
 
 - **YES** � Create specific error class with specific code
+
   - Example: `PasswordSameAsOldError` � FE shows hint about password rules
   - Example: `EmailExistsError` � FE shows "Already have account? Login"
   - Example: `TenantMismatchError` � FE redirects to login
@@ -519,21 +544,25 @@ Ask: **"Does the frontend need to react differently to this error?"**
 ## Summary
 
 ### Backend:
+
 - Throw specific error classes (don't think about codes)
 - Include minimal, error-specific details
 - Let errorHandler format the response
 
 ### Frontend:
+
 - Check `error.code` only
 - Map codes to i18n translations
 - Ignore `details` (only for dev debugging)
 
 ### Error Details:
+
 - Only include error-specific critical data
 - Keep it flat (no nested `context` key)
 - Don't duplicate what errorHandler already logs
 
 ### Error Handler:
+
 - Automatically catches all errors
 - Formats response based on environment
 - Logs full context for debugging

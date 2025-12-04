@@ -63,7 +63,7 @@ Before coding, review these critical conventions:
 ```
 API Routes (server/api/**/*.{get,post,put,delete}.ts)
     ↓ calls
-Middleware (workspace resolution, auth)
+Middleware (tenant resolution, auth)
     ↓ calls
 Service Layer (business logic, request-scoped)
     ↓ calls
@@ -147,10 +147,10 @@ keystone/
 │   ├── validators/         # Zod schemas
 │   └── types/              # Shared types
 └── docs/                     # Documentation
-    ├── backend/            # Backend guides
-    ├── frontend/           # Frontend guides
-    ├── conventions/        # Conventions
-    └── operations/         # Setup & deployment
+    ├── BACKEND/            # Backend guides
+    ├── FRONTEND/           # Frontend guides
+    ├── CONVENTIONS/        # Conventions
+    └── OPERATIONS/         # Setup & deployment
 ```
 
 ---
@@ -199,32 +199,22 @@ Services encapsulate business logic and are **request-scoped**.
 
 ```typescript
 export class ExampleService {
-  private readonly db: D1Database;
   private readonly userId?: string;
-  private readonly workspaceId: string;
+  private readonly tenantId?: string;
 
   constructor(
     private readonly event: H3Event,
+    private readonly db: D1Database,
     private readonly exampleRepo: ExampleRepository,
     private readonly auditLogRepo: AuditLogRepository
   ) {
     // Extract context once in constructor
-    this.db = getDatabase(event);
     this.userId = event.context.userId;
-    this.workspaceId = event.context.workspaceId;
+    this.tenantId = event.context.tenantId;
 
     // Validate database context
     if (!this.db) {
       throw new InternalServerError("Database not found in event context");
-    }
-
-    // Validate workspace context
-    if (
-      !this.workspaceId ||
-      typeof this.workspaceId !== "string" ||
-      this.workspaceId.trim() === ""
-    ) {
-      throw new WorkspaceContextMissingError();
     }
   }
 
@@ -284,7 +274,7 @@ export function createExampleService(event: H3Event): ExampleService {
 
 ## Repository Pattern
 
-Repositories handle data access with workspace isolation using **QueryHelpers** for common operations.
+Repositories handle data access with tenant isolation using **QueryHelpers** for common operations.
 
 ### Repository Structure
 
@@ -436,7 +426,7 @@ if (error.code === ERROR_CODES.PASSWORD_SAME_AS_OLD) {
 **Error Details Convention:**
 
 - ✅ Include: field names, resource IDs, conflicting values
-- ❌ Don't include: workspaceId, path, method, IP (already logged)
+- ❌ Don't include: tenantId, path, method, IP (already logged)
 - Keep it flat (no nested `context` key)
 
 ---
@@ -723,7 +713,7 @@ export const examples = sqliteTable("examples", {
 - Include `createdAt` and `updatedAt` on all tables
 - Use `createId()` for primary keys
 - Foreign keys: CASCADE DELETE for dependent data
-- **workspaceId column** - Workspace-scoped tables include workspaceId for row-level isolation
+- **No tenantId column** - Multi-tenant uses separate databases
 
 ### Soft Delete Queries
 
@@ -771,16 +761,16 @@ await expect(service.getUser("invalid")).rejects.toThrow("User not found");
 #### 2. Use Constants, Not Magic Strings
 
 ```typescript
-import { HdrKeyWorkspaceID } from "#server/types/api";
+import { HdrKeyTenantID } from "#server/types/api";
 
 // ✅ Use constant
 vi.mocked(getHeader).mockImplementation((event, header) => {
-  if (header === HdrKeyWorkspaceID) return "test-workspace";
+  if (header === HdrKeyTenantID) return "test-tenant";
   return undefined;
 });
 
 // ❌ Hardcode string
-if (header === "X-Workspace-ID") return "test-workspace";
+if (header === "X-Tenant-ID") return "test-tenant";
 ```
 
 **Why?** Constants keep tests in sync with production code. Header name changes automatically propagate to tests.
