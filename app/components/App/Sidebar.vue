@@ -47,69 +47,144 @@
                                 </NuxtLink>
                             </SidebarMenuButton>
                         </SidebarMenuItem>
-
-                        <!-- Settings -->
-                        <SidebarMenuItem>
-                            <SidebarMenuButton asChild :isActive="route.path === '/settings'">
-                                <NuxtLink to="/settings" class="flex items-center gap-2">
-                                    <Icon name="lucide:settings" /> Settings
-                                </NuxtLink>
-                            </SidebarMenuButton>
-                        </SidebarMenuItem>
-
-                        <!-- Help Center -->
-                        <Collapsible v-model:open="helpOpen" class="group/collapsible md:hidden">
-                            <SidebarMenuItem>
-                                <SidebarMenuButton asChild>
-                                    <CollapsibleTrigger class="w-full flex items-center gap-2">
-                                        <Icon name="lucide:help-circle" />
-                                        Help Center
-                                        <Icon name="mdi:chevron-down" class="ml-auto transition-transform group-data-[state=open]/collapsible:rotate-180" />
-                                    </CollapsibleTrigger>
-                                </SidebarMenuButton>
-                                <CollapsibleContent v-auto-animate>
-                                    <SidebarMenuSub>
-                                        <SidebarMenuSubItem>
-                                            <SidebarMenuSubButton asChild :isActive="route.path === '/help/contact'">
-                                                <NuxtLink to="/help/contact" class="flex items-center gap-2">
-                                                    <Icon name="lucide:mail" /> Contact Support
-                                                </NuxtLink>
-                                            </SidebarMenuSubButton>
-                                        </SidebarMenuSubItem>
-                                        <SidebarMenuSubItem>
-                                            <SidebarMenuSubButton asChild :isActive="route.path === '/help/tutorials'">
-                                                <NuxtLink to="/help/tutorials" class="flex items-center gap-2">
-                                                    <Icon name="lucide:graduation-cap" /> Tutorials
-                                                </NuxtLink>
-                                            </SidebarMenuSubButton>
-                                        </SidebarMenuSubItem>
-                                    </SidebarMenuSub>
-                                </CollapsibleContent>
-                            </SidebarMenuItem>
-                        </Collapsible>
-                        <SidebarMenuItem class="hidden md:block">
-                            <SidebarMenuButton asChild :isActive="route.path.startsWith('/help')">
-                                <NuxtLink to="/help/contact" class="flex items-center gap-2">
-                                    <Icon name="lucide:help-circle" />
-                                    Help Center
-                                </NuxtLink>
-                            </SidebarMenuButton>
-                        </SidebarMenuItem>
                     </SidebarMenu>
                 </SidebarGroupContent>
             </SidebarGroup>
         </SidebarContent>
+
+        <SidebarFooter>
+            <SidebarMenu>
+                <SidebarMenuItem>
+                    <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                            <SidebarMenuButton size="lg" class="data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground">
+                                <Avatar class="h-8 w-8 rounded-lg">
+                                    <AvatarFallback class="rounded-lg">
+                                        {{ usernameInitials || "?" }}
+                                    </AvatarFallback>
+                                </Avatar>
+                                <div class="grid flex-1 text-left text-sm leading-tight">
+                                    <span class="truncate font-semibold">{{ username || "Loading..." }}</span>
+                                    <span class="truncate text-xs text-muted-foreground">{{ userEmail || "" }}</span>
+                                </div>
+                                <Icon name="mdi:chevron-up" class="ml-auto size-4" />
+                            </SidebarMenuButton>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent side="top" class="w-[--reka-popper-anchor-width] min-w-56" align="end" :sideOffset="4">
+                            <DropdownMenuLabel class="p-0 font-normal">
+                                <div class="flex items-center gap-2 px-1 py-1.5 text-left text-sm">
+                                    <Avatar class="h-8 w-8 rounded-lg">
+                                        <AvatarFallback class="rounded-lg">
+                                            {{ usernameInitials || "?" }}
+                                        </AvatarFallback>
+                                    </Avatar>
+                                    <div class="grid flex-1 text-left text-sm leading-tight">
+                                        <span class="truncate font-semibold">{{ username || "Loading..." }}</span>
+                                        <span class="truncate text-xs text-muted-foreground">{{ userEmail || "" }}</span>
+                                    </div>
+                                </div>
+                            </DropdownMenuLabel>
+                            <DropdownMenuSeparator />
+                            <DropdownMenuItem @click="navigateTo('/settings')">
+                                <Icon name="lucide:settings" />
+                                Settings
+                            </DropdownMenuItem>
+                            <DropdownMenuSeparator />
+                            <DropdownMenuSub>
+                                <DropdownMenuSubTrigger>
+                                    <Icon name="lucide:palette" />
+                                    Theme
+                                </DropdownMenuSubTrigger>
+                                <DropdownMenuSubContent>
+                                    <DropdownMenuItem @click="userStore.setTheme('light')">
+                                        <Icon name="lucide:sun" />
+                                        Light
+                                        <Icon v-if="theme === 'light'" name="lucide:check" class="ml-auto" />
+                                    </DropdownMenuItem>
+                                    <DropdownMenuItem @click="userStore.setTheme('dark')">
+                                        <Icon name="lucide:moon" />
+                                        Dark
+                                        <Icon v-if="theme === 'dark'" name="lucide:check" class="ml-auto" />
+                                    </DropdownMenuItem>
+                                </DropdownMenuSubContent>
+                            </DropdownMenuSub>
+                            <DropdownMenuSub>
+                                <DropdownMenuSubTrigger>
+                                    <Icon name="lucide:languages" />
+                                    Language
+                                </DropdownMenuSubTrigger>
+                                <DropdownMenuSubContent>
+                                    <DropdownMenuItem>
+                                        <Icon name="lucide:check" class="mr-2" />
+                                        English
+                                    </DropdownMenuItem>
+                                    <DropdownMenuItem disabled>
+                                        <span class="ml-6">Spanish</span>
+                                    </DropdownMenuItem>
+                                    <DropdownMenuItem disabled>
+                                        <span class="ml-6">French</span>
+                                    </DropdownMenuItem>
+                                </DropdownMenuSubContent>
+                            </DropdownMenuSub>
+                            <DropdownMenuSeparator />
+                            <DropdownMenuSub>
+                                <DropdownMenuSubTrigger>
+                                    <Icon name="lucide:help-circle" />
+                                    Help
+                                </DropdownMenuSubTrigger>
+                                <DropdownMenuSubContent>
+                                    <DropdownMenuItem @click="navigateTo('/help/contact')">
+                                        <Icon name="lucide:mail" />
+                                        Contact Support
+                                    </DropdownMenuItem>
+                                    <DropdownMenuItem @click="navigateTo('/help/tutorials')">
+                                        <Icon name="lucide:graduation-cap" />
+                                        Tutorials
+                                    </DropdownMenuItem>
+                                </DropdownMenuSubContent>
+                            </DropdownMenuSub>
+                            <DropdownMenuSeparator />
+                            <DropdownMenuItem @click="userStore.signout">
+                                <Icon name="lucide:log-out" />
+                                Sign out
+                            </DropdownMenuItem>
+                        </DropdownMenuContent>
+                    </DropdownMenu>
+                </SidebarMenuItem>
+
+                <!-- Mobile trigger -->
+                <SidebarMenuItem class="flex items-center justify-center md:hidden">
+                    <SidebarTrigger />
+                </SidebarMenuItem>
+            </SidebarMenu>
+        </SidebarFooter>
     </Sidebar>
 </template>
 
 <script setup>
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible'
-
 const userStore = useUserStore()
 const route = useRoute()
 
-// Section open states
-const helpOpen = ref(false)
+// User computed properties
+const username = computed(() => {
+    const p = userStore.userProfile
+    if (!p) return ''
+    const first = p.firstName || ''
+    const last = p.lastName || ''
+    return `${first} ${last}`.trim()
+})
+
+const usernameInitials = computed(() => {
+    if (!username.value) return ''
+    const parts = username.value.split(' ').filter(Boolean)
+    return parts.length > 1 ? `${parts[0][0]}${parts[1][0]}` : parts[0][0]
+})
+
+const userEmail = computed(() => {
+    return userStore.userProfile?.email || ''
+})
+
+const theme = computed(() => userStore.theme)
 
 onMounted(() => {
     if (!userStore.userProfile) {
