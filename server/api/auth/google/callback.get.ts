@@ -102,7 +102,13 @@ export default defineEventHandler(async (event) => {
       );
     }
 
+    // Get user permissions
+    const permissions = await identityService.getUserPermissions(userData.id);
+    const permissionVersion = await identityService.getPermissionVersion(userData.id);
+
     // Set session using nuxt-auth-utils
+    // NOTE: nuxt-auth-utils requires a 'user' key for loggedIn to work
+    // IMPORTANT: tenantId is bound to session to prevent cross-tenant access
     await setUserSession(event, {
       user: {
         id: userData.id,
@@ -113,6 +119,9 @@ export default defineEventHandler(async (event) => {
         isEmailVerified: userData.isEmailVerified,
         picture: userData.picture,
       },
+      tenantId: event.context.tenantId, // Bind session to tenant (prevents cross-tenant session reuse)
+      permissions,
+      permissionVersion,
       loggedInAt: Date.now(),
     });
 

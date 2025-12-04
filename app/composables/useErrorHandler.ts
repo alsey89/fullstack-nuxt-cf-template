@@ -3,7 +3,7 @@
 // ========================================
 // Centralized error handling for API responses
 // Imports error codes from backend for type-safe error handling
-// Uses i18n for multi-language error messages
+// Uses i18n for multi-language error messages (with fallbacks)
 // ========================================
 
 import { ERROR_CODES, type ErrorCode } from "#shared/error/codes";
@@ -36,6 +36,48 @@ interface ErrorMessage {
 }
 
 /**
+ * Fallback error messages when i18n is not available
+ */
+const fallbackMessages: Record<string, { title: string; description: string }> = {
+  [ERROR_CODES.AUTH_REQUIRED]: {
+    title: "Authentication Required",
+    description: "Please sign in to continue.",
+  },
+  [ERROR_CODES.INVALID_TOKEN]: {
+    title: "Invalid Session",
+    description: "Your session is invalid. Please sign in again.",
+  },
+  [ERROR_CODES.TOKEN_EXPIRED]: {
+    title: "Session Expired",
+    description: "Your session has expired. Please sign in again.",
+  },
+  [ERROR_CODES.TENANT_MISMATCH]: {
+    title: "Access Denied",
+    description: "You don't have access to this workspace.",
+  },
+  [ERROR_CODES.EMAIL_NOT_CONFIRMED]: {
+    title: "Email Not Verified",
+    description: "Please verify your email address before signing in.",
+  },
+  [ERROR_CODES.INVALID_CREDENTIALS]: {
+    title: "Invalid Credentials",
+    description: "The email or password you entered is incorrect.",
+  },
+  [ERROR_CODES.VALIDATION_ERROR]: {
+    title: "Validation Error",
+    description: "Please check your input and try again.",
+  },
+  [ERROR_CODES.INTERNAL_ERROR]: {
+    title: "Server Error",
+    description: "An unexpected error occurred. Please try again later.",
+  },
+  UNKNOWN_ERROR: {
+    title: "Error",
+    description: "An unexpected error occurred.",
+  },
+};
+
+/**
  * Map error codes to redirect configurations
  */
 const redirectConfig: Partial<Record<ErrorCode, { path: string }>> = {
@@ -57,18 +99,51 @@ const actionConfig: Partial<Record<ErrorCode, { path: string }>> = {
 };
 
 /**
- * Get error message from i18n translations
- * This function can be called outside of setup context
+ * Safely get translation function
+ * Returns null if i18n is not available (outside Vue context)
+ */
+function tryGetI18n(): ((key: string) => string) | null {
+  try {
+    const nuxtApp = useNuxtApp();
+    if (nuxtApp.$i18n) {
+      return (key: string) => nuxtApp.$i18n.t(key) as string;
+    }
+    return null;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Default fallback for unknown errors
+ */
+const defaultFallback = {
+  title: "Error",
+  description: "An unexpected error occurred.",
+};
+
+/**
+ * Get error message from i18n translations with fallback
+ * Works both inside and outside Vue component context
  */
 function getErrorMessage(code: ErrorCode | "UNKNOWN_ERROR"): ErrorMessage {
-  const { t } = useI18n();
+  const t = tryGetI18n();
   const errorKey = `errors.${code}`;
+  const fallback = fallbackMessages[code] ?? defaultFallback;
 
-  // Build error message from i18n
+  // Build error message - use i18n if available, otherwise fallback
   const message: ErrorMessage = {
-    title: t(`${errorKey}.title`),
-    description: t(`${errorKey}.description`),
+    title: t ? t(`${errorKey}.title`) : fallback.title,
+    description: t ? t(`${errorKey}.description`) : fallback.description,
   };
+
+  // Check if i18n returned the key itself (translation missing)
+  if (message.title === `${errorKey}.title`) {
+    message.title = fallback.title;
+  }
+  if (message.description === `${errorKey}.description`) {
+    message.description = fallback.description;
+  }
 
   // Add redirect configuration if exists
   const redirect = redirectConfig[code as ErrorCode];
@@ -77,16 +152,20 @@ function getErrorMessage(code: ErrorCode | "UNKNOWN_ERROR"): ErrorMessage {
     message.redirectTo = redirect.path;
   }
 
-  // Add action button if translation exists
+  // Add action button if configured
   const actionPath = actionConfig[code as ErrorCode];
-  if (actionPath && t(`${errorKey}.action.label`)) {
-    message.action = {
-      label: t(`${errorKey}.action.label`),
-      onClick: () => {
-        navigateTo(actionPath.path);
-        return true;
-      },
-    };
+  if (actionPath) {
+    const actionLabel = t ? t(`${errorKey}.action.label`) : null;
+    // Only add action if we have a valid label (not the key itself)
+    if (actionLabel && actionLabel !== `${errorKey}.action.label`) {
+      message.action = {
+        label: actionLabel,
+        onClick: () => {
+          navigateTo(actionPath.path);
+          return true;
+        },
+      };
+    }
   }
 
   return message;

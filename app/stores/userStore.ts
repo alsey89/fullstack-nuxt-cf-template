@@ -57,7 +57,7 @@ export const useUserStore = defineStore(
       const { extendedFetch } = useExtendedFetch();
       const { fetch: fetchSession } = useUserSession();
 
-      const { status, payload } = await extendedFetch("/v1/auth/signin", {
+      const response = await extendedFetch("/v1/auth/signin", {
         method: "POST",
         body: {
           email,
@@ -65,7 +65,7 @@ export const useUserStore = defineStore(
         },
       });
 
-      if (status === 200) {
+      if (response?.ok) {
         // Fetch the session from nuxt-auth-utils
         await fetchSession();
 
@@ -75,12 +75,15 @@ export const useUserStore = defineStore(
         });
 
         // Track user login
-        posthog.identify(payload.data.user.email, {
-          user_id: payload.data.user.id,
-          email: payload.data.user.email,
-          first_name: payload.data.user.firstName,
-          last_name: payload.data.user.lastName,
-        });
+        const user = response.payload?.data?.user;
+        if (user) {
+          posthog.identify(user.email, {
+            user_id: user.id,
+            email: user.email,
+            first_name: user.firstName,
+            last_name: user.lastName,
+          });
+        }
 
         isLoading.value = false;
         return navigateTo(redirectTo);
@@ -104,7 +107,7 @@ export const useUserStore = defineStore(
       const showToast = useShowToast();
       const { extendedFetch } = useExtendedFetch();
 
-      const { status } = await extendedFetch("/v1/auth/signup", {
+      const response = await extendedFetch("/v1/auth/signup", {
         method: "POST",
         body: {
           firstName,
@@ -115,7 +118,7 @@ export const useUserStore = defineStore(
         },
       });
 
-      if (status === 200 || status === 201) {
+      if (response?.ok) {
         showToast({
           title: "Account Created",
           description:
@@ -150,22 +153,17 @@ export const useUserStore = defineStore(
     async function fetchUserProfile(): Promise<boolean> {
       const { extendedFetch } = useExtendedFetch();
 
-      try {
-        const { status, payload } = await extendedFetch("/v1/user/profile", {
-          method: "GET",
-        });
+      const response = await extendedFetch("/v1/user/profile", {
+        method: "GET",
+      });
 
-        if (status === 200) {
-          userProfile.value = payload.data;
-          return true;
-        }
-
-        return false;
-      } catch (err: any) {
-        console.error("Failed to fetch user profile:", err);
-        userProfile.value = null;
-        return false;
+      if (response?.ok) {
+        userProfile.value = response.payload?.data ?? null;
+        return true;
       }
+
+      userProfile.value = null;
+      return false;
     }
 
     /**
@@ -215,14 +213,14 @@ export const useUserStore = defineStore(
       const showToast = useShowToast();
       const { extendedFetch } = useExtendedFetch();
 
-      const { status } = await extendedFetch("/v1/auth/password/reset/request", {
+      const response = await extendedFetch("/v1/auth/password/reset/request", {
         method: "POST",
         body: {
           email,
         },
       });
 
-      if (status === 200) {
+      if (response?.ok) {
         showToast({
           title: "Reset Email Sent",
           description: "Please check your email for password reset instructions.",
@@ -248,7 +246,7 @@ export const useUserStore = defineStore(
       const showToast = useShowToast();
       const { extendedFetch } = useExtendedFetch();
 
-      const { status } = await extendedFetch("/v1/auth/password/reset", {
+      const response = await extendedFetch("/v1/auth/password/reset", {
         method: "PUT",
         body: {
           token,
@@ -257,7 +255,7 @@ export const useUserStore = defineStore(
         },
       });
 
-      if (status === 200) {
+      if (response?.ok) {
         showToast({
           title: "Password Reset Successfully",
           description: "You can now sign in with your new password.",

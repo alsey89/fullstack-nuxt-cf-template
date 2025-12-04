@@ -62,6 +62,9 @@ function isPublicRoute(path: string): boolean {
     "/api/v1/auth/password/reset",
     "/api/_nuxt_icon/", // nuxt icon endpoint
     "/api/_auth/session", // nuxt-auth-utils session endpoint
+    // OAuth routes
+    "/api/auth/google/authorize",
+    "/api/auth/google/callback",
   ];
 
   return publicRoutes.some((route) => path === route || path.startsWith(route));

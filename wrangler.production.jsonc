@@ -118,6 +118,23 @@
   "vars": {
     "NODE_ENV": "production",
     "NUXT_PUBLIC_ENVIRONMENT": "production"
+  },
+
+  // OBSERVABILITY CONFIGURATION
+  "observability": {
+    "enabled": false,
+    "head_sampling_rate": 1,
+    "logs": {
+      "enabled": true,
+      "head_sampling_rate": 1,
+      "persist": true,
+      "invocation_logs": false
+    },
+    "traces": {
+      "enabled": false,
+      "persist": true,
+      "head_sampling_rate": 1
+    }
   }
 
   // ========================================
