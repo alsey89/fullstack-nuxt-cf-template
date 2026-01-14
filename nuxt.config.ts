@@ -97,7 +97,11 @@ export default defineNuxtConfig({
     compatibilityDate: "2025-07-15",
     errorHandler: "server/error/errorHandler.ts",
     cloudflareDev: {
-      configPath: "./wrangler.staging.jsonc",
+      // Use test config when NUXT_PUBLIC_ENVIRONMENT=test, otherwise staging
+      configPath:
+        process.env.NUXT_PUBLIC_ENVIRONMENT === "test"
+          ? "./wrangler.test.jsonc"
+          : "./wrangler.staging.jsonc",
     },
   },
   shadcn: {

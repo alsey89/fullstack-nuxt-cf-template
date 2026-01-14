@@ -107,7 +107,7 @@ components/
 ├── ui/              # shadcn-vue base components
 ├── App/             # App-level components (Sidebar, Layout)
 ├── User/            # User domain components
-└── Common/          # Shared components
+└── Generic/         # Shared generic components
 ```
 
 ## Composable Pattern

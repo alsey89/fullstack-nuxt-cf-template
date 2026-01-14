@@ -9,7 +9,7 @@ import { AuthenticationError } from "#server/error/errors";
 // - event.context.userId: Authenticated user's ID
 // - event.context.tenantId: Current tenant/workspace ID (from session)
 //
-// Runs after database middleware (02 prefix)
+// Runs after workspace middleware (01 prefix)
 // ========================================
 
 /**

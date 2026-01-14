@@ -361,19 +361,26 @@ export type NewWorkspaceInvite = typeof workspaceInvites.$inferInsert;
 // ============================================================================
 // Permission Codes (extend with your app-specific permissions)
 // ============================================================================
+// Uses CRUD naming: read/create/update/delete (matches config/rbac.ts)
+// ============================================================================
 
 export type PermissionCode =
   // Users
-  | "users:view"
+  | "users:read"
   | "users:create"
   | "users:update"
   | "users:delete"
   | "users:*" // All user permissions
   // Roles
-  | "roles:view"
+  | "roles:read"
   | "roles:create"
   | "roles:update"
   | "roles:delete"
   | "roles:*" // All role permissions
+  // Profile (self)
+  | "profile:read"
+  | "profile:update"
+  // Audit
+  | "audit:read"
   // System
   | "*"; // Super admin - all permissions

@@ -1,7 +1,7 @@
 import { defineStore } from "pinia";
 import { ref } from "vue";
 import posthog from "posthog-js";
-import type { User } from "~~/server/database/schema/identity";
+import type { User } from "#shared/types";
 
 type Theme = "light" | "dark";
 

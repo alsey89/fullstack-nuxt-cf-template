@@ -38,13 +38,18 @@ The same backend `tenantId` maps to a user-facing "workspace" (or could be "orga
 
 ## Service Pattern
 
+There are two types of services:
+
+### Tenant-Scoped Services (require tenantId)
+For services that operate on tenant-specific data:
+
 ```typescript
-export class XxxService {
+export class ProjectService {
   private readonly tenantId: string;
 
   constructor(
     private readonly event: H3Event,
-    private readonly xxxRepo: XxxRepository
+    private readonly projectRepo: ProjectRepository
   ) {
     this.tenantId = event.context.tenantId;
 
@@ -54,8 +59,27 @@ export class XxxService {
     }
   }
 }
+```
 
-// Factory function
+### Global Services (no tenantId requirement)
+For services that operate on global entities (like users):
+
+```typescript
+export class IdentityService {
+  private readonly userId?: string;  // Optional, set after auth
+
+  constructor(
+    private readonly event: H3Event,
+    private readonly userRepo: UserRepository
+  ) {
+    // No tenant validation - users are global entities
+    this.userId = event.context.userId;
+  }
+}
+```
+
+### Factory Function Pattern
+```typescript
 export function createXxxService(event: H3Event): XxxService {
   const db = getDatabase(event);
   return new XxxService(event, new XxxRepository(db));

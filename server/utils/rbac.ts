@@ -282,8 +282,8 @@ export function assertPermissionCode(
  */
 export const PermissionChecks = {
   // Users
-  canViewUsers: (permissions: PermissionCode[]) =>
-    PermissionMatcher.hasPermission(permissions, "users:view"),
+  canReadUsers: (permissions: PermissionCode[]) =>
+    PermissionMatcher.hasPermission(permissions, "users:read"),
   canCreateUsers: (permissions: PermissionCode[]) =>
     PermissionMatcher.hasPermission(permissions, "users:create"),
   canUpdateUsers: (permissions: PermissionCode[]) =>
@@ -292,8 +292,8 @@ export const PermissionChecks = {
     PermissionMatcher.hasPermission(permissions, "users:delete"),
 
   // Roles
-  canViewRoles: (permissions: PermissionCode[]) =>
-    PermissionMatcher.hasPermission(permissions, "roles:view"),
+  canReadRoles: (permissions: PermissionCode[]) =>
+    PermissionMatcher.hasPermission(permissions, "roles:read"),
   canCreateRoles: (permissions: PermissionCode[]) =>
     PermissionMatcher.hasPermission(permissions, "roles:create"),
   canUpdateRoles: (permissions: PermissionCode[]) =>

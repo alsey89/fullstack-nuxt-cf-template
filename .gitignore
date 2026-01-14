@@ -35,5 +35,8 @@ server/types/worker-configuration.d.ts
 postgres
 redis
 
+
 # Air files
 tmp
+
+temporary_reference
