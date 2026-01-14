@@ -19,7 +19,6 @@ import {
 } from "drizzle-orm";
 import * as schema from "#server/database/schema";
 import type { Filter, SortOrder } from "#server/types/api";
-import { QueryHelpers } from "#server/repositories/helpers/query-builder";
 
 /**
  * Base repository class with soft delete support

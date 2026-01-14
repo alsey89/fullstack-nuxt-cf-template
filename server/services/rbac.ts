@@ -1,20 +1,22 @@
 import type { H3Event } from "h3";
-import {
-  RoleRepository,
-  UserRoleRepository,
-  PermissionRepository,
-} from "#server/repositories/rbac";
 import { UserRepository } from "#server/repositories/identity";
 import type { PermissionCode } from "#server/database/schema/identity";
 import { getDatabase } from "#server/database/utils";
 import { AuthorizationError, PermissionDeniedError } from "#server/error/errors";
+import {
+  DEFAULT_ROLES,
+  PERMISSION_DEFINITIONS,
+  hasPermission as configHasPermission,
+  getRolePermissions,
+  type RoleName,
+} from "#server/config/rbac";
 
 // ========================================
 // RBAC SERVICE
 // ========================================
-// Service layer for Role-Based Access Control
-// Provides graceful degradation when RBAC is disabled
-// Handles permission checks, role management, and user authorization
+// Config-based Role-Based Access Control
+// Roles are defined in server/config/rbac.ts (no database tables)
+// User's role is stored in users.role field
 // ========================================
 
 /**
@@ -27,19 +29,17 @@ export interface RBACConfig {
 
 /**
  * RBAC Service
- * Main service for managing roles, permissions, and authorization
+ *
+ * Config-based role system:
+ * - Roles defined in server/config/rbac.ts
+ * - User's role stored in users.role field
+ * - No database queries for permission checks (fast)
  */
 export class RBACService {
-  private roleRepo: RoleRepository;
-  private userRoleRepo: UserRoleRepository;
-  private permissionRepo: PermissionRepository;
   private userRepo: UserRepository;
   private config: RBACConfig;
 
   constructor(database: D1Database, config?: Partial<RBACConfig>) {
-    this.roleRepo = new RoleRepository(database);
-    this.userRoleRepo = new UserRoleRepository(database);
-    this.permissionRepo = new PermissionRepository(database);
     this.userRepo = new UserRepository(database);
 
     // Default configuration: RBAC enabled
@@ -74,6 +74,9 @@ export class RBACService {
   /**
    * Check if user has a specific permission
    * Graceful degradation: Returns true when RBAC disabled
+   *
+   * Reads user's role from users.role field and checks
+   * permissions from config/rbac.ts based on that role.
    */
   async userHasPermission(userId: string, permission: PermissionCode): Promise<boolean> {
     // Graceful degradation: Allow all when RBAC disabled
@@ -87,8 +90,10 @@ export class RBACService {
       return false;
     }
 
-    // RBAC enabled: Check actual permissions
-    return this.userRoleRepo.userHasPermission(userId, permission);
+    // Get permissions from config based on user's role
+    const roleName = user.role as RoleName;
+    const permissions = getRolePermissions(roleName);
+    return configHasPermission(permissions, permission);
   }
 
   /**
@@ -154,200 +159,56 @@ export class RBACService {
       return [];
     }
 
-    return this.userRoleRepo.getUserPermissions(userId);
-  }
-
-  // ========================================
-  // ROLE MANAGEMENT
-  // ========================================
-
-  /**
-   * Create a new role
-   */
-  async createRole(data: {
-    name: string;
-    description?: string;
-    permissions: PermissionCode[];
-    isSystem?: boolean;
-  }) {
-    // Validate permissions exist in registry
-    const isValid = await this.permissionRepo.validatePermissions(data.permissions);
-    if (!isValid) {
-      throw new Error("Invalid permission codes provided");
-    }
-
-    return this.roleRepo.createRole(data);
-  }
-
-  /**
-   * Get role by ID
-   */
-  async getRoleById(roleId: string) {
-    return this.roleRepo.getRoleById(roleId);
-  }
-
-  /**
-   * Get role by name
-   */
-  async getRoleByName(name: string) {
-    return this.roleRepo.getRoleByName(name);
-  }
-
-  /**
-   * List all roles with pagination, filtering, and sorting
-   */
-  async listRoles(
-    limit?: number,
-    offset?: number,
-    filters?: import("#server/types/api").Filter[],
-    sortBy?: string,
-    sortOrder?: import("#server/types/api").SortOrder,
-    options?: { includeSystem?: boolean }
-  ) {
-    return this.roleRepo.listRoles(limit, offset, filters, sortBy, sortOrder, options);
-  }
-
-  /**
-   * Count roles with optional filters
-   */
-  async countRoles(
-    filters?: import("#server/types/api").Filter[],
-    options?: { includeSystem?: boolean }
-  ): Promise<number> {
-    return this.roleRepo.countRoles(filters, options);
-  }
-
-  /**
-   * Update role
-   */
-  async updateRole(
-    roleId: string,
-    data: {
-      name?: string;
-      description?: string;
-      permissions?: PermissionCode[];
-    }
-  ) {
-    // Validate permissions if provided
-    if (data.permissions) {
-      const isValid = await this.permissionRepo.validatePermissions(data.permissions);
-      if (!isValid) {
-        throw new Error("Invalid permission codes provided");
-      }
-    }
-
-    return this.roleRepo.updateRole(roleId, data);
-  }
-
-  /**
-   * Delete role (soft delete)
-   */
-  async deleteRole(roleId: string) {
-    return this.roleRepo.deleteRole(roleId);
-  }
-
-  // ========================================
-  // USER-ROLE MANAGEMENT
-  // ========================================
-
-  /**
-   * Assign role to user
-   */
-  async assignRoleToUser(userId: string, roleId: string) {
-    // Verify user exists
     const user = await this.userRepo.findById(userId);
-    if (!user) {
-      throw new Error("User not found");
-    }
+    if (!user) return [];
 
-    // Verify role exists
-    const role = await this.roleRepo.getRoleById(roleId);
-    if (!role) {
-      throw new Error("Role not found");
-    }
-
-    return this.userRoleRepo.assignRoleToUser(userId, roleId);
+    const roleName = user.role as RoleName;
+    return getRolePermissions(roleName) as PermissionCode[];
   }
 
   /**
-   * Remove role from user
+   * Get user's role name
    */
-  async removeRoleFromUser(userId: string, roleId: string) {
-    return this.userRoleRepo.removeRoleFromUser(userId, roleId);
-  }
+  async getUserRole(userId: string): Promise<RoleName | null> {
+    const user = await this.userRepo.findById(userId);
+    if (!user) return null;
 
-  /**
-   * Get all roles for a user
-   */
-  async getUserRoles(userId: string) {
-    return this.userRoleRepo.getUserRoles(userId);
-  }
-
-  /**
-   * Get all users with a specific role
-   */
-  async getUsersByRole(roleId: string) {
-    return this.userRoleRepo.getUsersByRole(roleId);
-  }
-
-  /**
-   * Replace all roles for a user
-   */
-  async replaceUserRoles(userId: string, roleIds: string[]) {
-    // Verify all roles exist
-    for (const roleId of roleIds) {
-      const role = await this.roleRepo.getRoleById(roleId);
-      if (!role) {
-        throw new Error(`Role not found: ${roleId}`);
-      }
-    }
-
-    return this.userRoleRepo.replaceUserRoles(userId, roleIds);
+    return user.role as RoleName;
   }
 
   // ========================================
-  // PERMISSION REGISTRY
+  // ROLE INFORMATION (Config-Based)
   // ========================================
 
   /**
-   * List all available permissions with pagination, filtering, and sorting
+   * Get all available roles (from config)
    */
-  async listPermissions(
-    limit?: number,
-    offset?: number,
-    filters?: import("#server/types/api").Filter[],
-    sortBy?: string,
-    sortOrder?: import("#server/types/api").SortOrder
-  ) {
-    return this.permissionRepo.listPermissions(limit, offset, filters, sortBy, sortOrder);
+  getAvailableRoles(): Array<{ name: RoleName; config: typeof DEFAULT_ROLES[RoleName] }> {
+    return Object.entries(DEFAULT_ROLES).map(([name, config]) => ({
+      name: name as RoleName,
+      config,
+    }));
   }
 
   /**
-   * Count permissions with optional filters
+   * Get role config by name
    */
-  async countPermissions(filters?: import("#server/types/api").Filter[]): Promise<number> {
-    return this.permissionRepo.countPermissions(filters);
+  getRoleConfig(roleName: RoleName): typeof DEFAULT_ROLES[RoleName] | null {
+    return DEFAULT_ROLES[roleName] ?? null;
   }
 
   /**
-   * List permissions by category
+   * Get all permission definitions (for admin UI)
    */
-  async listPermissionsByCategory(category: string) {
-    return this.permissionRepo.listPermissionsByCategory(category);
+  getPermissionDefinitions(): Record<string, string> {
+    return { ...PERMISSION_DEFINITIONS };
   }
 
   /**
-   * Get permission by code
+   * Check if a role name is valid
    */
-  async getPermissionByCode(code: PermissionCode) {
-    return this.permissionRepo.getPermissionByCode(code);
-  }
-
-  /**
-   * Validate permission codes
-   */
-  async validatePermissions(codes: PermissionCode[]): Promise<boolean> {
-    return this.permissionRepo.validatePermissions(codes);
+  isValidRole(roleName: string): roleName is RoleName {
+    return roleName in DEFAULT_ROLES;
   }
 }
 
@@ -357,7 +218,6 @@ export class RBACService {
 
 /**
  * Get RBAC service for current request
- * Uses tenant-specific database from context
  */
 export function getRBACService(event: H3Event, config?: Partial<RBACConfig>): RBACService {
   const db = getDatabase(event);
@@ -420,14 +280,14 @@ export async function getCurrentUserPermissions(event: H3Event): Promise<Permiss
 }
 
 /**
- * Get all roles for current user
+ * Get current user's role
  */
-export async function getCurrentUserRoles(event: H3Event) {
+export async function getCurrentUserRole(event: H3Event): Promise<RoleName | null> {
   const userId = event.context.userId;
   if (!userId) {
-    return [];
+    return null;
   }
 
   const rbacService = getRBACService(event);
-  return rbacService.getUserRoles(userId);
+  return rbacService.getUserRole(userId);
 }

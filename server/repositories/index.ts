@@ -14,12 +14,8 @@ export {
   AuditLogRepository,
 } from "./identity";
 
-// RBAC repositories
-export {
-  RoleRepository,
-  UserRoleRepository,
-  PermissionRepository,
-} from "./rbac";
+// Query condition helpers
+export { Conditions, combineConditions } from "./helpers/conditions";
 
 // Import for factory functions
 import {
@@ -27,12 +23,6 @@ import {
   UserSettingsRepository,
   AuditLogRepository,
 } from "./identity";
-
-import {
-  RoleRepository,
-  UserRoleRepository,
-  PermissionRepository,
-} from "./rbac";
 
 // ========================================
 // FACTORY FUNCTIONS
@@ -50,24 +40,10 @@ export function createIdentityRepositories(db: D1Database) {
 }
 
 /**
- * Create all RBAC repositories
- */
-export function createRBACRepositories(db: D1Database) {
-  return {
-    roleRepo: new RoleRepository(db),
-    userRoleRepo: new UserRoleRepository(db),
-    permissionRepo: new PermissionRepository(db),
-  };
-}
-
-/**
  * Create all repositories
  */
 export function createRepositories(db: D1Database) {
-  return {
-    ...createIdentityRepositories(db),
-    ...createRBACRepositories(db),
-  };
+  return createIdentityRepositories(db);
 }
 
 /**

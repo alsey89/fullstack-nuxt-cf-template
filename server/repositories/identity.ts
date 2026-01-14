@@ -1,7 +1,7 @@
-import { eq, and } from "drizzle-orm";
+import { eq, and, desc } from "drizzle-orm";
 import * as schema from "#server/database/schema";
 import { BaseRepository } from "#server/repositories/base";
-import { QueryHelpers } from "#server/repositories/helpers/query-builder";
+import { Conditions } from "#server/repositories/helpers/conditions";
 import type {
   User,
   NewUser,
@@ -17,7 +17,10 @@ import type { Filter, SortOrder } from "#server/types/api";
 // ========================================
 
 /**
- * User Repository - Simplified for template
+ * User Repository
+ *
+ * Users are global entities (not tenant-scoped).
+ * All queries use Conditions.notDeleted for soft delete filtering.
  */
 export class UserRepository extends BaseRepository {
   constructor(db: D1Database) {
@@ -25,31 +28,36 @@ export class UserRepository extends BaseRepository {
   }
 
   /**
-   * Find user by email (database-scoped)
+   * Find user by email
    */
   async findByEmail(email: string): Promise<User | null> {
+    const conditions = [
+      Conditions.notDeleted(schema.users),
+      eq(schema.users.email, email.toLowerCase()),
+    ];
+
     const result = await this.drizzle
       .select()
       .from(schema.users)
-      .where(
-        QueryHelpers.notDeleted(
-          schema.users,
-          eq(schema.users.email, email.toLowerCase())
-        )
-      )
+      .where(and(...conditions))
       .limit(1);
 
     return result[0] || null;
   }
 
   /**
-   * Find user by ID (database-scoped)
+   * Find user by ID
    */
   async findById(id: string): Promise<User | null> {
+    const conditions = [
+      Conditions.notDeleted(schema.users),
+      eq(schema.users.id, id),
+    ];
+
     const result = await this.drizzle
       .select()
       .from(schema.users)
-      .where(QueryHelpers.notDeleted(schema.users, eq(schema.users.id, id)))
+      .where(and(...conditions))
       .limit(1);
 
     return result[0] || null;
@@ -59,18 +67,16 @@ export class UserRepository extends BaseRepository {
    * Find user by OAuth provider and provider ID
    */
   async findByOAuth(provider: string, providerId: string): Promise<User | null> {
+    const conditions = [
+      Conditions.notDeleted(schema.users),
+      eq(schema.users.oauthProvider, provider),
+      eq(schema.users.oauthProviderId, providerId),
+    ];
+
     const result = await this.drizzle
       .select()
       .from(schema.users)
-      .where(
-        QueryHelpers.notDeleted(
-          schema.users,
-          and(
-            eq(schema.users.oauthProvider, provider),
-            eq(schema.users.oauthProviderId, providerId)
-          )
-        )
-      )
+      .where(and(...conditions))
       .limit(1);
 
     return result[0] || null;
@@ -82,13 +88,13 @@ export class UserRepository extends BaseRepository {
   async count(filters?: Filter[]): Promise<number> {
     return this.countRecords(
       schema.users,
-      QueryHelpers.notDeleted(schema.users),
+      Conditions.notDeleted(schema.users),
       filters
     );
   }
 
   /**
-   * List users (database-scoped) with optional filters and sorting
+   * List users with optional filters and sorting
    */
   async list(
     limit = 100,
@@ -97,7 +103,7 @@ export class UserRepository extends BaseRepository {
     sortBy?: string,
     sortOrder?: SortOrder
   ): Promise<User[]> {
-    const conditions = [QueryHelpers.notDeleted(schema.users)];
+    const conditions = [Conditions.notDeleted(schema.users)];
 
     // Add filters
     if (filters && filters.length > 0) {
@@ -152,10 +158,15 @@ export class UserRepository extends BaseRepository {
    * Update user
    */
   async update(id: string, data: Partial<User>): Promise<User | null> {
+    const conditions = [
+      Conditions.notDeleted(schema.users),
+      eq(schema.users.id, id),
+    ];
+
     const [user] = await this.drizzle
       .update(schema.users)
       .set({ ...data, updatedAt: new Date() })
-      .where(QueryHelpers.notDeleted(schema.users, eq(schema.users.id, id)))
+      .where(and(...conditions))
       .returning();
 
     return user || null;
@@ -199,25 +210,25 @@ export class UserSettingsRepository extends BaseRepository {
   }
 
   /**
-   * Get user settings (database-scoped)
+   * Get user settings
    */
   async getSettings(userId: string): Promise<Record<string, any>> {
+    const conditions = [
+      Conditions.notDeleted(schema.userSettings),
+      eq(schema.userSettings.userId, userId),
+    ];
+
     const result = await this.drizzle
       .select()
       .from(schema.userSettings)
-      .where(
-        QueryHelpers.notDeleted(
-          schema.userSettings,
-          eq(schema.userSettings.userId, userId)
-        )
-      )
+      .where(and(...conditions))
       .limit(1);
 
     return result[0]?.settings || {};
   }
 
   /**
-   * Update user settings
+   * Update user settings (upsert)
    */
   async updateSettings(
     userId: string,
@@ -248,6 +259,9 @@ export class UserSettingsRepository extends BaseRepository {
 
 /**
  * Audit Log Repository
+ *
+ * Audit logs are tenant-scoped for multi-tenant isolation.
+ * Use tenantId parameter for all queries.
  */
 export class AuditLogRepository extends BaseRepository {
   constructor(db: D1Database) {
@@ -258,6 +272,7 @@ export class AuditLogRepository extends BaseRepository {
    * Log an action
    */
   async log(
+    tenantId: string | null,
     userId: string | null,
     action: string,
     entityType: string | null,
@@ -277,6 +292,7 @@ export class AuditLogRepository extends BaseRepository {
     const [log] = await this.drizzle
       .insert(schema.auditLogs)
       .values({
+        tenantId,
         userId,
         action,
         entityType,
@@ -297,36 +313,43 @@ export class AuditLogRepository extends BaseRepository {
   }
 
   /**
-   * Get audit logs for entity (database-scoped)
+   * Get audit logs for entity (tenant-scoped)
    */
   async getLogsForEntity(
+    tenantId: string,
     entityType: string,
     entityId: string,
     limit = 50
   ): Promise<AuditLog[]> {
+    const conditions = [
+      Conditions.notDeleted(schema.auditLogs),
+      Conditions.tenantScoped(schema.auditLogs, tenantId),
+      eq(schema.auditLogs.entityType, entityType),
+      eq(schema.auditLogs.entityId, entityId),
+    ];
+
     return this.drizzle
       .select()
       .from(schema.auditLogs)
-      .where(
-        QueryHelpers.notDeleted(
-          schema.auditLogs,
-          eq(schema.auditLogs.entityType, entityType),
-          eq(schema.auditLogs.entityId, entityId)
-        )
-      )
-      .orderBy(schema.auditLogs.createdAt)
+      .where(and(...conditions))
+      .orderBy(desc(schema.auditLogs.createdAt))
       .limit(limit);
   }
 
   /**
-   * Get recent audit logs (database-scoped)
+   * Get recent audit logs (tenant-scoped)
    */
-  async getRecentLogs(limit = 100): Promise<AuditLog[]> {
+  async getRecentLogs(tenantId: string, limit = 100): Promise<AuditLog[]> {
+    const conditions = [
+      Conditions.notDeleted(schema.auditLogs),
+      Conditions.tenantScoped(schema.auditLogs, tenantId),
+    ];
+
     return this.drizzle
       .select()
       .from(schema.auditLogs)
-      .where(QueryHelpers.notDeleted(schema.auditLogs))
-      .orderBy(schema.auditLogs.createdAt)
+      .where(and(...conditions))
+      .orderBy(desc(schema.auditLogs.createdAt))
       .limit(limit);
   }
 }

@@ -19,20 +19,14 @@ A production-ready full-stack web application template built on Cloudflare Worke
 
 ## 📚 Documentation
 
-Complete documentation is available in the [`docs/`](docs/) folder:
+### Quick Reference (CLAUDE.md files)
+- **[CLAUDE.md](CLAUDE.md)** - Root quick reference (architecture overview)
+- **[server/CLAUDE.md](server/CLAUDE.md)** - Backend conventions (services, repositories, error handling)
+- **[app/CLAUDE.md](app/CLAUDE.md)** - Frontend conventions (components, state, styling)
 
-### Quick Start
-- **[docs/CLAUDE.md](docs/CLAUDE.md)** - AI-optimized quick reference (START HERE for development)
+### Setup Guides
 - **[docs/TEMPLATE_SETUP.md](docs/TEMPLATE_SETUP.md)** - Complete setup guide for new projects
-
-### Core Documentation
-- **[docs/CONVENTIONS.md](docs/CONVENTIONS.md)** - Complete architectural patterns and coding conventions
-  - Includes Nuxt component auto-import conventions (no explicit imports needed)
-- **[docs/ERROR_HANDLING.md](docs/ERROR_HANDLING.md)** - Structured error handling system
-- **[docs/RBAC.md](docs/RBAC.md)** - Enterprise role-based access control guide
-- **[docs/SECURITY.md](docs/SECURITY.md)** - Security architecture and threat model
-- **[docs/MIGRATIONS.md](docs/MIGRATIONS.md)** - Database migration workflows
-- **[docs/SECRETS.md](docs/SECRETS.md)** - Secrets management and environment variables
+- **[docs/OAUTH_SETUP.md](docs/OAUTH_SETUP.md)** - OAuth provider configuration
 
 ## 🏗️ Tech Stack
 
@@ -155,7 +149,7 @@ The template automatically prevents:
 - ✅ Unauthorized database access via tenant manipulation
 - ✅ Cross-tenant data leakage through middleware validation
 
-See [docs/SECURITY.md](docs/SECURITY.md) for detailed security documentation.
+See [server/CLAUDE.md](server/CLAUDE.md) for security implementation details.
 
 ## ⚙️ Multitenancy & RBAC Configuration
 
@@ -188,39 +182,33 @@ NUXT_MULTITENANCY_ENABLED=true
 
 ### RBAC (Role-Based Access Control)
 
-**RBAC Enabled (Default)**
-- ✅ Enterprise-grade permission system
-- ✅ Wildcard support (*, users:*, roles:*)
-- ✅ Multiple roles per user
-- ✅ 3 system roles: admin, manager, user
-- ✅ Full REST API for role management
-
-**Disable RBAC (for simple apps):**
-```bash
-# In .dev.vars - allows all actions
-NUXT_RBAC_ENABLED=false
-```
+**Config-Based Roles:**
+- ✅ Roles defined in `server/config/rbac.ts`
+- ✅ Wildcard support (`*`, `users:*`, `roles:*`)
+- ✅ User role stored in `users.role` field
+- ✅ Workspace role stored in `workspace_members.role` field
+- ✅ 3 default roles: admin, manager, user
 
 **Using RBAC in Code:**
 ```typescript
 // Check permission in API routes
-import { requirePermission } from '~/server/services/rbac'
+import { getRBACService } from '#server/services/rbac'
 
 export default defineEventHandler(async (event) => {
-  // Throws if user lacks permission
-  await requirePermission(event, 'users:create')
+  const rbacService = getRBACService(event)
+
+  // Throws ForbiddenError if user lacks permission
+  await rbacService.requirePermission('users:create')
 
   // Your logic here
 })
 
 // Get user permissions
-import { getCurrentUserPermissions } from '~/server/services/rbac'
-
-const permissions = await getCurrentUserPermissions(event)
+const permissions = await rbacService.getUserPermissions(userId)
 // Returns: ['*'] for admin, ['users:*', 'company:*'] for manager, etc.
 ```
 
-See [docs/RBAC.md](docs/RBAC.md) for complete RBAC guide.
+See [server/config/rbac.ts](server/config/rbac.ts) for role configuration.
 
 ## 🔧 Environment Variables
 
@@ -254,18 +242,18 @@ wrangler secret put NUXT_TURNSTILE_SECRET_KEY  # Cloudflare Turnstile
 
 The template includes a production-ready foundational schema:
 
-- **Company Metadata** - Single-tenant company profile (per database)
-- **Users** - Authentication and user management
-- **Roles** - Role definitions with JSON permission arrays
-- **User Roles** - Many-to-many user-role assignments
-- **Permissions** - Permission registry (validation/documentation)
+- **Users** - Authentication and user management (global, not workspace-scoped)
+- **Workspaces** - Tenant/organization entities
+- **Workspace Members** - User-workspace membership with roles
+- **Workspace Invites** - Pending invitations to join workspaces
 - **User Settings** - JSON-based user preferences
-- **Audit Logs** - Track all significant actions
+- **Audit Logs** - Track all significant actions (workspace-scoped)
 
 **RBAC Architecture:**
-- Hybrid storage: JSON permissions in roles for fast queries
+- Config-based roles defined in `server/config/rbac.ts`
+- User's global role in `users.role` field
+- Workspace-specific role in `workspace_members.role` field
 - Permission wildcards: `*` (super admin), `users:*` (category), `users:create` (specific)
-- System roles: admin, manager, user (cannot be deleted)
 
 Clean foundation that's easy to extend with your domain-specific tables.
 

@@ -1,16 +1,23 @@
-import { AuthenticationError, TenantMismatchError } from "#server/error/errors";
+import { AuthenticationError } from "#server/error/errors";
 
 // ========================================
 // AUTHENTICATION MIDDLEWARE
 // ========================================
-// Validates user session
-// Sets user context from session
-// Runs after tenant middleware (02 prefix)
+// Validates user session and sets context for downstream handlers.
+//
+// Context variables set:
+// - event.context.userId: Authenticated user's ID
+// - event.context.tenantId: Current tenant/workspace ID (from session)
+//
+// Runs after database middleware (02 prefix)
 // ========================================
 
 /**
- * Authentication middleware
- * Validates session and sets user context
+ * Authentication Middleware
+ *
+ * Validates session and sets user + tenant context.
+ * In single-database architecture, tenantId from session defines
+ * which workspace the user is currently operating in.
  */
 export default defineEventHandler(async (event) => {
   // Only apply to API routes
@@ -30,21 +37,10 @@ export default defineEventHandler(async (event) => {
     throw new AuthenticationError("Invalid or missing authentication session.");
   }
 
-  // CRITICAL: Validate session is bound to current tenant
-  // This prevents cross-tenant access by reusing session tokens
-  if (session.tenantId !== event.context.tenantId) {
-    throw new TenantMismatchError(
-      "Tenant mismatch between session and request",
-      {
-        sessionTenantId: session.tenantId,
-        currentTenantId: event.context.tenantId,
-        userId: session.user.id,
-      }
-    );
-  }
-
-  // Set user context for downstream handlers
+  // Set user and tenant context for downstream handlers
+  // tenantId defines which workspace the user is operating in
   event.context.userId = session.user.id as string;
+  event.context.tenantId = session.tenantId as string | undefined;
 });
 
 /**

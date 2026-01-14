@@ -70,83 +70,129 @@ export const users = sqliteTable(
   })
 );
 
-/**
- * Permission definitions (registry/validation table)
- * Defines all available permissions in the system
- * NOT joined at runtime - used for validation and admin UI metadata
- */
-export const permissions = sqliteTable(
-  "permissions",
-  {
-    code: text("code").primaryKey(), // e.g., "users:create", "posts:read"
-    name: text("name").notNull(),
-    description: text("description"),
-    category: text("category").notNull(), // e.g., "users", "content", "admin"
-    createdAt: integer("created_at", { mode: "timestamp" })
-      .notNull()
-      .$defaultFn(() => new Date()),
-    updatedAt: integer("updated_at", { mode: "timestamp" })
-      .notNull()
-      .$defaultFn(() => new Date()),
-    deletedAt: integer("deleted_at", { mode: "timestamp" }),
-  },
-  (table) => ({
-    categoryIdx: index("permissions_category_idx").on(table.category),
-    deletedIdx: index("permissions_deleted_idx").on(table.deletedAt),
-  })
-);
+// ============================================================================
+// WORKSPACE DOMAIN - Multi-Tenant Support (Single Database)
+// ============================================================================
 
 /**
- * Roles table
- * Defines reusable permission sets with JSON array storage for fast queries
+ * Workspaces table
+ * Represents a tenant/organization in the system
+ * Users can belong to multiple workspaces
  */
-export const roles = sqliteTable(
-  "roles",
+export const workspaces = sqliteTable(
+  "workspaces",
   {
     ...baseFields,
 
     name: text("name").notNull(),
+    slug: text("slug").notNull(), // URL-friendly identifier
     description: text("description"),
-    // JSON array of permission codes for fast runtime access
-    permissions: text("permissions", { mode: "json" })
-      .$type<PermissionCode[]>()
+
+    // Settings stored as JSON
+    settings: text("settings", { mode: "json" })
+      .$type<Record<string, any>>()
+      .default({}),
+
+    // Owner (creator) of the workspace
+    ownerId: text("owner_id")
       .notNull()
-      .default([]),
-    // System roles cannot be deleted (admin, manager, user)
-    isSystem: integer("is_system", { mode: "boolean" })
-      .default(false)
-      .notNull(),
+      .references(() => users.id, { onDelete: "restrict" }),
+
+    isActive: integer("is_active", { mode: "boolean" }).default(true).notNull(),
   },
   (table) => ({
-    nameUnique: unique("roles_name_unique").on(table.name),
-    systemIdx: index("roles_system_idx").on(table.isSystem),
-    deletedIdx: index("roles_deleted_idx").on(table.deletedAt),
+    slugUnique: unique("workspaces_slug_unique").on(table.slug),
+    ownerIdx: index("workspaces_owner_idx").on(table.ownerId),
+    activeIdx: index("workspaces_active_idx").on(table.isActive),
+    deletedIdx: index("workspaces_deleted_idx").on(table.deletedAt),
   })
 );
 
 /**
- * User-Role junction table (many-to-many)
- * Users can have multiple roles, roles can be assigned to multiple users
+ * Workspace Members (many-to-many: users <-> workspaces)
+ * Tracks which users belong to which workspaces and their role
  */
-export const userRoles = sqliteTable(
-  "user_roles",
+export const workspaceMembers = sqliteTable(
+  "workspace_members",
   {
     ...baseFields,
 
+    workspaceId: text("workspace_id")
+      .notNull()
+      .references(() => workspaces.id, { onDelete: "cascade" }),
     userId: text("user_id")
       .notNull()
       .references(() => users.id, { onDelete: "cascade" }),
-    roleId: text("role_id")
+
+    // Role within this workspace (uses RoleName from config/rbac.ts)
+    role: text("role").default("user").notNull(),
+
+    // When they joined
+    joinedAt: integer("joined_at", { mode: "timestamp" })
       .notNull()
-      .references(() => roles.id, { onDelete: "cascade" }),
+      .$defaultFn(() => new Date()),
   },
   (table) => ({
-    // Unique: one role assignment per user-role pair
-    userRoleUnique: unique("user_roles_unique").on(table.userId, table.roleId),
-    userIdx: index("user_roles_user_idx").on(table.userId),
-    roleIdx: index("user_roles_role_idx").on(table.roleId),
+    memberUnique: unique("workspace_members_unique").on(
+      table.workspaceId,
+      table.userId
+    ),
+    workspaceIdx: index("workspace_members_workspace_idx").on(table.workspaceId),
+    userIdx: index("workspace_members_user_idx").on(table.userId),
+    roleIdx: index("workspace_members_role_idx").on(table.role),
   })
 );
+
+/**
+ * Workspace Invites
+ * Pending invitations to join a workspace
+ */
+export const workspaceInvites = sqliteTable(
+  "workspace_invites",
+  {
+    ...baseFields,
+
+    workspaceId: text("workspace_id")
+      .notNull()
+      .references(() => workspaces.id, { onDelete: "cascade" }),
+
+    // Email of the invitee (may not be a user yet)
+    email: text("email").notNull(),
+
+    // Role they'll have when they accept
+    role: text("role").default("user").notNull(),
+
+    // Who sent the invite
+    invitedById: text("invited_by_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+
+    // Token for accepting the invite
+    token: text("token").notNull(),
+
+    // Expiration
+    expiresAt: integer("expires_at", { mode: "timestamp" }).notNull(),
+
+    // Status
+    acceptedAt: integer("accepted_at", { mode: "timestamp" }),
+    acceptedByUserId: text("accepted_by_user_id").references(() => users.id),
+  },
+  (table) => ({
+    tokenUnique: unique("workspace_invites_token_unique").on(table.token),
+    workspaceIdx: index("workspace_invites_workspace_idx").on(table.workspaceId),
+    emailIdx: index("workspace_invites_email_idx").on(table.email),
+    expiresIdx: index("workspace_invites_expires_idx").on(table.expiresAt),
+  })
+);
+
+// ============================================================================
+// RBAC - Config-Based Role System
+// ============================================================================
+// Roles are defined in server/config/rbac.ts (no database tables needed)
+// User's global role: users.role field
+// Workspace role: workspace_members.role field
+// Both use the same role names from config (admin, manager, user, etc.)
+// ============================================================================
 
 /**
  * User settings (JSON storage)
@@ -174,11 +220,18 @@ export const userSettings = sqliteTable(
 /**
  * Audit log
  * Track all significant actions for compliance
+ * Tenant-scoped for multi-tenant isolation
  */
 export const auditLogs = sqliteTable(
   "audit_logs",
   {
     ...baseFields,
+
+    // Tenant isolation - which workspace this log belongs to
+    // Nullable for system-level actions that aren't workspace-specific
+    tenantId: text("tenant_id").references(() => workspaces.id, {
+      onDelete: "cascade",
+    }),
 
     // User who performed action (nullable - system actions have no user)
     userId: text("user_id").references(() => users.id, {
@@ -213,6 +266,7 @@ export const auditLogs = sqliteTable(
     userAgent: text("user_agent"),
   },
   (table) => ({
+    tenantIdx: index("audit_logs_tenant_idx").on(table.tenantId),
     userIdx: index("audit_logs_user_idx").on(table.userId),
     actionIdx: index("audit_logs_action_idx").on(table.action),
     entityIdx: index("audit_logs_entity_idx").on(
@@ -230,26 +284,55 @@ export const auditLogs = sqliteTable(
 // ============================================================================
 
 export const usersRelations = relations(users, ({ one, many }) => ({
-  roles: many(userRoles),
   settings: one(userSettings, {
     fields: [users.id],
     references: [userSettings.userId],
   }),
   auditLogs: many(auditLogs),
+  workspaceMemberships: many(workspaceMembers),
+  ownedWorkspaces: many(workspaces),
 }));
 
-export const rolesRelations = relations(roles, ({ many }) => ({
-  userRoles: many(userRoles),
-}));
-
-export const userRolesRelations = relations(userRoles, ({ one }) => ({
-  user: one(users, {
-    fields: [userRoles.userId],
+export const workspacesRelations = relations(workspaces, ({ one, many }) => ({
+  owner: one(users, {
+    fields: [workspaces.ownerId],
     references: [users.id],
   }),
-  role: one(roles, {
-    fields: [userRoles.roleId],
-    references: [roles.id],
+  members: many(workspaceMembers),
+  invites: many(workspaceInvites),
+  auditLogs: many(auditLogs),
+}));
+
+export const workspaceMembersRelations = relations(workspaceMembers, ({ one }) => ({
+  workspace: one(workspaces, {
+    fields: [workspaceMembers.workspaceId],
+    references: [workspaces.id],
+  }),
+  user: one(users, {
+    fields: [workspaceMembers.userId],
+    references: [users.id],
+  }),
+}));
+
+export const workspaceInvitesRelations = relations(workspaceInvites, ({ one }) => ({
+  workspace: one(workspaces, {
+    fields: [workspaceInvites.workspaceId],
+    references: [workspaces.id],
+  }),
+  invitedBy: one(users, {
+    fields: [workspaceInvites.invitedById],
+    references: [users.id],
+  }),
+}));
+
+export const auditLogsRelations = relations(auditLogs, ({ one }) => ({
+  tenant: one(workspaces, {
+    fields: [auditLogs.tenantId],
+    references: [workspaces.id],
+  }),
+  user: one(users, {
+    fields: [auditLogs.userId],
+    references: [users.id],
   }),
 }));
 
@@ -260,20 +343,20 @@ export const userRolesRelations = relations(userRoles, ({ one }) => ({
 export type User = typeof users.$inferSelect;
 export type NewUser = typeof users.$inferInsert;
 
-export type Permission = typeof permissions.$inferSelect;
-export type NewPermission = typeof permissions.$inferInsert;
-
-export type Role = typeof roles.$inferSelect;
-export type NewRole = typeof roles.$inferInsert;
-
-export type UserRole = typeof userRoles.$inferSelect;
-export type NewUserRole = typeof userRoles.$inferInsert;
-
 export type UserSettings = typeof userSettings.$inferSelect;
 export type NewUserSettings = typeof userSettings.$inferInsert;
 
 export type AuditLog = typeof auditLogs.$inferSelect;
 export type NewAuditLog = typeof auditLogs.$inferInsert;
+
+export type Workspace = typeof workspaces.$inferSelect;
+export type NewWorkspace = typeof workspaces.$inferInsert;
+
+export type WorkspaceMember = typeof workspaceMembers.$inferSelect;
+export type NewWorkspaceMember = typeof workspaceMembers.$inferInsert;
+
+export type WorkspaceInvite = typeof workspaceInvites.$inferSelect;
+export type NewWorkspaceInvite = typeof workspaceInvites.$inferInsert;
 
 // ============================================================================
 // Permission Codes (extend with your app-specific permissions)

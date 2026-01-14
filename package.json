@@ -5,6 +5,7 @@
   "scripts": {
     "build": "nuxt build",
     "dev": "nuxt dev",
+    "types": "wrangler types --config wrangler.staging.jsonc --out-file worker-configuration.d.ts",
     "preview": "nuxt preview",
     "deploy": "npm run db:migrate && wrangler deploy",
     "db:generate": "drizzle-kit generate",

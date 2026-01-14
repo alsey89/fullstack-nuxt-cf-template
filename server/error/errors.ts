@@ -81,6 +81,12 @@ export class TenantMismatchError extends AppError {
   }
 }
 
+export class WorkspaceContextMissingError extends AppError {
+  constructor(message = 'Workspace context required. Please select a workspace.', details?: any) {
+    super(message, 401, ERROR_CODES.WORKSPACE_CONTEXT_MISSING, details)
+  }
+}
+
 export class InvalidTokenPurposeError extends AppError {
   constructor(message = 'Invalid token purpose', details?: any) {
     super(message, 401, ERROR_CODES.INVALID_TOKEN_PURPOSE, details)

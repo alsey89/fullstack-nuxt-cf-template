@@ -27,6 +27,10 @@ logs
 .wrangler/
 .dev.vars
 
+# Wrangler generated types (regenerate with: npm run types)
+worker-configuration.d.ts
+server/types/worker-configuration.d.ts
+
 # Build files
 postgres
 redis

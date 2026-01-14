@@ -1,12 +1,12 @@
 import { defineEventHandler, getRouterParam } from "h3";
 import { getRBACService, requirePermission } from "#server/services/rbac";
 import { createSuccessResponse } from "#server/lib/response";
-import { MissingFieldError } from "#server/error/errors";
+import { MissingFieldError, NotFoundError } from "#server/error/errors";
 
 // ========================================
 // GET /api/v1/users/:userId/roles
 // ========================================
-// Get all roles for a user
+// Get user's role (config-based single role per user)
 // Requires authentication and users:view permission
 // ========================================
 
@@ -20,7 +20,21 @@ export default defineEventHandler(async (event) => {
   }
 
   const rbacService = getRBACService(event);
-  const roles = await rbacService.getUserRoles(userId);
+  const roleName = await rbacService.getUserRole(userId);
 
-  return createSuccessResponse("User roles retrieved successfully", roles);
+  if (!roleName) {
+    throw new NotFoundError("User");
+  }
+
+  // Get role config for additional details
+  const roleConfig = rbacService.getRoleConfig(roleName);
+
+  const roleData = {
+    name: roleName,
+    displayName: roleConfig?.name,
+    description: roleConfig?.description,
+    permissions: roleConfig?.permissions,
+  };
+
+  return createSuccessResponse("User role retrieved successfully", roleData);
 });
