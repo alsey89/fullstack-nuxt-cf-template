@@ -23,6 +23,7 @@ import {
 } from "#server/error/errors";
 import type { User } from "#server/database/schema/identity";
 import { getDatabase } from "#server/database/utils";
+import { isTest } from "#server/utils/environment";
 
 // Note: hashPassword, verifyPassword are auto-imported by nuxt-auth-utils
 
@@ -51,6 +52,7 @@ export class IdentityService {
 
   /**
    * Helper to log audit events with request context
+   * Note: tenantId can be null for tenant-agnostic actions like signup
    */
   private async logAudit(
     userId: string | null,
@@ -64,7 +66,10 @@ export class IdentityService {
       stateAfter?: Record<string, any>;
     }
   ) {
-    return this.auditLogRepo.log(userId, action, entityType, entityId, {
+    // Get tenantId from context (may be null for tenant-agnostic actions)
+    const tenantId = this.event.context.tenantId || null;
+
+    return this.auditLogRepo.log(tenantId, userId, action, entityType, entityId, {
       requestId: this.event.context.requestId,
       endpoint: this.event.context.endpoint,
       method: this.event.context.method,
@@ -83,6 +88,7 @@ export class IdentityService {
 
   /**
    * Sign up a new user
+   * Note: Signup is tenant-agnostic - users are global entities
    */
   async signUp(data: {
     email: string;
@@ -109,6 +115,9 @@ export class IdentityService {
     // Hash password
     const passwordHash = await hashPassword(password);
 
+    // In test environment, auto-verify email (no email provider available)
+    const isTestEnv = isTest(this.event);
+
     // Create user
     const user = await this.userRepo.create({
       email: email.toLowerCase(),
@@ -116,26 +125,27 @@ export class IdentityService {
       firstName,
       lastName,
       role,
-      isEmailVerified: false, // Require email confirmation
+      isEmailVerified: isTestEnv, // Auto-verify in test environment
       isActive: true,
     });
 
     // Log the signup
     await this.logAudit(user.id, "USER_SIGNED_UP", "User", user.id, {
       statusCode: 201,
-      metadata: { email: user.email, role },
+      metadata: { email: user.email, role, autoVerified: isTestEnv },
     });
 
-    const tenantId = this.event.context.tenantId;
-    if (!tenantId) {
-      throw new InternalServerError("Tenant context not available");
+    // In test environment, skip email confirmation token generation
+    if (isTestEnv) {
+      return { user, confirmToken: null };
     }
 
-    // Generate email confirmation token (bound to current tenant)
-    const confirmToken = generateEmailConfirmToken(
+    // Generate email confirmation token
+    // Use "global" as tenantId since signup is tenant-agnostic
+    const confirmToken = await generateEmailConfirmToken(
       user.id,
       user.email,
-      tenantId,
+      "global",
       this.event
     );
 

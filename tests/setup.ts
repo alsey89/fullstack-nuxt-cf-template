@@ -54,3 +54,11 @@ global.setUserSession = vi.fn().mockResolvedValue(undefined)
 global.defineEventHandler = vi.fn().mockImplementation((handler) => handler)
 
 global.setHeader = vi.fn().mockImplementation(() => undefined)
+
+// Mock useRuntimeConfig for environment checks
+global.useRuntimeConfig = vi.fn().mockReturnValue({
+  public: {
+    environment: 'test', // Default to test environment for unit tests
+  },
+  jwtSecret: 'test-jwt-secret',
+})

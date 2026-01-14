@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach, vi } from "vitest";
 import authMiddleware from "../../../server/middleware/02.auth";
-import { AuthenticationError, TenantMismatchError } from "../../../server/error/errors";
+import { AuthenticationError } from "../../../server/error/errors";
 
 // Note: getUserSession is globally mocked in tests/setup.ts
 
@@ -233,115 +233,38 @@ describe("Authentication Middleware (02.auth)", () => {
   });
 
   // ========================================
-  // TENANT VALIDATION TESTS (CRITICAL)
+  // TENANT CONTEXT TESTS
   // ========================================
+  // Auth middleware now sets tenantId from session (cross-tenant auth)
+  // No validation - tenantId in session defines the current workspace
 
-  describe("Tenant Validation (Security Critical)", () => {
-    it("throws error when session tenant doesn't match context tenant", async () => {
+  describe("Tenant Context (Cross-Tenant Auth)", () => {
+    it("sets tenantId from session", async () => {
       mockEvent.path = "/api/v1/users";
-      mockEvent.context.tenantId = "tenant-a";
 
       global.getUserSession.mockResolvedValue({
         user: { id: "user-123" },
-        tenantId: "tenant-b", // Different tenant!
-      });
-
-      await expect(authMiddleware(mockEvent)).rejects.toThrow();
-    });
-
-    it("prevents cross-tenant access with valid user ID", async () => {
-      mockEvent.path = "/api/v1/data";
-      mockEvent.context.tenantId = "acme";
-
-      global.getUserSession.mockResolvedValue({
-        user: { id: "valid-user-id" },
-        tenantId: "evil-corp", // Attempting to access different tenant
-      });
-
-      await expect(authMiddleware(mockEvent)).rejects.toThrow();
-    });
-
-    it("allows access when tenant IDs match exactly", async () => {
-      mockEvent.path = "/api/v1/users";
-      mockEvent.context.tenantId = "same-tenant";
-
-      global.getUserSession.mockResolvedValue({
-        user: { id: "user-123" },
-        tenantId: "same-tenant",
+        tenantId: "session-tenant",
       });
 
       await authMiddleware(mockEvent);
 
       expect(mockEvent.context.userId).toBe("user-123");
+      expect(mockEvent.context.tenantId).toBe("session-tenant");
     });
 
-    it("is case-sensitive for tenant matching", async () => {
+    it("allows undefined tenantId in session (user not in a workspace yet)", async () => {
       mockEvent.path = "/api/v1/users";
-      mockEvent.context.tenantId = "tenant-a";
 
       global.getUserSession.mockResolvedValue({
         user: { id: "user-123" },
-        tenantId: "TENANT-A", // Different case
-      });
-
-      await expect(authMiddleware(mockEvent)).rejects.toThrow();
-    });
-
-    it("validates tenant even for admin users", async () => {
-      mockEvent.path = "/api/v1/admin/users";
-      mockEvent.context.tenantId = "tenant-a";
-
-      global.getUserSession.mockResolvedValue({
-        user: { id: "admin-user", role: "admin" },
-        tenantId: "tenant-b",
-      });
-
-      await expect(authMiddleware(mockEvent)).rejects.toThrow();
-    });
-
-    it("suggests re-authentication when tenant mismatch detected", async () => {
-      mockEvent.path = "/api/v1/users";
-      mockEvent.context.tenantId = "tenant-a";
-
-      global.getUserSession.mockResolvedValue({
-        user: { id: "user-123" },
-        tenantId: "tenant-b",
-      });
-
-      await expect(authMiddleware(mockEvent)).rejects.toThrow();
-    });
-  });
-
-  // ========================================
-  // MIDDLEWARE ORDER TESTS
-  // ========================================
-
-  describe("Middleware Order Dependencies", () => {
-    it("expects tenantId to be set by previous middleware", async () => {
-      mockEvent.path = "/api/v1/users";
-      mockEvent.context.tenantId = "expected-tenant";
-
-      global.getUserSession.mockResolvedValue({
-        user: { id: "user-123" },
-        tenantId: "expected-tenant",
+        tenantId: undefined,
       });
 
       await authMiddleware(mockEvent);
 
-      // Should work if tenant middleware ran first
       expect(mockEvent.context.userId).toBe("user-123");
-    });
-
-    it("handles missing tenantId in context (tenant middleware failed)", async () => {
-      mockEvent.path = "/api/v1/users";
-      mockEvent.context.tenantId = undefined;
-
-      global.getUserSession.mockResolvedValue({
-        user: { id: "user-123" },
-        tenantId: "some-tenant",
-      });
-
-      await expect(authMiddleware(mockEvent)).rejects.toThrow();
+      expect(mockEvent.context.tenantId).toBeUndefined();
     });
   });
 
@@ -438,24 +361,6 @@ describe("Authentication Middleware (02.auth)", () => {
       } catch (error: any) {
         expect(error).toBeInstanceOf(AuthenticationError);
         expect(error.code).toBe("AUTH_REQUIRED");
-      }
-    });
-
-    it("throws TENANT_MISMATCH error code for tenant mismatch", async () => {
-      mockEvent.path = "/api/v1/users";
-      mockEvent.context.tenantId = "tenant-a";
-
-      global.getUserSession.mockResolvedValue({
-        user: { id: "user-123" },
-        tenantId: "tenant-b",
-      });
-
-      try {
-        await authMiddleware(mockEvent);
-        expect.fail("Should have thrown TenantMismatchError");
-      } catch (error: any) {
-        expect(error).toBeInstanceOf(TenantMismatchError);
-        expect(error.code).toBe("TENANT_MISMATCH");
       }
     });
   });

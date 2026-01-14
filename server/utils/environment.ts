@@ -10,7 +10,7 @@ import type { H3Event } from "h3";
 /**
  * Valid environment values
  */
-export type Environment = "development" | "staging" | "production";
+export type Environment = "development" | "staging" | "production" | "test";
 
 /**
  * Environment constants (single source of truth)
@@ -19,6 +19,7 @@ export const ENV = {
   DEVELOPMENT: "development" as const,
   STAGING: "staging" as const,
   PRODUCTION: "production" as const,
+  TEST: "test" as const,
 } as const;
 
 /**
@@ -58,4 +59,12 @@ export function getEnvironment(event?: H3Event): string {
  */
 export function isNonProduction(event?: H3Event): boolean {
   return !isProduction(event);
+}
+
+/**
+ * Check if current environment is test
+ */
+export function isTest(event?: H3Event): boolean {
+  const config = event ? useRuntimeConfig(event) : useRuntimeConfig();
+  return config.public.environment === ENV.TEST;
 }

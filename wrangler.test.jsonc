@@ -1,0 +1,94 @@
+{
+  "name": "projectyl-test",
+  "main": ".output/server/index.mjs",
+  "compatibility_date": "2025-10-01",
+  "compatibility_flags": ["nodejs_compat"],
+
+  // Static Assets
+  "assets": {
+    "directory": ".output/public",
+    "binding": "ASSETS"
+  },
+
+  // D1 Database (SQLite) - Uses in-memory for tests
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "projectyl-test",
+      "database_id": "local-test",
+      "preview_database_id": "local-test",
+      "migrations_dir": "./server/database/migrations"
+    }
+  ],
+
+  // R2 Bucket (File storage)
+  "r2_buckets": [
+    {
+      "binding": "STORAGE",
+      "bucket_name": "projectyl-test",
+      "preview_bucket_name": "projectyl-test"
+    }
+  ],
+
+  // Rate Limiting - Very high for tests to avoid rate limit issues
+  // Rate limit tests use their own dedicated test that expects specific behavior
+  "ratelimits": [
+    {
+      "name": "AUTH_SIGNIN_LIMITER",
+      "namespace_id": "1001",
+      "simple": {
+        "limit": 10000,
+        "period": 60
+      }
+    },
+    {
+      "name": "AUTH_SIGNUP_LIMITER",
+      "namespace_id": "1002",
+      "simple": {
+        "limit": 10000,
+        "period": 60
+      }
+    },
+    {
+      "name": "AUTH_EMAIL_RESEND_LIMITER",
+      "namespace_id": "1006",
+      "simple": {
+        "limit": 10,
+        "period": 60
+      }
+    },
+    {
+      "name": "AUTH_PASSWORD_RESET_LIMITER",
+      "namespace_id": "1003",
+      "simple": {
+        "limit": 10,
+        "period": 60
+      }
+    },
+    {
+      "name": "OAUTH_AUTHORIZE_LIMITER",
+      "namespace_id": "1004",
+      "simple": {
+        "limit": 20,
+        "period": 60
+      }
+    },
+    {
+      "name": "OAUTH_CALLBACK_LIMITER",
+      "namespace_id": "1005",
+      "simple": {
+        "limit": 20,
+        "period": 60
+      }
+    }
+  ],
+
+  "observability": {
+    "enabled": false
+  },
+
+  // Test environment variables
+  "vars": {
+    "NUXT_PUBLIC_ENVIRONMENT": "test"
+  }
+}

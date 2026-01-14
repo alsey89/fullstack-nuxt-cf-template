@@ -29,7 +29,7 @@ export default defineNuxtConfig({
       password: "overwrite-this-with-environment-in-production", // Min 32 chars
       cookie: {
         sameSite: "lax", // CSRF protection via SameSite cookies
-        secure: process.env.NODE_ENV === "production", // HTTPS only in production
+        secure: process.env.NUXT_PUBLIC_ENVIRONMENT === "production", // HTTPS only in production (uses same env var as runtimeConfig.public.environment)
         httpOnly: true, // Prevent XSS access to cookies
       },
     },

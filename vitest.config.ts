@@ -9,7 +9,7 @@ export default defineConfig({
     typecheck: {
       include: ['tests/**/*.test.ts'],
     },
-    include: ['tests/**/*.test.ts'],
+    include: ['tests/unit/**/*.test.ts'],
     exclude: ['node_modules', '.nuxt', 'dist'],
     coverage: {
       provider: 'v8',
