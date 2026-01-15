@@ -35,6 +35,7 @@
 
 <script setup>
 useHead({ title: 'Contact Support' })
+const { t } = useI18n()
 const category = ref('account')
 const description = ref('')
 const showToast = useShowToast()
@@ -44,7 +45,10 @@ onMounted(() => {
 })
 
 function submit() {
-  showToast({ title: 'Submitted', description: 'Your message has been sent.' })
+  showToast({
+    title: t('contact.submitted.title'),
+    description: t('contact.submitted.description'),
+  })
   description.value = ''
 }
 </script>

@@ -4,41 +4,12 @@
 // Protects auth endpoints from brute force attacks
 // Uses Cloudflare's Rate Limiting API for distributed rate limiting
 // Note: Bindings are only available in staging/production, not local dev
+//
+// Rate limit configuration is centralized in server/config/routes.ts
 // ========================================
 
 import { RateLimitError } from "#server/error/errors";
-
-// Rate limit configuration per endpoint
-// Note: Cloudflare only supports period values of 10 or 60 seconds
-const RATE_LIMIT_CONFIG = {
-  // Email/Password Auth Endpoints
-  "/api/v1/auth/signin": {
-    binding: "AUTH_SIGNIN_LIMITER" as const,
-    max: 5,
-    window: 60, // 1 minute in seconds
-  },
-  "/api/v1/auth/signup": {
-    binding: "AUTH_SIGNUP_LIMITER" as const,
-    max: 1,
-    window: 60, // 1 minute in seconds
-  },
-  "/api/v1/auth/password/reset/request": {
-    binding: "AUTH_PASSWORD_RESET_LIMITER" as const,
-    max: 1,
-    window: 60, // 1 minute in seconds
-  },
-  // OAuth Endpoints
-  "/api/v1/auth/google/authorize": {
-    binding: "OAUTH_AUTHORIZE_LIMITER" as const,
-    max: 10,
-    window: 60, // 1 minute in seconds
-  },
-  "/api/v1/auth/google/callback": {
-    binding: "OAUTH_CALLBACK_LIMITER" as const,
-    max: 5,
-    window: 60, // 1 minute in seconds
-  },
-} as const;
+import { getRateLimitConfig, type RateLimitBinding } from "#server/config/routes";
 
 /**
  * Rate limit middleware
@@ -49,8 +20,8 @@ export default defineEventHandler(async (event) => {
   const path = event.path;
   const ip = getRequestIP(event) || "unknown";
 
-  // Only rate limit configured endpoints
-  const config = RATE_LIMIT_CONFIG[path as keyof typeof RATE_LIMIT_CONFIG];
+  // Get rate limit config from centralized routes config
+  const config = getRateLimitConfig(path);
   if (!config) {
     return; // Skip rate limiting for non-configured paths
   }
@@ -69,7 +40,7 @@ export default defineEventHandler(async (event) => {
   }
 
   // Get the appropriate rate limiter binding
-  const rateLimiter = env[config.binding];
+  const rateLimiter = env[config.binding as RateLimitBinding];
 
   if (!rateLimiter) {
     console.error(
@@ -87,15 +58,15 @@ export default defineEventHandler(async (event) => {
 
     if (!success) {
       // Rate limit exceeded
-      const retryAfter = config.window;
+      const retryAfter = config.period;
 
       // Set rate limit headers
-      setResponseHeader(event, "X-RateLimit-Limit", String(config.max));
+      setResponseHeader(event, "X-RateLimit-Limit", String(config.limit));
       setResponseHeader(event, "X-RateLimit-Remaining", "0");
       setResponseHeader(
         event,
         "X-RateLimit-Reset",
-        String(Math.floor((Date.now() + config.window * 1000) / 1000))
+        String(Math.floor((Date.now() + config.period * 1000) / 1000))
       );
       setResponseHeader(event, "Retry-After", retryAfter);
 
@@ -108,7 +79,7 @@ export default defineEventHandler(async (event) => {
     // Success - set informational headers
     // Note: Cloudflare's API doesn't provide remaining count,
     // so we only set the limit header
-    setResponseHeader(event, "X-RateLimit-Limit", String(config.max));
+    setResponseHeader(event, "X-RateLimit-Limit", String(config.limit));
   } catch (error) {
     // Re-throw RateLimitError
     if (error instanceof RateLimitError) {

@@ -1,6 +1,7 @@
 // ~/composables/useShowToast.ts
 
 import { toast } from "vue-sonner";
+import { getTranslation } from "@/utils/translations";
 
 interface ToastAction {
   label: string;
@@ -15,7 +16,7 @@ interface ToastOptions {
 
 /**
  * A composable to show a toast notification with optional action.
- * Default action is a button with the label "Got it!" that does nothing.
+ * Default action is a button with the label from i18n (common.gotIt).
  * Pass an empty object to action to disable the action button.
  *
  * @param title - The title of the toast notification
@@ -45,7 +46,7 @@ export function useShowToast() {
     title,
     description,
     action = {
-      label: "Got it!",
+      label: getTranslation("common.gotIt"),
       onClick: () => {
         return true;
       },

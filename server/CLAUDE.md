@@ -144,9 +144,6 @@ Conditions.notDeleted(table)
 // Tenant scoping (for tenantId column)
 Conditions.tenantScoped(table, tenantId)
 
-// Workspace scoping (for workspaceId column)
-Conditions.workspaceScoped(table, workspaceId)
-
 // User ownership
 Conditions.userOwned(table, userId)
 
@@ -163,6 +160,8 @@ Conditions.activeOnly(table)
 Conditions.all(condition1, condition2, maybeUndefined)
 Conditions.any(condition1, condition2)
 ```
+
+**Note:** For junction tables like `workspace_members` that use `workspaceId` as a foreign key, use `eq(table.workspaceId, id)` directly - this is a FK reference, not tenant isolation.
 
 ## Tenant Isolation
 
@@ -283,13 +282,32 @@ const pagination = calculatePagination(page, perPage, total);
 return createSuccessResponse("Items retrieved", items, pagination);
 ```
 
+## Route Configuration
+
+Route metadata is centralized in `server/config/routes.ts`:
+
+```typescript
+import { isPublicRoute, getRateLimitConfig } from "#server/config/routes";
+
+// Check if route is public (no auth required)
+if (isPublicRoute(path)) { ... }
+
+// Get rate limit config for a route
+const config = getRateLimitConfig(path);
+```
+
+To add a new route:
+1. Add entry to `ROUTE_CONFIG` array in `server/config/routes.ts`
+2. Set `public: true` if no auth required
+3. Add `rateLimit` with matching binding name from wrangler.jsonc
+
 ## Middleware Stack
 
 Ordered by filename prefix:
 1. `00.request-context.ts` - Capture request ID, IP, user agent
 2. `01.workspace.ts` - Set database binding
-3. `02.auth.ts` - Validate session, set userId and tenantId from session
-4. `03.rate-limit.ts` - Rate limiting
+3. `02.auth.ts` - Validate session, set userId and tenantId (uses route config for public routes)
+4. `03.rate-limit.ts` - Rate limiting (uses route config for rate limit settings)
 
 Context variables available after middleware:
 - `event.context.db` - D1 database instance

@@ -37,13 +37,6 @@ describe("Conditions.tenantScoped", () => {
   });
 });
 
-describe("Conditions.workspaceScoped", () => {
-  it("returns SQL condition for workspaceId equality", () => {
-    const condition = Conditions.workspaceScoped(mockTable, "workspace-123");
-    expect(condition).toBeDefined();
-  });
-});
-
 describe("Conditions.userOwned", () => {
   it("returns SQL condition for userId equality", () => {
     const condition = Conditions.userOwned(mockTable, "user-123");

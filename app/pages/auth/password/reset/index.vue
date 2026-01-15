@@ -67,6 +67,7 @@ import { useForm } from 'vee-validate';
 import { toTypedSchema } from '@vee-validate/zod';
 import { passwordResetSchema } from '#shared/validators/auth';
 
+const { t } = useI18n();
 const userStore = useUserStore();
 const route = useRoute();
 const showToast = useShowToast();
@@ -78,8 +79,8 @@ const token = computed(() => route.query.token);
 onMounted(() => {
   if (!token.value) {
     showToast({
-      title: "Invalid Reset Link",
-      description: "The password reset link is invalid or has expired.",
+      title: t('auth.password.invalidLink.title'),
+      description: t('auth.password.invalidLink.description'),
     });
     navigateTo('/auth/password/reset/request');
   }

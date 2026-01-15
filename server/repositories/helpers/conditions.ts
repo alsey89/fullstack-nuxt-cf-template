@@ -61,20 +61,6 @@ export const Conditions = {
   },
 
   /**
-   * Workspace scoping (alias for tenantScoped)
-   * Use when the column is named workspaceId instead of tenantId
-   *
-   * @example
-   * Conditions.workspaceScoped(schema.workspaceMembers, workspaceId)
-   */
-  workspaceScoped<T extends { workspaceId: SQLiteColumn }>(
-    table: T,
-    workspaceId: string
-  ): SQL {
-    return eq(table.workspaceId, workspaceId);
-  },
-
-  /**
    * User ownership scoping
    * Returns: userId = :userId
    *

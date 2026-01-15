@@ -1,4 +1,5 @@
 import { AuthenticationError } from "#server/error/errors";
+import { isPublicRoute } from "#server/config/routes";
 
 // ========================================
 // AUTHENTICATION MIDDLEWARE
@@ -9,6 +10,7 @@ import { AuthenticationError } from "#server/error/errors";
 // - event.context.userId: Authenticated user's ID
 // - event.context.tenantId: Current tenant/workspace ID (from session)
 //
+// Public routes are defined in server/config/routes.ts
 // Runs after workspace middleware (01 prefix)
 // ========================================
 
@@ -25,7 +27,7 @@ export default defineEventHandler(async (event) => {
     return;
   }
 
-  // Skip for public routes
+  // Skip for public routes (defined in server/config/routes.ts)
   if (isPublicRoute(event.path)) {
     return;
   }
@@ -42,26 +44,3 @@ export default defineEventHandler(async (event) => {
   event.context.userId = session.user.id as string;
   event.context.tenantId = session.tenantId as string | undefined;
 });
-
-/**
- * Check if route is public (no auth required)
- */
-function isPublicRoute(path: string): boolean {
-  const publicRoutes = [
-    "/api/health",
-    "/api/reset-and-seed",
-    "/api/test-db",
-    "/api/v1/auth/signup",
-    "/api/v1/auth/signin",
-    "/api/v1/auth/email/confirm",
-    "/api/v1/auth/password/reset/request",
-    "/api/v1/auth/password/reset",
-    "/api/_nuxt_icon/", // nuxt icon endpoint
-    "/api/_auth/session", // nuxt-auth-utils session endpoint
-    // OAuth routes
-    "/api/auth/google/authorize",
-    "/api/auth/google/callback",
-  ];
-
-  return publicRoutes.some((route) => path === route || path.startsWith(route));
-}

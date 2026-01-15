@@ -1,7 +1,8 @@
 import { defineStore } from "pinia";
 import { ref } from "vue";
-import posthog from "posthog-js";
 import type { User } from "#shared/types";
+import { analytics } from "@/utils/analytics";
+import { getTranslation } from "@/utils/translations";
 
 type Theme = "light" | "dark";
 
@@ -70,18 +71,18 @@ export const useUserStore = defineStore(
         await fetchSession();
 
         showToast({
-          title: "Success",
-          description: "You are now logged in.",
+          title: getTranslation("auth.signin.success.title"),
+          description: getTranslation("auth.signin.success.description"),
         });
 
         // Track user login
         const user = response.payload?.data?.user;
         if (user) {
-          posthog.identify(user.email, {
-            user_id: user.id,
+          analytics.identifyUser({
+            id: user.id,
             email: user.email,
-            first_name: user.firstName,
-            last_name: user.lastName,
+            firstName: user.firstName,
+            lastName: user.lastName,
           });
         }
 
@@ -120,15 +121,12 @@ export const useUserStore = defineStore(
 
       if (response?.ok) {
         showToast({
-          title: "Account Created",
-          description:
-            "Please check your email to verify your account before signing in.",
+          title: getTranslation("auth.signup.success.title"),
+          description: getTranslation("auth.signup.success.description"),
         });
 
         // Track user signup
-        posthog.capture("user_signed_up", {
-          email: email,
-        });
+        analytics.trackSignUp(email);
 
         isLoading.value = false;
         return navigateTo("/auth/signin");
@@ -188,16 +186,16 @@ export const useUserStore = defineStore(
       // Clear user profile
       userProfile.value = null;
 
-      // Track user logout
-      posthog.reset();
+      // Track user logout and reset analytics identity
+      analytics.reset();
 
       // Do not clear theme on signout so app preference remains
       isLoading.value = false;
       error.value = null;
 
       showToast({
-        title: "Success",
-        description: "You have signed out.",
+        title: getTranslation("auth.signout.success.title"),
+        description: getTranslation("auth.signout.success.description"),
       });
 
       return navigateTo(redirectTo);
@@ -222,9 +220,12 @@ export const useUserStore = defineStore(
 
       if (response?.ok) {
         showToast({
-          title: "Reset Email Sent",
-          description: "Please check your email for password reset instructions.",
+          title: getTranslation("auth.password.resetSent.title"),
+          description: getTranslation("auth.password.resetSent.description"),
         });
+
+        // Track password reset request
+        analytics.trackPasswordResetRequest(email);
 
         isLoading.value = false;
         return navigateTo("/auth/signin");
@@ -257,9 +258,12 @@ export const useUserStore = defineStore(
 
       if (response?.ok) {
         showToast({
-          title: "Password Reset Successfully",
-          description: "You can now sign in with your new password.",
+          title: getTranslation("auth.password.resetSuccess.title"),
+          description: getTranslation("auth.password.resetSuccess.description"),
         });
+
+        // Track successful password reset
+        analytics.trackPasswordResetSuccess();
 
         isLoading.value = false;
         return navigateTo("/auth/signin");

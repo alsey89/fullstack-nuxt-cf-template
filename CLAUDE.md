@@ -131,6 +131,7 @@ Types: `feat`, `fix`, `refactor`, `chore`, `docs`, `test`, `security`
 |---------|----------|
 | Database schema | `server/database/schema/` |
 | Conditions helpers | `server/repositories/helpers/conditions.ts` |
+| Route config | `server/config/routes.ts` |
 | Error classes | `server/error/errors.ts` |
 | Error codes | `shared/error/codes.ts` |
 | RBAC config | `server/config/rbac.ts` |

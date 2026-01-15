@@ -3,6 +3,10 @@ export default defineI18nConfig(() => ({
   messages: {
     // -------------------- English --------------------
     en: {
+      common: {
+        success: "Success",
+        gotIt: "Got it!",
+      },
       auth: {
         signin: {
           title: "Welcome back!",
@@ -33,6 +37,10 @@ export default defineI18nConfig(() => ({
               description:
                 "Either your session has expired or you are not logged in.",
             },
+          },
+          success: {
+            title: "Success",
+            description: "You are now logged in.",
           },
         },
         signup: {
@@ -69,6 +77,36 @@ export default defineI18nConfig(() => ({
             google: "Google",
             line: "Line",
           },
+          success: {
+            title: "Account Created",
+            description: "Please check your email to verify your account before signing in.",
+          },
+        },
+        signout: {
+          success: {
+            title: "Success",
+            description: "You have signed out.",
+          },
+        },
+        password: {
+          resetSent: {
+            title: "Reset Email Sent",
+            description: "Please check your email for password reset instructions.",
+          },
+          resetSuccess: {
+            title: "Password Reset Successfully",
+            description: "You can now sign in with your new password.",
+          },
+          invalidLink: {
+            title: "Invalid Reset Link",
+            description: "The password reset link is invalid or has expired.",
+          },
+        },
+      },
+      contact: {
+        submitted: {
+          title: "Submitted",
+          description: "Your message has been sent.",
         },
       },
       errors: {
@@ -252,6 +290,10 @@ export default defineI18nConfig(() => ({
 
     // -------------------- Chinese (Simplified) --------------------
     "zh-CN": {
+      common: {
+        success: "成功",
+        gotIt: "知道了！",
+      },
       auth: {
         signin: {
           title: "欢迎回来！",
@@ -275,6 +317,10 @@ export default defineI18nConfig(() => ({
             title: "使用以下方式登录",
             google: "Google",
             line: "Line",
+          },
+          success: {
+            title: "成功",
+            description: "您已登录。",
           },
         },
         signup: {
@@ -311,6 +357,36 @@ export default defineI18nConfig(() => ({
             google: "Google",
             line: "Line",
           },
+          success: {
+            title: "账户已创建",
+            description: "请查收邮箱以验证您的账户。",
+          },
+        },
+        signout: {
+          success: {
+            title: "成功",
+            description: "您已登出。",
+          },
+        },
+        password: {
+          resetSent: {
+            title: "重置邮件已发送",
+            description: "请查收邮箱获取密码重置说明。",
+          },
+          resetSuccess: {
+            title: "密码重置成功",
+            description: "您现在可以使用新密码登录。",
+          },
+          invalidLink: {
+            title: "无效的重置链接",
+            description: "密码重置链接无效或已过期。",
+          },
+        },
+      },
+      contact: {
+        submitted: {
+          title: "已提交",
+          description: "您的消息已发送。",
         },
       },
       errors: {
@@ -486,6 +562,10 @@ export default defineI18nConfig(() => ({
 
     // -------------------- Chinese (Traditional) --------------------
     "zh-TW": {
+      common: {
+        success: "成功",
+        gotIt: "知道了！",
+      },
       auth: {
         signin: {
           title: "歡迎回來！",
@@ -509,6 +589,10 @@ export default defineI18nConfig(() => ({
             title: "使用以下方式登入",
             google: "Google",
             line: "Line",
+          },
+          success: {
+            title: "成功",
+            description: "您已登入。",
           },
         },
         signup: {
@@ -545,6 +629,36 @@ export default defineI18nConfig(() => ({
             google: "Google",
             line: "Line",
           },
+          success: {
+            title: "帳號已建立",
+            description: "請查收信箱以驗證您的帳號。",
+          },
+        },
+        signout: {
+          success: {
+            title: "成功",
+            description: "您已登出。",
+          },
+        },
+        password: {
+          resetSent: {
+            title: "重置郵件已發送",
+            description: "請查收信箱獲取密碼重置說明。",
+          },
+          resetSuccess: {
+            title: "密碼重置成功",
+            description: "您現在可以使用新密碼登入。",
+          },
+          invalidLink: {
+            title: "無效的重置連結",
+            description: "密碼重置連結無效或已過期。",
+          },
+        },
+      },
+      contact: {
+        submitted: {
+          title: "已提交",
+          description: "您的訊息已發送。",
         },
       },
       errors: {
