@@ -327,6 +327,167 @@ const result = await this.drizzle.query.messages.findMany({
 });
 ```
 
+## Adding a New Domain
+
+Step-by-step guide for adding a new domain entity (e.g., "Project", "Invoice", "Task"):
+
+### 1. Schema (`server/database/schema/`)
+
+Create `server/database/schema/{domain}.ts`:
+
+```typescript
+import { sqliteTable, text, integer } from "drizzle-orm/sqlite-core";
+import { users, workspaces } from "./identity";
+
+export const projects = sqliteTable("projects", {
+  id: text("id").primaryKey().$defaultFn(() => crypto.randomUUID()),
+  tenantId: text("tenant_id").notNull().references(() => workspaces.id),
+  name: text("name").notNull(),
+  description: text("description"),
+  ownerId: text("owner_id").references(() => users.id),
+  createdAt: integer("created_at", { mode: "timestamp_ms" }).$defaultFn(() => new Date()),
+  updatedAt: integer("updated_at", { mode: "timestamp_ms" }).$defaultFn(() => new Date()),
+  deletedAt: integer("deleted_at", { mode: "timestamp_ms" }),
+});
+```
+
+Export from `server/database/schema/index.ts`.
+
+### 2. Repository (`server/repositories/`)
+
+Create `server/repositories/{domain}.ts`:
+
+```typescript
+import { and, eq } from "drizzle-orm";
+import * as schema from "#server/database/schema";
+import { Conditions } from "#server/repositories/helpers/conditions";
+import { BaseRepository } from "./base";
+
+export class ProjectRepository extends BaseRepository {
+  async findById(id: string, tenantId: string) {
+    const conditions = [
+      Conditions.notDeleted(schema.projects),
+      Conditions.tenantScoped(schema.projects, tenantId),
+      eq(schema.projects.id, id),
+    ];
+
+    const result = await this.drizzle
+      .select()
+      .from(schema.projects)
+      .where(and(...conditions))
+      .limit(1);
+
+    return result[0] || null;
+  }
+
+  async create(data: NewProject) {
+    const result = await this.drizzle
+      .insert(schema.projects)
+      .values(data)
+      .returning();
+    return result[0];
+  }
+}
+```
+
+### 3. Service (`server/services/`)
+
+Create `server/services/{domain}.ts`:
+
+```typescript
+import type { H3Event } from "h3";
+import { ProjectRepository } from "#server/repositories/project";
+import { TenantContextMissingError, NotFoundError } from "#server/error/errors";
+import { getDatabase } from "#server/lib/database";
+
+export class ProjectService {
+  private readonly tenantId: string;
+
+  constructor(
+    private readonly event: H3Event,
+    private readonly projectRepo: ProjectRepository
+  ) {
+    this.tenantId = event.context.tenantId;
+    if (!this.tenantId) {
+      throw new TenantContextMissingError();
+    }
+  }
+
+  async getById(id: string) {
+    const project = await this.projectRepo.findById(id, this.tenantId);
+    if (!project) {
+      throw new NotFoundError("Project not found");
+    }
+    return project;
+  }
+}
+
+export function createProjectService(event: H3Event) {
+  const db = getDatabase(event);
+  return new ProjectService(event, new ProjectRepository(db));
+}
+```
+
+### 4. Validator (`shared/validators/`)
+
+Create `shared/validators/{domain}.ts`:
+
+```typescript
+import { z } from "zod";
+
+export const createProjectSchema = z.object({
+  name: z.string().min(1).max(100),
+  description: z.string().max(500).optional(),
+});
+
+export const updateProjectSchema = createProjectSchema.partial();
+```
+
+### 5. API Routes (`server/api/v1/`)
+
+Create `server/api/v1/{domain}/`:
+
+```typescript
+// server/api/v1/projects/index.get.ts
+import { createProjectService } from "#server/services/project";
+import { createSuccessResponse } from "#server/lib/response";
+
+export default defineEventHandler(async (event) => {
+  const service = createProjectService(event);
+  const projects = await service.list();
+  return createSuccessResponse("Projects retrieved", projects);
+});
+
+// server/api/v1/projects/index.post.ts
+import { createProjectService } from "#server/services/project";
+import { createProjectSchema } from "#shared/validators/project";
+import { createSuccessResponse } from "#server/lib/response";
+
+export default defineEventHandler(async (event) => {
+  const body = await readBody(event);
+  const validated = createProjectSchema.parse(body);
+  const service = createProjectService(event);
+  const project = await service.create(validated);
+  return createSuccessResponse("Project created", project);
+});
+```
+
+### 6. Generate Migration
+
+```bash
+npm run db:generate
+npm run db:migrate:local
+```
+
+### Checklist
+
+- [ ] Schema with `tenantId`, `createdAt`, `updatedAt`, `deletedAt`
+- [ ] Repository using `Conditions.tenantScoped()`
+- [ ] Service with `TenantContextMissingError` check
+- [ ] Shared validators for input
+- [ ] API routes using factory pattern
+- [ ] Migration generated and applied
+
 ## Database Migrations
 
 Always use Drizzle to generate migrations:
