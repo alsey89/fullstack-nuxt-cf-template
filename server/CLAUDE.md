@@ -482,9 +482,13 @@ npm run db:migrate:local
 
 ## Database Migrations
 
-Always use Drizzle to generate migrations:
+Migrations are tracked by wrangler's built-in `d1_migrations` table. See `docs/MIGRATIONS.md` for full details.
 
 ```bash
-npm run db:generate         # Generate migration
-npm run db:migrate:local    # Apply locally
+npm run db:generate                    # Generate migration from schema changes
+npm run db:migrate:local:staging       # Apply locally
+npm run db:migrate:remote:staging      # Apply to staging
+npm run db:migrate:remote:production   # Apply to production (with safety checks)
 ```
+
+Production migrations capture Time Travel bookmarks for rollback. Check `server/database/operations/operations.log` for history.

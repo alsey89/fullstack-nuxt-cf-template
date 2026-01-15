@@ -9,6 +9,7 @@ Full-stack template for Nuxt 4 on Cloudflare Workers with authentication, RBAC, 
 - **Frontend conventions:** `app/CLAUDE.md`
 - **Setup guide:** `docs/TEMPLATE_SETUP.md`
 - **OAuth setup:** `docs/OAUTH_SETUP.md`
+- **Migrations guide:** `docs/MIGRATIONS.md`
 
 ## Architecture Overview
 
@@ -131,6 +132,8 @@ Types: `feat`, `fix`, `refactor`, `chore`, `docs`, `test`, `security`
 | Pattern | Location |
 |---------|----------|
 | Database schema | `server/database/schema/` |
+| Migrations | `server/database/migrations/` |
+| Migration operations | `server/database/operations/` |
 | Conditions helpers | `server/repositories/helpers/conditions.ts` |
 | Route config | `server/config/routes.ts` |
 | Error classes | `server/error/errors.ts` |

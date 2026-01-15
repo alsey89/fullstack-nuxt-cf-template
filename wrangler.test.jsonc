@@ -1,5 +1,5 @@
 {
-  "name": "projectyl-test",
+  "name": "template-test",
   "main": ".output/server/index.mjs",
   "compatibility_date": "2025-10-01",
   "compatibility_flags": ["nodejs_compat"],
@@ -14,7 +14,7 @@
   "d1_databases": [
     {
       "binding": "DB",
-      "database_name": "projectyl-test",
+      "database_name": "template-test",
       "database_id": "local-test",
       "preview_database_id": "local-test",
       "migrations_dir": "./server/database/migrations"
@@ -25,8 +25,8 @@
   "r2_buckets": [
     {
       "binding": "STORAGE",
-      "bucket_name": "projectyl-test",
-      "preview_bucket_name": "projectyl-test"
+      "bucket_name": "template-test",
+      "preview_bucket_name": "template-test"
     }
   ],
 

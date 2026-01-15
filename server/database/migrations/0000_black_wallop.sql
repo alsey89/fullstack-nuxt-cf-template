@@ -1,18 +1,3 @@
-CREATE TABLE `_migrations` (
-	`id` text PRIMARY KEY NOT NULL,
-	`hash` text NOT NULL,
-	`applied_at` integer NOT NULL,
-	`applied_by` text,
-	`rolled_back_at` integer,
-	`timetravel_bookmark` text,
-	`status` text NOT NULL,
-	`error_message` text,
-	`environment` text NOT NULL
-);
---> statement-breakpoint
-CREATE INDEX `migrations_status_idx` ON `_migrations` (`status`);--> statement-breakpoint
-CREATE INDEX `migrations_env_idx` ON `_migrations` (`environment`);--> statement-breakpoint
-CREATE INDEX `migrations_applied_at_idx` ON `_migrations` (`applied_at`);--> statement-breakpoint
 CREATE TABLE `audit_logs` (
 	`id` text PRIMARY KEY NOT NULL,
 	`created_at` integer NOT NULL,

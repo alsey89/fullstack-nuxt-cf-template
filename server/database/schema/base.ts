@@ -1,4 +1,4 @@
-import { text, integer, sqliteTable, index } from "drizzle-orm/sqlite-core";
+import { text, integer } from "drizzle-orm/sqlite-core";
 
 /**
  * Base fields for all entities
@@ -19,34 +19,12 @@ export const baseFields = {
 };
 
 // ========================================
-// MIGRATION STATE TRACKING
+// MIGRATION TRACKING
 // ========================================
-// Tracks migration history with Time Travel bookmarks for rollback
+// Migrations are tracked by wrangler's built-in `d1_migrations` table.
+// Rollback bookmarks are logged to `server/database/operations/operations.log`
+// when running production migrations via `npm run db:migrate:remote:production`.
+//
+// For rollback, use D1 Time Travel:
+//   wrangler d1 time-travel restore <DB_NAME> --bookmark=<BOOKMARK_ID>
 // ========================================
-
-export const migrations = sqliteTable(
-  "_migrations",
-  {
-    id: text("id").primaryKey(), // e.g., "0003_add_idempotency"
-    hash: text("hash").notNull(), // SHA-256 of migration SQL
-    appliedAt: integer("applied_at", { mode: "timestamp" }).notNull(),
-    appliedBy: text("applied_by"), // "github-actions" or "developer@email.com"
-    rolledBackAt: integer("rolled_back_at", { mode: "timestamp" }),
-    timeravelBookmark: text("timetravel_bookmark"), // D1 bookmark before migration
-    status: text("status", {
-      enum: ["PENDING", "APPLIED", "FAILED", "ROLLED_BACK"],
-    }).notNull(),
-    errorMessage: text("error_message"),
-    environment: text("environment", {
-      enum: ["local", "staging", "production"],
-    }).notNull(),
-  },
-  (table) => ({
-    statusIdx: index("migrations_status_idx").on(table.status),
-    envIdx: index("migrations_env_idx").on(table.environment),
-    appliedAtIdx: index("migrations_applied_at_idx").on(table.appliedAt),
-  })
-);
-
-export type Migration = typeof migrations.$inferSelect;
-export type NewMigration = typeof migrations.$inferInsert;
