@@ -1,3 +1,5 @@
+/// <reference types="@cloudflare/workers-types" />
+
 // Cloudflare Workers environment bindings
 export interface Env {
   DB: D1Database;
@@ -18,6 +20,10 @@ export interface Env {
   EMAIL_FROM?: string;
   NODE_ENV?: "development" | "production";
   ENVIRONMENT?: string;
+
+  // Index signature for dynamic tenant database bindings (e.g., DB_ACME, DB_TENANT1)
+  // Used in multi-tenant mode where each tenant has their own D1 database
+  [key: string]: D1Database | KVNamespace | R2Bucket | RateLimiterBinding | string | undefined;
 }
 
 // Extend H3 event context with our custom properties

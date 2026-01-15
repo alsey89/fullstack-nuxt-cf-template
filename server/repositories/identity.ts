@@ -2,6 +2,7 @@ import { eq, and, desc } from "drizzle-orm";
 import * as schema from "#server/database/schema";
 import { BaseRepository } from "#server/repositories/base";
 import { Conditions } from "#server/repositories/helpers/conditions";
+import { InternalServerError } from "#server/error/errors";
 import type {
   User,
   NewUser,
@@ -151,6 +152,10 @@ export class UserRepository extends BaseRepository {
       .values(normalizedData)
       .returning();
 
+    if (!user) {
+      throw new InternalServerError("Failed to create user");
+    }
+
     return user;
   }
 
@@ -249,6 +254,10 @@ export class UserSettingsRepository extends BaseRepository {
       })
       .returning();
 
+    if (!userSettings) {
+      throw new InternalServerError("Failed to update user settings");
+    }
+
     return userSettings;
   }
 }
@@ -308,6 +317,10 @@ export class AuditLogRepository extends BaseRepository {
         stateAfter: context?.stateAfter,
       })
       .returning();
+
+    if (!log) {
+      throw new InternalServerError("Failed to create audit log");
+    }
 
     return log;
   }

@@ -81,6 +81,8 @@ export function parseFilterParams(query: Record<string, any>): Filter[] {
     }
 
     const [, field, operator] = match;
+    if (!field || !operator) return;
+
     const value = query[key];
 
     // Validate operator

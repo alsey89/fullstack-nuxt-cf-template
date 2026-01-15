@@ -1,5 +1,5 @@
 import { drizzle } from "drizzle-orm/d1";
-import * as schema from "#server/database/schema";
+import * as schema from "#server/database/schema/identity";
 import { Hash } from "@adonisjs/hash";
 import { Scrypt } from "@adonisjs/hash/drivers/scrypt";
 import { createBatchInserts, executeBatch } from "#server/database/batch";
@@ -18,12 +18,11 @@ async function hashPassword(password: string): Promise<string> {
 }
 
 // ========================================
-// DATABASE SEEDER - Simplified Template
+// DATABASE SEEDER - Full Template Pattern
 // ========================================
-// TODO: Customize this seeder for your application
-// - Update test user accounts and passwords
-// - Add your own domain-specific seed data
-// - Customize roles and permissions for your use case
+// Seeds: users, workspace, workspace_members, user_settings
+// Demonstrates multitenancy pattern for template users
+// RBAC is config-based (see server/config/rbac.ts) - no roles table needed
 // ========================================
 
 export async function seedDatabase(
@@ -33,48 +32,10 @@ export async function seedDatabase(
   const now = new Date();
   const isMultitenancyEnabled = options?.multitenancyEnabled ?? true;
 
-  console.log("🌱 Starting template database seed (using atomic batch operations)...\n");
+  console.log("🌱 Starting template database seed...\n");
 
   // ========================================
-  // 3. CREATE BASIC PERMISSIONS (BATCH)
-  // ========================================
-  console.log("🔐 Creating permissions...");
-
-  const permissionCodes = [
-    // Users
-    { code: "users:view", name: "View Users", category: "USERS" },
-    { code: "users:create", name: "Create Users", category: "USERS" },
-    { code: "users:update", name: "Update Users", category: "USERS" },
-    { code: "users:delete", name: "Delete Users", category: "USERS" },
-    { code: "users:*", name: "All User Permissions", category: "USERS" },
-    // Roles
-    { code: "roles:view", name: "View Roles", category: "ROLES" },
-    { code: "roles:create", name: "Create Roles", category: "ROLES" },
-    { code: "roles:update", name: "Update Roles", category: "ROLES" },
-    { code: "roles:delete", name: "Delete Roles", category: "ROLES" },
-    { code: "roles:*", name: "All Role Permissions", category: "ROLES" },
-    // System
-    { code: "*", name: "Super Admin (All Permissions)", category: "SYSTEM" },
-  ] as const;
-
-  // Insert permissions atomically using batch operation
-  const permissionValues = permissionCodes.map(p => ({
-    code: p.code,
-    name: p.name,
-    description: p.name,
-    category: p.category,
-    created_at: now.getTime(),
-    updated_at: now.getTime(),
-    deleted_at: null,
-  }));
-
-  const permissionStatements = createBatchInserts(db, 'permissions', permissionValues);
-  await executeBatch(db, permissionStatements);
-
-  console.log(`✅ Created ${permissionCodes.length} permission definitions (atomic batch)\n`);
-
-  // ========================================
-  // 4. CREATE USERS (BATCH)
+  // 1. CREATE USERS
   // ========================================
   console.log("👥 Creating users...");
 
@@ -90,7 +51,7 @@ export async function seedDatabase(
       firstName: "Admin",
       lastName: "User",
       phone: "+1-555-234-5678",
-      role: "admin",
+      role: "admin", // Config-based role (see server/config/rbac.ts)
     },
     {
       id: crypto.randomUUID(),
@@ -110,8 +71,8 @@ export async function seedDatabase(
     },
   ];
 
-  // Insert users atomically using batch operation
-  const userValues = users.map(u => ({
+  // Insert users using batch operation
+  const userValues = users.map((u) => ({
     id: u.id,
     email: u.email,
     password_hash: passwordHash,
@@ -121,128 +82,104 @@ export async function seedDatabase(
     role: u.role,
     is_email_verified: 1, // SQLite uses 1/0 for boolean
     is_active: 1,
+    has_completed_onboarding: 1,
     created_at: now.getTime(),
     updated_at: now.getTime(),
     deleted_at: null,
   }));
 
-  const userStatements = createBatchInserts(db, 'users', userValues);
+  const userStatements = createBatchInserts(db, "users", userValues);
   await executeBatch(db, userStatements);
 
-  // Keep reference to created users for role assignment
-  const createdUsers = users;
-
-  users.forEach(u => {
+  users.forEach((u) => {
     console.log(`✅ Created user: ${u.email} (${u.role})`);
   });
-
   console.log(`   Password for all users: testtesttest\n`);
 
   // ========================================
-  // 5. CREATE ROLES (RBAC) - BATCH
+  // 2. CREATE DEFAULT WORKSPACE
   // ========================================
-  console.log("🎭 Creating roles...");
+  console.log("🏢 Creating default workspace...");
 
-  // Define roles
-  const roles = [
-    {
-      id: crypto.randomUUID(),
-      name: "admin",
-      description: "Full system access (super admin)",
-      permissions: ["*"], // All permissions via wildcard
-      isSystem: true,
-    },
-    {
-      id: crypto.randomUUID(),
-      name: "manager",
-      description: "User management access",
-      permissions: ["users:view", "users:update"],
-      isSystem: true,
-    },
-    {
-      id: crypto.randomUUID(),
-      name: "user",
-      description: "Basic user access (read-only)",
-      permissions: ["users:view"],
-      isSystem: true,
-    },
-  ];
+  const workspaceId = crypto.randomUUID();
+  // Non-null assertion safe: users array is defined with 3 elements above
+  const adminUser = users[0]!;
 
-  // Insert roles atomically using batch operation
-  const roleStatements = roles.map(role =>
-    db.prepare(
-      `INSERT INTO roles (id, name, description, permissions, is_system, created_at, updated_at, deleted_at)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?)`
-    ).bind(
-      role.id,
-      role.name,
-      role.description,
-      JSON.stringify(role.permissions), // SQLite stores JSON as TEXT
-      role.isSystem ? 1 : 0,
+  const workspaceStatement = db
+    .prepare(
+      `INSERT INTO workspaces (id, name, slug, description, owner_id, is_active, settings, created_at, updated_at, deleted_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+    )
+    .bind(
+      workspaceId,
+      "Default Workspace",
+      "default",
+      "Default workspace for the template",
+      adminUser.id,
+      1,
+      JSON.stringify({}),
       now.getTime(),
       now.getTime(),
       null
-    )
-  );
-  await executeBatch(db, roleStatements);
+    );
 
-  // Keep references for role assignment
-  const adminRole = roles[0];
-  const managerRole = roles[1];
-  const userRole = roles[2];
-
-  roles.forEach(role => {
-    console.log(`✅ Created role: ${role.name} (${role.permissions.length} permissions)`);
-  });
-  console.log();
+  await db.batch([workspaceStatement]);
+  console.log(`✅ Created workspace: Default Workspace (slug: default)\n`);
 
   // ========================================
-  // 6. ASSIGN ROLES TO USERS (BATCH)
+  // 3. CREATE WORKSPACE MEMBERSHIPS
   // ========================================
-  console.log("🔗 Assigning roles to users...");
+  console.log("👥 Adding users to workspace...");
 
-  // Create role assignments
-  const roleAssignments = [
-    {
-      id: crypto.randomUUID(),
-      userId: createdUsers[0].id,
-      roleId: adminRole.id,
-      roleName: adminRole.name,
-      userEmail: createdUsers[0].email,
-    },
-    {
-      id: crypto.randomUUID(),
-      userId: createdUsers[1].id,
-      roleId: managerRole.id,
-      roleName: managerRole.name,
-      userEmail: createdUsers[1].email,
-    },
-    {
-      id: crypto.randomUUID(),
-      userId: createdUsers[2].id,
-      roleId: userRole.id,
-      roleName: userRole.name,
-      userEmail: createdUsers[2].email,
-    },
-  ];
-
-  // Insert role assignments atomically using batch operation
-  const userRoleValues = roleAssignments.map(ra => ({
-    id: ra.id,
-    user_id: ra.userId,
-    role_id: ra.roleId,
+  const membershipValues = users.map((u) => ({
+    id: crypto.randomUUID(),
+    workspace_id: workspaceId,
+    user_id: u.id,
+    role: u.role, // Same role as their global role for simplicity
+    joined_at: now.getTime(),
     created_at: now.getTime(),
     updated_at: now.getTime(),
     deleted_at: null,
   }));
 
-  const userRoleStatements = createBatchInserts(db, 'user_roles', userRoleValues);
-  await executeBatch(db, userRoleStatements);
+  const membershipStatements = createBatchInserts(
+    db,
+    "workspace_members",
+    membershipValues
+  );
+  await executeBatch(db, membershipStatements);
 
-  roleAssignments.forEach(ra => {
-    console.log(`✅ Assigned "${ra.roleName}" role to ${ra.userEmail}`);
+  users.forEach((u) => {
+    console.log(`✅ Added ${u.email} to workspace as ${u.role}`);
   });
   console.log();
+
+  // ========================================
+  // 4. CREATE USER SETTINGS
+  // ========================================
+  console.log("⚙️  Creating user settings...");
+
+  const settingsValues = users.map((u) => ({
+    id: crypto.randomUUID(),
+    user_id: u.id,
+    settings: JSON.stringify({
+      theme: "system",
+      notifications: true,
+      language: "en",
+    }),
+    created_at: now.getTime(),
+    updated_at: now.getTime(),
+    deleted_at: null,
+  }));
+
+  const settingsStatements = createBatchInserts(
+    db,
+    "user_settings",
+    settingsValues
+  );
+  await executeBatch(db, settingsStatements);
+
+  console.log(`✅ Created settings for ${users.length} users\n`);
 
   // ========================================
   // SUMMARY
@@ -254,11 +191,12 @@ export async function seedDatabase(
   console.log(`Architecture: Per-tenant database`);
   console.log(`Mode: ${isMultitenancyEnabled ? "Multi-tenant" : "Single-tenant"}`);
   console.log(`Transaction: Atomic batch operations (D1 batch API)`);
-  console.log(`Permissions: 11 permissions with wildcards`);
-  console.log(`Roles: 3 system roles (admin, manager, user)`);
+  console.log(`Users: 3 (admin, manager, user)`);
+  console.log(`Workspaces: 1 (default)`);
+  console.log(`RBAC: Config-based roles (see server/config/rbac.ts)`);
   console.log(`\nTest Accounts:`);
 
-  createdUsers.forEach((user) => {
+  users.forEach((user) => {
     console.log(`\n👤 ${user.firstName} ${user.lastName} (${user.role}):`);
     console.log(`   Email: ${user.email}`);
     console.log(`   Password: testtesttest`);
@@ -289,20 +227,20 @@ export async function clearDatabase(db: D1Database) {
   console.log("🗑️  Clearing database...\n");
 
   // Temporarily disable foreign keys to avoid constraint errors during clearing
-  await db.exec('PRAGMA foreign_keys = OFF;');
+  await db.exec("PRAGMA foreign_keys = OFF;");
 
   try {
     // Delete in reverse order of dependencies
-    await drizzleDb.delete(schema.userRoles);
-    await drizzleDb.delete(schema.roles);
-    await drizzleDb.delete(schema.userSettings);
-    await drizzleDb.delete(schema.users);
-    await drizzleDb.delete(schema.permissions);
     await drizzleDb.delete(schema.auditLogs);
+    await drizzleDb.delete(schema.workspaceInvites);
+    await drizzleDb.delete(schema.workspaceMembers);
+    await drizzleDb.delete(schema.userSettings);
+    await drizzleDb.delete(schema.workspaces);
+    await drizzleDb.delete(schema.users);
 
     console.log("✅ Database cleared\n");
   } finally {
     // Re-enable foreign keys
-    await db.exec('PRAGMA foreign_keys = ON;');
+    await db.exec("PRAGMA foreign_keys = ON;");
   }
 }

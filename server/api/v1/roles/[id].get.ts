@@ -13,7 +13,7 @@ import type { RoleName } from "#server/config/rbac";
 
 export default defineEventHandler(async (event) => {
   // Check permission
-  await requirePermission(event, "roles:view");
+  await requirePermission(event, "roles:read");
 
   const roleName = getRouterParam(event, "id");
   if (!roleName) {

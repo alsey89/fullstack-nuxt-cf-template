@@ -6,6 +6,7 @@
 // ========================================
 
 // Types from database schema (safe subset for frontend)
+// Note: Using relative paths for consistent module resolution
 export type {
   User,
   Workspace,
@@ -13,7 +14,7 @@ export type {
   WorkspaceInvite,
   UserSettings,
   AuditLog,
-} from "#server/database/schema/identity";
+} from "../../server/database/schema/identity";
 
 // API types
 export type {
@@ -26,7 +27,7 @@ export type {
   Filter,
   FilterOperator,
   ListQuery,
-} from "#server/types/api";
+} from "../../server/types/api";
 
 // Error codes
-export { ERROR_CODES, type ErrorCode } from "#shared/error/codes";
+export { ERROR_CODES, type ErrorCode } from "../error/codes";

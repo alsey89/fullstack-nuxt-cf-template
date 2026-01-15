@@ -11,7 +11,7 @@ import { createSuccessResponse } from "#server/lib/response";
 
 export default defineEventHandler(async (event) => {
   // Check permission
-  await requirePermission(event, "roles:view");
+  await requirePermission(event, "roles:read");
 
   // Get config-defined roles from RBAC service
   const rbacService = getRBACService(event);

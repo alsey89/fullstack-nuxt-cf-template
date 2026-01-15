@@ -12,7 +12,7 @@ import { MissingFieldError, NotFoundError } from "#server/error/errors";
 
 export default defineEventHandler(async (event) => {
   // Check permission
-  await requirePermission(event, "users:view");
+  await requirePermission(event, "users:read");
 
   const userId = getRouterParam(event, "userId");
   if (!userId) {

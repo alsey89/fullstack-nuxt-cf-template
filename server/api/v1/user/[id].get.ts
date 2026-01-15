@@ -13,7 +13,7 @@ import { requirePermission } from "#server/services/rbac";
 
 export default defineEventHandler(async (event) => {
   // Check permission
-  await requirePermission(event, "users:view");
+  await requirePermission(event, "users:read");
 
   const userId = getRouterParam(event, "id");
 

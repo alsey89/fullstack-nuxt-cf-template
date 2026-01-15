@@ -7,6 +7,7 @@ Full-stack template for Nuxt 4 on Cloudflare Workers with authentication, RBAC, 
 - **Template ethos:** `docs/ETHOS.md`
 - **Backend conventions:** `server/CLAUDE.md`
 - **Frontend conventions:** `app/CLAUDE.md`
+- **TypeScript conventions:** `docs/TYPESCRIPT.md`
 - **Setup guide:** `docs/TEMPLATE_SETUP.md`
 - **OAuth setup:** `docs/OAUTH_SETUP.md`
 - **Migrations guide:** `docs/MIGRATIONS.md`

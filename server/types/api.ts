@@ -1,8 +1,9 @@
+// Note: Using relative path for consistent module resolution
 import {
   MAX_PER_PAGE,
   DEFAULT_PER_PAGE,
   DEFAULT_PAGE,
-} from "#shared/constants/api";
+} from "../../shared/constants/api";
 
 export const HdrKeyRequestID = "X-Request-ID";
 export const HdrKeyTenantID = "X-Tenant-ID";

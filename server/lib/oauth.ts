@@ -188,7 +188,7 @@ export async function fetchGoogleUserInfo(accessToken: string): Promise<GoogleUs
     throw new Error(`Failed to fetch user info: ${error}`);
   }
 
-  const userInfo = await response.json();
+  const userInfo = (await response.json()) as GoogleUser;
 
   // Validate required fields
   if (!userInfo.sub || !userInfo.email) {

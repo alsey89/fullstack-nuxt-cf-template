@@ -87,7 +87,8 @@ export const useUserStore = defineStore(
         }
 
         isLoading.value = false;
-        return navigateTo(redirectTo);
+        await navigateTo(redirectTo);
+        return;
       } else {
         isLoading.value = false;
         return false;
@@ -129,7 +130,8 @@ export const useUserStore = defineStore(
         analytics.trackSignUp(email);
 
         isLoading.value = false;
-        return navigateTo("/auth/signin");
+        await navigateTo("/auth/signin");
+        return;
       } else {
         isLoading.value = false;
         return false;
@@ -198,7 +200,7 @@ export const useUserStore = defineStore(
         description: getTranslation("auth.signout.success.description"),
       });
 
-      return navigateTo(redirectTo);
+      await navigateTo(redirectTo);
     }
 
     /**
@@ -228,7 +230,8 @@ export const useUserStore = defineStore(
         analytics.trackPasswordResetRequest(email);
 
         isLoading.value = false;
-        return navigateTo("/auth/signin");
+        await navigateTo("/auth/signin");
+        return;
       } else {
         isLoading.value = false;
         return false;
@@ -266,7 +269,8 @@ export const useUserStore = defineStore(
         analytics.trackPasswordResetSuccess();
 
         isLoading.value = false;
-        return navigateTo("/auth/signin");
+        await navigateTo("/auth/signin");
+        return;
       } else {
         isLoading.value = false;
         return false;
@@ -304,9 +308,11 @@ export const useUserStore = defineStore(
       reset,
     };
   },
+  // Persist options cast needed as pinia-plugin-persistedstate types
+  // aren't fully inferred with setup store syntax
   {
     persist: {
       omit: ["isLoading", "error", "userProfile"],
     },
-  }
+  } as any
 );

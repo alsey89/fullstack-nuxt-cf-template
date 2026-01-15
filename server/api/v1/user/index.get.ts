@@ -24,7 +24,7 @@ import { calculateLimitOffset, buildPaginatedResponse } from '#server/utils/pagi
 
 export default defineEventHandler(async (event) => {
   // Check permission
-  await requirePermission(event, 'users:view')
+  await requirePermission(event, 'users:read')
 
   // Parse query parameters
   const query = parseListQuery(event)

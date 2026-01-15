@@ -4,21 +4,21 @@ import gsap from "gsap";
 
 interface PrimaryAnimationOptions {
   identifier: string;
-  stagger?: number | null;
+  stagger?: number;
 }
 
 /**
  * Run the primary animation for elements using GSAP
  *
  * @param identifier - CSS selector for the element(s) to animate
- * @param stagger - The stagger time in seconds, or null for no stagger
+ * @param stagger - The stagger time in seconds (optional)
  *
  * @example
  * primaryAnimation({ identifier: '.card', stagger: 0.1 })
  */
 export function primaryAnimation({
   identifier,
-  stagger = null,
+  stagger,
 }: PrimaryAnimationOptions): void {
   gsap.fromTo(
     identifier,
