@@ -51,6 +51,12 @@ export class InvalidCredentialsError extends AppError {
   }
 }
 
+export class PasswordNotSetError extends AppError {
+  constructor(message = 'Account has no password set', details?: any) {
+    super(message, 401, ERROR_CODES.PASSWORD_NOT_SET, details)
+  }
+}
+
 export class InvalidTokenError extends AppError {
   constructor(message = 'Invalid or expired token', details?: any) {
     super(message, 401, ERROR_CODES.INVALID_TOKEN, details)

@@ -8,6 +8,13 @@
       "when": 1768464851521,
       "tag": "0000_black_wallop",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "6",
+      "when": 1768465455469,
+      "tag": "0001_perpetual_greymalkin",
+      "breakpoints": true
     }
   ]
 }

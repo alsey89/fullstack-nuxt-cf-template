@@ -13,6 +13,7 @@ import {
 import { validatePasswordStrength } from "#shared/validators/password";
 import {
   InvalidCredentialsError,
+  PasswordNotSetError,
   EmailAlreadyExistsError,
   UserNotFoundError,
   ValidationError,
@@ -24,6 +25,10 @@ import {
 import type { User } from "#server/database/schema/identity";
 import { getDatabase } from "#server/database/utils";
 import { isTest } from "#server/utils/environment";
+import {
+  sanitizeUserForClient,
+  type SafeUser,
+} from "#server/lib/sanitizeUser";
 
 // Note: hashPassword, verifyPassword are auto-imported by nuxt-auth-utils
 
@@ -155,14 +160,14 @@ export class IdentityService {
   }
 
   /**
-   * Sign in a user
+   * Sign in a user with email/password
    */
   async signIn(email: string, password: string) {
     // Find user by email
     const user = await this.userRepo.findByEmail(email);
     if (!user) {
       throw new InvalidCredentialsError(undefined, {
-        email: email
+        email: email,
       });
     }
 
@@ -170,8 +175,20 @@ export class IdentityService {
     if (!user.isActive) {
       throw new AccountInactiveError(undefined, {
         userId: user.id,
-        email: user.email
+        email: user.email,
       });
+    }
+
+    // Check if user has a password (OAuth-only users won't have password)
+    if (!user.passwordHash || user.passwordHash === "") {
+      throw new PasswordNotSetError(
+        "OAuth-only user attempted password login",
+        {
+          userId: user.id,
+          email: email,
+          oauthProvider: user.oauthProvider,
+        }
+      );
     }
 
     // Verify password
@@ -180,18 +197,15 @@ export class IdentityService {
     if (!isValid) {
       throw new InvalidCredentialsError(undefined, {
         userId: user.id,
-        email: email
+        email: email,
       });
     }
-
-    //remove sensitive fields before returning
-    const { passwordHash, ...userData } = user;
 
     // Log the signin
     await this.logAudit(user.id, "USER_SIGNED_IN", "User", user.id);
 
     return {
-      user: userData,
+      user: sanitizeUserForClient(user),
     };
   }
 
@@ -224,8 +238,7 @@ export class IdentityService {
         throw new InternalServerError("Failed to update user login info");
       }
 
-      const { passwordHash, ...userData } = updatedUser;
-      return { user: userData };
+      return { user: sanitizeUserForClient(updatedUser) };
     }
 
     // Step 2: Check if email already exists (account linking)
@@ -266,8 +279,7 @@ export class IdentityService {
         metadata: { provider, email, autoLinked: true },
       });
 
-      const { passwordHash, ...userData } = linkedUser;
-      return { user: userData };
+      return { user: sanitizeUserForClient(linkedUser) };
     }
 
     // Step 3: Create new OAuth-only user
@@ -291,8 +303,7 @@ export class IdentityService {
       metadata: { email: newUser.email, provider, emailVerified },
     });
 
-    const { passwordHash, ...userData } = newUser;
-    return { user: userData };
+    return { user: sanitizeUserForClient(newUser) };
   }
 
   /**
@@ -385,16 +396,19 @@ export class IdentityService {
     if (!user || user.email !== email) {
       throw new ValidationError("Invalid reset token", {
         userId: userId,
-        email: email
+        email: email,
       });
     }
 
-    // Check if new password is same as old password
-    const isSamePassword = await verifyPassword(user.passwordHash, newPassword);
+    // Check if new password is same as old password (only if user has a password)
+    // OAuth-only users may not have a password set
+    const isSamePassword = user.passwordHash
+      ? await verifyPassword(user.passwordHash, newPassword)
+      : false;
     if (isSamePassword) {
       throw new PasswordSameAsOldError(undefined, {
-        field: 'password',
-        userId: userId
+        field: "password",
+        userId: userId,
       });
     }
 
@@ -423,7 +437,7 @@ export class IdentityService {
   /**
    * Get current authenticated user
    */
-  async getCurrentUser(): Promise<User> {
+  async getCurrentUser(): Promise<SafeUser> {
     if (!this.userId) {
       throw new AuthenticationError("User not authenticated");
     }
@@ -433,26 +447,24 @@ export class IdentityService {
       throw new UserNotFoundError();
     }
 
-    // Remove sensitive fields
-    const { passwordHash, ...userData } = user;
-    return userData as User;
+    return sanitizeUserForClient(user);
   }
 
   /**
    * Get user by ID
    */
-  async getUser(userId: string): Promise<User> {
+  async getUser(userId: string): Promise<SafeUser> {
     const user = await this.userRepo.findById(userId);
     if (!user) {
       throw new UserNotFoundError();
     }
-    return user;
+    return sanitizeUserForClient(user);
   }
 
   /**
    * Update user profile
    */
-  async updateUser(userId: string, data: Partial<User>): Promise<User> {
+  async updateUser(userId: string, data: Partial<User>): Promise<SafeUser> {
     if (!this.userId) {
       throw new AuthenticationError("User not authenticated");
     }
@@ -471,7 +483,7 @@ export class IdentityService {
       metadata: { updates: updateData },
     });
 
-    return user;
+    return sanitizeUserForClient(user);
   }
 
   /**
@@ -483,8 +495,15 @@ export class IdentityService {
     filters?: import("#server/types/api").Filter[],
     sortBy?: string,
     sortOrder?: import("#server/types/api").SortOrder
-  ): Promise<User[]> {
-    return this.userRepo.list(limit, offset, filters, sortBy, sortOrder);
+  ): Promise<SafeUser[]> {
+    const users = await this.userRepo.list(
+      limit,
+      offset,
+      filters,
+      sortBy,
+      sortOrder
+    );
+    return users.map(sanitizeUserForClient);
   }
 
   /**

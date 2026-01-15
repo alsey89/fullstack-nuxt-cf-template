@@ -23,17 +23,31 @@ export const users = sqliteTable(
 
     // Authentication
     email: text("email").notNull(),
-    passwordHash: text("password_hash").notNull(),
+    // Nullable for OAuth-only accounts (users who sign in with Google without password)
+    // OAuth users will have empty string '' as passwordHash
+    // Code checks for null or empty string to determine OAuth-only accounts
+    passwordHash: text("password_hash"),
     isEmailVerified: integer("is_email_verified", { mode: "boolean" })
       .default(false)
       .notNull(),
+    // Email verification timestamp (keeps isEmailVerified for backward compatibility)
+    emailVerifiedAt: integer("email_verified_at", { mode: "timestamp" }),
 
-    // OAuth Authentication
-    oauthProvider: text("oauth_provider"), // "google", "github", etc.
-    oauthProviderId: text("oauth_provider_id"), // Provider's user ID
-    picture: text("picture"), // Profile picture URL
-    lastLoginMethod: text("last_login_method"), // "password", "google", etc.
+    // OAuth (for Google, GitHub, etc.)
+    oauthProvider: text("oauth_provider"), // 'google', 'github', etc.
+    oauthProviderId: text("oauth_provider_id"), // Unique ID from OAuth provider
+    picture: text("picture"), // Profile picture URL from OAuth or user upload
+
+    // Login tracking
     lastLoginAt: integer("last_login_at", { mode: "timestamp" }),
+    lastLoginMethod: text("last_login_method"), // 'email' | 'google' | null
+
+    // Onboarding - tracks if user has created or joined a workspace
+    hasCompletedOnboarding: integer("has_completed_onboarding", {
+      mode: "boolean",
+    })
+      .default(false)
+      .notNull(),
 
     // Personal Info
     firstName: text("first_name"),
