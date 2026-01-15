@@ -24,7 +24,7 @@ API Route → Service → Repository → Database
 ```
 
 - **API routes** validate input, call services, return responses
-- **Services** contain business logic, validate tenant context, throw errors
+- **Services** contain business logic, validate workspace context, throw errors
 - **Repositories** are pure data access (no business logic)
 
 ## Service Pattern

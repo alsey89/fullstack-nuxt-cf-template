@@ -115,7 +115,7 @@ describe("Authentication Middleware (02.auth)", () => {
 
       global.getUserSession.mockResolvedValue({
         user: { id: "user-123" },
-        workspaceId: "test-tenant",
+        workspaceId: "test-workspace",
       });
 
       await authMiddleware(mockEvent);
@@ -124,13 +124,13 @@ describe("Authentication Middleware (02.auth)", () => {
       expect(global.getUserSession).toHaveBeenCalledWith(mockEvent);
     });
 
-    it("allows access with valid session and matching tenant", async () => {
+    it("allows access with valid session and matching workspace", async () => {
       mockEvent.path = "/api/v1/data";
-      mockEvent.context.workspaceId = "tenant-acme";
+      mockEvent.context.workspaceId = "workspace-acme";
 
       global.getUserSession.mockResolvedValue({
         user: { id: "user-456" },
-        workspaceId: "tenant-acme",
+        workspaceId: "workspace-acme",
       });
 
       await authMiddleware(mockEvent);
@@ -143,7 +143,7 @@ describe("Authentication Middleware (02.auth)", () => {
 
       global.getUserSession.mockResolvedValue({
         user: { id: "string-user-id" },
-        workspaceId: "test-tenant",
+        workspaceId: "test-workspace",
       });
 
       await authMiddleware(mockEvent);
@@ -171,7 +171,7 @@ describe("Authentication Middleware (02.auth)", () => {
       mockEvent.path = "/api/v1/protected";
 
       global.getUserSession.mockResolvedValue({
-        workspaceId: "test-tenant",
+        workspaceId: "test-workspace",
       });
 
       await expect(authMiddleware(mockEvent)).rejects.toThrow(
@@ -184,7 +184,7 @@ describe("Authentication Middleware (02.auth)", () => {
 
       global.getUserSession.mockResolvedValue({
         user: {},
-        workspaceId: "test-tenant",
+        workspaceId: "test-workspace",
       });
 
       await expect(authMiddleware(mockEvent)).rejects.toThrow(
@@ -197,7 +197,7 @@ describe("Authentication Middleware (02.auth)", () => {
 
       global.getUserSession.mockResolvedValue({
         user: { id: "" },
-        workspaceId: "test-tenant",
+        workspaceId: "test-workspace",
       });
 
       await expect(authMiddleware(mockEvent)).rejects.toThrow(
@@ -210,7 +210,7 @@ describe("Authentication Middleware (02.auth)", () => {
 
       global.getUserSession.mockResolvedValue({
         user: { id: null },
-        workspaceId: "test-tenant",
+        workspaceId: "test-workspace",
       });
 
       await expect(authMiddleware(mockEvent)).rejects.toThrow(
@@ -223,7 +223,7 @@ describe("Authentication Middleware (02.auth)", () => {
 
       global.getUserSession.mockResolvedValue({
         user: { id: undefined },
-        workspaceId: "test-tenant",
+        workspaceId: "test-workspace",
       });
 
       await expect(authMiddleware(mockEvent)).rejects.toThrow(
@@ -244,13 +244,13 @@ describe("Authentication Middleware (02.auth)", () => {
 
       global.getUserSession.mockResolvedValue({
         user: { id: "user-123" },
-        workspaceId: "session-tenant",
+        workspaceId: "session-workspace",
       });
 
       await authMiddleware(mockEvent);
 
       expect(mockEvent.context.userId).toBe("user-123");
-      expect(mockEvent.context.workspaceId).toBe("session-tenant");
+      expect(mockEvent.context.workspaceId).toBe("session-workspace");
     });
 
     it("allows undefined workspaceId in session (user not in a workspace yet)", async () => {
@@ -295,7 +295,7 @@ describe("Authentication Middleware (02.auth)", () => {
           role: "user",
           extraData: "should be ignored",
         },
-        workspaceId: "test-tenant",
+        workspaceId: "test-workspace",
         extraSessionData: "also ignored",
       });
 
@@ -309,7 +309,7 @@ describe("Authentication Middleware (02.auth)", () => {
 
       global.getUserSession.mockResolvedValue({
         user: { id: 12345 },
-        workspaceId: "test-tenant",
+        workspaceId: "test-workspace",
       });
 
       await authMiddleware(mockEvent);
@@ -320,21 +320,21 @@ describe("Authentication Middleware (02.auth)", () => {
     it("processes multiple protected requests independently", async () => {
       const event1 = {
         path: "/api/v1/users",
-        context: { workspaceId: "tenant-1" },
+        context: { workspaceId: "workspace-1" },
       };
       const event2 = {
         path: "/api/v1/posts",
-        context: { workspaceId: "tenant-2" },
+        context: { workspaceId: "workspace-2" },
       };
 
       global.getUserSession
         .mockResolvedValueOnce({
           user: { id: "user-1" },
-          workspaceId: "tenant-1",
+          workspaceId: "workspace-1",
         })
         .mockResolvedValueOnce({
           user: { id: "user-2" },
-          workspaceId: "tenant-2",
+          workspaceId: "workspace-2",
         });
 
       await authMiddleware(event1 as any);

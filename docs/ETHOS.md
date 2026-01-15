@@ -135,7 +135,7 @@ Database (Drizzle ORM → D1)
 | Nuxt 4 | Full-stack Vue with file-based routing, Nitro for edge |
 | Drizzle ORM | Type-safe, lightweight, SQLite-native, no runtime overhead |
 | Config-based RBAC | No database queries for permission checks, explicit role definitions |
-| Single database | Simpler operations, tenant isolation via queries not infrastructure |
+| Single database | Simpler operations, workspace isolation via queries not infrastructure |
 | Session auth | Works everywhere, no JWT complexity, built-in with nuxt-auth-utils |
 | shadcn-vue | Copy-paste components, full control, no black-box library |
 
@@ -159,8 +159,8 @@ The template succeeds when:
 Ask: "Would an AI assistant understand this?"
 If no → Add a CLAUDE.md or inline comment
 
-Ask: "Could this leak data to the wrong tenant?"
-If maybe → Add explicit tenant scoping
+Ask: "Could this leak data to the wrong workspace?"
+If maybe → Add explicit workspace scoping
 
 Ask: "Does this need to exist?"
 If unsure → Delete it, add when actually needed

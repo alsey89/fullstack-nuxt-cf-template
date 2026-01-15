@@ -19,7 +19,7 @@ import type { Filter, SortOrder } from "#server/types/api";
 /**
  * User Repository
  *
- * Users are global entities (not tenant-scoped).
+ * Users are global entities (not workspace-scoped).
  * All queries use Conditions.notDeleted for soft delete filtering.
  */
 export class UserRepository extends BaseRepository {

@@ -29,7 +29,7 @@ export default defineEventHandler(async (event) => {
   // Create identity service
   const identityService = createIdentityService(event);
 
-  // Sign up user (database is already selected by tenant middleware)
+  // Sign up user (database is already selected by workspace middleware)
   const result = await identityService.signUp({
     email: sanitized.email,
     password: sanitized.password,

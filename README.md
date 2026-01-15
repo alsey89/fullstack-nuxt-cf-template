@@ -243,7 +243,7 @@ wrangler secret put NUXT_TURNSTILE_SECRET_KEY  # Cloudflare Turnstile
 The template includes a production-ready foundational schema:
 
 - **Users** - Authentication and user management (global, not workspace-scoped)
-- **Workspaces** - Tenant/organization entities
+- **Workspaces** - Organization entities for multi-workspace isolation
 - **Workspace Members** - User-workspace membership with roles
 - **Workspace Invites** - Pending invitations to join workspaces
 - **User Settings** - JSON-based user preferences

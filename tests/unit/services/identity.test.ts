@@ -129,7 +129,7 @@ describe("IdentityService", () => {
         })
       );
       expect(mockAuditLogRepo.log).toHaveBeenCalledWith(
-        "test-workspace", // workspaceId (null for tenant-agnostic signup)
+        "test-workspace", // workspaceId (null for workspace-agnostic signup)
         "user-1",
         "USER_SIGNED_UP",
         "User",

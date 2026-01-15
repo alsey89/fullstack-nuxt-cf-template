@@ -31,7 +31,7 @@ describe("Conditions.workspaceScoped", () => {
   });
 
   it("uses the provided workspaceId value", () => {
-    const condition = Conditions.workspaceScoped(mockTable, "my-tenant");
+    const condition = Conditions.workspaceScoped(mockTable, "my-workspace");
     expect(condition).toBeDefined();
   });
 });

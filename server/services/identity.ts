@@ -45,7 +45,7 @@ export class IdentityService {
     private readonly userSettingsRepo: UserSettingsRepository,
     private readonly auditLogRepo: AuditLogRepository
   ) {
-    // Get database from event context (set by tenant middleware)
+    // Get database from event context (set by workspace middleware)
     this.db = getDatabase(event);
     this.userId = event.context.userId;
   }

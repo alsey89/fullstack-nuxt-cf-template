@@ -71,12 +71,12 @@ export const users = sqliteTable(
 );
 
 // ============================================================================
-// WORKSPACE DOMAIN - Multi-Tenant Support (Single Database)
+// WORKSPACE DOMAIN - Multi-Workspace Support (Single Database)
 // ============================================================================
 
 /**
  * Workspaces table
- * Represents a tenant/organization in the system
+ * Represents an organization/workspace in the system
  * Users can belong to multiple workspaces
  */
 export const workspaces = sqliteTable(
@@ -220,7 +220,7 @@ export const userSettings = sqliteTable(
 /**
  * Audit log
  * Track all significant actions for compliance
- * Tenant-scoped for multi-tenant isolation
+ * Workspace-scoped for multi-workspace isolation
  */
 export const auditLogs = sqliteTable(
   "audit_logs",
