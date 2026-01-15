@@ -12,6 +12,7 @@ export default defineNuxtConfig({
     // Set to true for multi-workspace mode (requires manual DB provisioning per workspace)
     multitenancy: {
       enabled: false, // Override with NUXT_MULTITENANCY_ENABLED
+      baseDomain: "", // Base domain for subdomain extraction (e.g., "myapp.com"). Override with NUXT_MULTITENANCY_BASE_DOMAIN
     },
     // RBAC Configuration
     rbac: {

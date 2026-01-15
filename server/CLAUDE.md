@@ -296,12 +296,13 @@ To add a new route:
 
 Ordered by filename prefix:
 1. `00.request-context.ts` - Capture request ID, IP, user agent
-2. `01.workspace.ts` - Set database binding
+2. `01.tenant.ts` - Select database binding (subdomain/header → DB_<TENANT> or default DB)
 3. `02.auth.ts` - Validate session, set userId and workspaceId (uses route config for public routes)
 4. `03.rate-limit.ts` - Rate limiting (uses route config for rate limit settings)
 
 Context variables available after middleware:
-- `event.context.db` - D1 database instance
+- `event.context.db` - D1 database instance (selected by tenant middleware)
+- `event.context.tenantId` - Tenant ID (from subdomain/header or "default")
 - `event.context.userId` - Authenticated user ID (if logged in)
 - `event.context.workspaceId` - Current workspace ID (from session)
 

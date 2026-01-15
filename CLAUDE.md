@@ -23,7 +23,7 @@ Full-stack template for Nuxt 4 on Cloudflare Workers with authentication, RBAC, 
 ```
 API Routes (server/api/**/*.ts)
     ↓
-Middleware (workspace context, auth, rate limiting)
+Middleware (tenant DB selection, auth, rate limiting)
     ↓
 Service Layer (business logic, request-scoped)
     ↓
@@ -32,11 +32,20 @@ Repository Layer (data access)
 Database (Drizzle ORM → D1)
 ```
 
-### Multi-Workspace Model
+### Isolation Model
 
-**Single-database architecture** with workspace isolation:
-- One D1 database for all workspaces
-- `workspaceId` column on workspace-scoped tables (references `workspaces.id`)
+Two levels of isolation:
+
+**1. Tenant (Infrastructure) - Which D1 database:**
+- Single-tenant mode (default): Uses `DB` binding
+- Multi-tenant mode: Subdomain + header → `DB_<TENANT>` binding
+  - Production: Subdomain required (e.g., `acme.myapp.com`)
+  - Development: Falls back to `X-Tenant-ID` header (for API tools)
+- Enable via `NUXT_MULTITENANCY_ENABLED=true`
+- Set base domain via `NUXT_MULTITENANCY_BASE_DOMAIN=myapp.com`
+
+**2. Workspace (Application) - Within a database:**
+- `workspaceId` column on workspace-scoped tables
 - Users are global (can belong to multiple workspaces)
 - Workspace context stored in session as `session.workspaceId`
 
