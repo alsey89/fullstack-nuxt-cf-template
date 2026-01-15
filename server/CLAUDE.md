@@ -27,41 +27,32 @@ API Route → Service → Repository → Database
 - **Services** contain business logic, validate tenant context, throw errors
 - **Repositories** are pure data access (no business logic)
 
-## Terminology
-
-| Term | Usage |
-|------|-------|
-| **tenant / tenantId** | Backend isolation context - used in middleware, session, service layer |
-| **workspace** | User-facing entity - the `workspaces` table that users see and manage |
-
-The same backend `tenantId` maps to a user-facing "workspace" (or could be "organization", "team", etc. depending on your app's branding).
-
 ## Service Pattern
 
 There are two types of services:
 
-### Tenant-Scoped Services (require tenantId)
-For services that operate on tenant-specific data:
+### Workspace-Scoped Services (require workspaceId)
+For services that operate on workspace-specific data:
 
 ```typescript
 export class ProjectService {
-  private readonly tenantId: string;
+  private readonly workspaceId: string;
 
   constructor(
     private readonly event: H3Event,
     private readonly projectRepo: ProjectRepository
   ) {
-    this.tenantId = event.context.tenantId;
+    this.workspaceId = event.context.workspaceId;
 
-    // ALWAYS validate tenant context for tenant-scoped services
-    if (!this.tenantId) {
-      throw new TenantContextMissingError();
+    // ALWAYS validate workspace context for workspace-scoped services
+    if (!this.workspaceId) {
+      throw new WorkspaceContextMissingError();
     }
   }
 }
 ```
 
-### Global Services (no tenantId requirement)
+### Global Services (no workspaceId requirement)
 For services that operate on global entities (like users):
 
 ```typescript
@@ -72,7 +63,7 @@ export class IdentityService {
     private readonly event: H3Event,
     private readonly userRepo: UserRepository
   ) {
-    // No tenant validation - users are global entities
+    // No workspace validation - users are global entities
     this.userId = event.context.userId;
   }
 }
@@ -94,11 +85,11 @@ Use the flat array pattern with `Conditions` helpers:
 import { Conditions } from "#server/repositories/helpers/conditions";
 
 export class XxxRepository extends BaseRepository {
-  // tenantId is REQUIRED for tenant-scoped entities
-  async findById(id: string, tenantId: string): Promise<Entity | null> {
+  // workspaceId is REQUIRED for workspace-scoped entities
+  async findById(id: string, workspaceId: string): Promise<Entity | null> {
     const conditions = [
       Conditions.notDeleted(schema.entities),
-      Conditions.tenantScoped(schema.entities, tenantId),
+      Conditions.workspaceScoped(schema.entities, workspaceId),
       eq(schema.entities.id, id),
     ];
 
@@ -112,13 +103,13 @@ export class XxxRepository extends BaseRepository {
   }
 
   // Complex queries with optional filters
-  async list(tenantId: string, filters: ListFilters): Promise<Entity[]> {
+  async list(workspaceId: string, filters: ListFilters): Promise<Entity[]> {
     const { search, status, ownerId } = filters;
 
     // Build conditions as flat array - each returns SQL | undefined
     const conditions = [
       Conditions.notDeleted(schema.entities),
-      Conditions.tenantScoped(schema.entities, tenantId),
+      Conditions.workspaceScoped(schema.entities, workspaceId),
       Conditions.search([schema.entities.name, schema.entities.description], search),
       status ? eq(schema.entities.status, status) : undefined,
       ownerId ? eq(schema.entities.ownerId, ownerId) : undefined,
@@ -141,8 +132,8 @@ Located at `server/repositories/helpers/conditions.ts`:
 // Soft delete filter
 Conditions.notDeleted(table)
 
-// Tenant scoping (for tenantId column)
-Conditions.tenantScoped(table, tenantId)
+// Workspace scoping (for workspaceId column)
+Conditions.workspaceScoped(table, workspaceId)
 
 // User ownership
 Conditions.userOwned(table, userId)
@@ -161,29 +152,29 @@ Conditions.all(condition1, condition2, maybeUndefined)
 Conditions.any(condition1, condition2)
 ```
 
-**Note:** For junction tables like `workspace_members` that use `workspaceId` as a foreign key, use `eq(table.workspaceId, id)` directly - this is a FK reference, not tenant isolation.
+**Note:** For junction tables like `workspace_members` that use `workspaceId` as a foreign key, use `eq(table.workspaceId, id)` directly - this is a FK reference, not workspace isolation.
 
-## Tenant Isolation
+## Workspace Isolation
 
-Every tenant-scoped query MUST include `tenantId`:
+Every workspace-scoped query MUST include `workspaceId`:
 
 ```typescript
-// ✅ Correct - tenant scoped
+// ✅ Correct - workspace scoped
 const conditions = [
   Conditions.notDeleted(schema.projects),
-  Conditions.tenantScoped(schema.projects, tenantId),
+  Conditions.workspaceScoped(schema.projects, workspaceId),
   eq(schema.projects.id, id),
 ];
 
-// ❌ Wrong - no tenant filter (data leakage!)
+// ❌ Wrong - no workspace filter (data leakage!)
 const conditions = [
   Conditions.notDeleted(schema.projects),
   eq(schema.projects.id, id),
 ];
 ```
 
-**Global entities (no tenantId):** `users`
-**Tenant-scoped entities:** `workspaces`, `workspace_members`, `workspace_invites`, `audit_logs`, and your domain tables
+**Global entities (no workspaceId):** `users`
+**Workspace-scoped entities:** `workspaces`, `workspace_members`, `workspace_invites`, `audit_logs`, and your domain tables
 
 ## RBAC (Config-Based)
 
@@ -306,13 +297,13 @@ To add a new route:
 Ordered by filename prefix:
 1. `00.request-context.ts` - Capture request ID, IP, user agent
 2. `01.workspace.ts` - Set database binding
-3. `02.auth.ts` - Validate session, set userId and tenantId (uses route config for public routes)
+3. `02.auth.ts` - Validate session, set userId and workspaceId (uses route config for public routes)
 4. `03.rate-limit.ts` - Rate limiting (uses route config for rate limit settings)
 
 Context variables available after middleware:
 - `event.context.db` - D1 database instance
 - `event.context.userId` - Authenticated user ID (if logged in)
-- `event.context.tenantId` - Current tenant/workspace ID (from session)
+- `event.context.workspaceId` - Current workspace ID (from session)
 
 ## SafeUser Pattern
 
@@ -341,7 +332,7 @@ import { users, workspaces } from "./identity";
 
 export const projects = sqliteTable("projects", {
   id: text("id").primaryKey().$defaultFn(() => crypto.randomUUID()),
-  tenantId: text("tenant_id").notNull().references(() => workspaces.id),
+  workspaceId: text("workspace_id").notNull().references(() => workspaces.id),
   name: text("name").notNull(),
   description: text("description"),
   ownerId: text("owner_id").references(() => users.id),
@@ -364,10 +355,10 @@ import { Conditions } from "#server/repositories/helpers/conditions";
 import { BaseRepository } from "./base";
 
 export class ProjectRepository extends BaseRepository {
-  async findById(id: string, tenantId: string) {
+  async findById(id: string, workspaceId: string) {
     const conditions = [
       Conditions.notDeleted(schema.projects),
-      Conditions.tenantScoped(schema.projects, tenantId),
+      Conditions.workspaceScoped(schema.projects, workspaceId),
       eq(schema.projects.id, id),
     ];
 
@@ -397,24 +388,24 @@ Create `server/services/{domain}.ts`:
 ```typescript
 import type { H3Event } from "h3";
 import { ProjectRepository } from "#server/repositories/project";
-import { TenantContextMissingError, NotFoundError } from "#server/error/errors";
+import { WorkspaceContextMissingError, NotFoundError } from "#server/error/errors";
 import { getDatabase } from "#server/lib/database";
 
 export class ProjectService {
-  private readonly tenantId: string;
+  private readonly workspaceId: string;
 
   constructor(
     private readonly event: H3Event,
     private readonly projectRepo: ProjectRepository
   ) {
-    this.tenantId = event.context.tenantId;
-    if (!this.tenantId) {
-      throw new TenantContextMissingError();
+    this.workspaceId = event.context.workspaceId;
+    if (!this.workspaceId) {
+      throw new WorkspaceContextMissingError();
     }
   }
 
   async getById(id: string) {
-    const project = await this.projectRepo.findById(id, this.tenantId);
+    const project = await this.projectRepo.findById(id, this.workspaceId);
     if (!project) {
       throw new NotFoundError("Project not found");
     }
@@ -481,9 +472,9 @@ npm run db:migrate:local
 
 ### Checklist
 
-- [ ] Schema with `tenantId`, `createdAt`, `updatedAt`, `deletedAt`
-- [ ] Repository using `Conditions.tenantScoped()`
-- [ ] Service with `TenantContextMissingError` check
+- [ ] Schema with `workspaceId`, `createdAt`, `updatedAt`, `deletedAt`
+- [ ] Repository using `Conditions.workspaceScoped()`
+- [ ] Service with `WorkspaceContextMissingError` check
 - [ ] Shared validators for input
 - [ ] API routes using factory pattern
 - [ ] Migration generated and applied

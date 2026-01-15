@@ -47,7 +47,7 @@ export default defineEventHandler(async (event) => {
 
   // Set session with user data and permissions
   // NOTE: nuxt-auth-utils requires a 'user' key for loggedIn to work
-  // IMPORTANT: tenantId is bound to session to prevent cross-tenant access
+  // IMPORTANT: workspaceId is bound to session to prevent cross-workspace access
   await setUserSession(event, {
     user: {
       id: user.id,
@@ -55,7 +55,7 @@ export default defineEventHandler(async (event) => {
       firstName: user.firstName,
       lastName: user.lastName,
     },
-    tenantId: event.context.tenantId, // Bind session to tenant (prevents cross-tenant session reuse)
+    workspaceId: event.context.workspaceId, // Bind session to workspace (prevents cross-workspace session reuse)
     permissions,
     permissionVersion,
     loggedInAt: Date.now(),

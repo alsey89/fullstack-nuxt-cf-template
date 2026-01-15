@@ -27,8 +27,8 @@ declare module "h3" {
       env: Env;
     };
     // Added by middleware
-    db?: D1Database; // Selected database (per-tenant or default)
-    tenantId?: string;
+    db?: D1Database; // Selected database (per-workspace or default)
+    workspaceId?: string;
     userId?: string;
     tokenPayload?: AccessTokenPayload;
   }

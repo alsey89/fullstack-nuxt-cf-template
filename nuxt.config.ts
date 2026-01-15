@@ -8,8 +8,8 @@ export default defineNuxtConfig({
 
   runtimeConfig: {
     // Multitenancy Configuration
-    // Default: Single-tenant mode (one database for all data)
-    // Set to true for multi-tenant mode (requires manual DB provisioning per tenant)
+    // Default: Single-workspace mode (one database for all data)
+    // Set to true for multi-workspace mode (requires manual DB provisioning per workspace)
     multitenancy: {
       enabled: false, // Override with NUXT_MULTITENANCY_ENABLED
     },

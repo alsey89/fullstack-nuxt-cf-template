@@ -51,7 +51,7 @@ const fallbackMessages: Record<string, { title: string; description: string }> =
     title: "Session Expired",
     description: "Your session has expired. Please sign in again.",
   },
-  [ERROR_CODES.TENANT_MISMATCH]: {
+  [ERROR_CODES.WORKSPACE_MISMATCH]: {
     title: "Access Denied",
     description: "You don't have access to this workspace.",
   },
@@ -84,7 +84,7 @@ const redirectConfig: Partial<Record<ErrorCode, { path: string }>> = {
   [ERROR_CODES.AUTH_REQUIRED]: { path: "/auth/signin" },
   [ERROR_CODES.INVALID_TOKEN]: { path: "/auth/signin" },
   [ERROR_CODES.TOKEN_EXPIRED]: { path: "/auth/signin" },
-  [ERROR_CODES.TENANT_MISMATCH]: { path: "/auth/signin" },
+  [ERROR_CODES.WORKSPACE_MISMATCH]: { path: "/auth/signin" },
 };
 
 /**
@@ -263,7 +263,7 @@ export function useErrorHandler() {
       ERROR_CODES.AUTH_REQUIRED,
       ERROR_CODES.INVALID_TOKEN,
       ERROR_CODES.TOKEN_EXPIRED,
-      ERROR_CODES.TENANT_MISMATCH,
+      ERROR_CODES.WORKSPACE_MISMATCH,
     ];
     return authErrors.includes(code as ErrorCode);
   }

@@ -75,9 +75,9 @@ export class AccountInactiveError extends AppError {
   }
 }
 
-export class TenantMismatchError extends AppError {
-  constructor(message = 'Session tenant mismatch. Please sign in again.', details?: any) {
-    super(message, 401, ERROR_CODES.TENANT_MISMATCH, details)
+export class WorkspaceMismatchError extends AppError {
+  constructor(message = 'Session workspace mismatch. Please sign in again.', details?: any) {
+    super(message, 401, ERROR_CODES.WORKSPACE_MISMATCH, details)
   }
 }
 
@@ -181,9 +181,9 @@ export class EmailAlreadyExistsError extends AppError {
   }
 }
 
-export class TenantIdTakenError extends AppError {
-  constructor(message = 'Tenant ID already taken', details?: any) {
-    super(message, 409, ERROR_CODES.TENANT_ID_TAKEN, details)
+export class WorkspaceIdTakenError extends AppError {
+  constructor(message = 'Workspace ID already taken', details?: any) {
+    super(message, 409, ERROR_CODES.WORKSPACE_ID_TAKEN, details)
   }
 }
 

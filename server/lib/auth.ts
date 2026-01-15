@@ -29,14 +29,14 @@ const JWT_CONFIG = {
 export interface EmailConfirmTokenPayload {
   userId: string;
   email: string;
-  tenantId: string; // Bind token to tenant (prevents cross-tenant token reuse)
+  workspaceId: string; // Bind token to workspace (prevents cross-workspace token reuse)
   purpose: "email-confirm";
 }
 
 export interface PasswordResetTokenPayload {
   userId: string;
   email: string;
-  tenantId: string; // Bind token to tenant (prevents cross-tenant token reuse)
+  workspaceId: string; // Bind token to workspace (prevents cross-workspace token reuse)
   purpose: "password-reset";
 }
 
@@ -67,7 +67,7 @@ function getJWTSecret(event?: H3Event): Uint8Array {
 export async function generateEmailConfirmToken(
   userId: string,
   email: string,
-  tenantId: string,
+  workspaceId: string,
   event?: H3Event
 ): Promise<string> {
   const secret = getJWTSecret(event);
@@ -77,7 +77,7 @@ export async function generateEmailConfirmToken(
   return await new SignJWT({
     userId,
     email,
-    tenantId, // Bind token to tenant
+    workspaceId, // Bind token to workspace
     purpose: "email-confirm",
   })
     .setProtectedHeader({ alg: "HS256" })
@@ -94,7 +94,7 @@ export async function generateEmailConfirmToken(
 export async function generatePasswordResetToken(
   userId: string,
   email: string,
-  tenantId: string,
+  workspaceId: string,
   event?: H3Event
 ): Promise<string> {
   const secret = getJWTSecret(event);
@@ -104,7 +104,7 @@ export async function generatePasswordResetToken(
   return await new SignJWT({
     userId,
     email,
-    tenantId, // Bind token to tenant
+    workspaceId, // Bind token to workspace
     purpose: "password-reset",
   })
     .setProtectedHeader({ alg: "HS256" })
@@ -118,12 +118,12 @@ export async function generatePasswordResetToken(
 /**
  * Verify email confirmation token
  * @param token - JWT token to verify
- * @param currentTenantId - Current tenant ID from context (for validation)
+ * @param currentWorkspaceId - Current workspace ID from context (for validation)
  * @param event - H3 event for config access
  */
 export async function verifyEmailConfirmToken(
   token: string,
-  currentTenantId: string,
+  currentWorkspaceId: string,
   event?: H3Event
 ): Promise<EmailConfirmTokenPayload> {
   try {
@@ -140,11 +140,11 @@ export async function verifyEmailConfirmToken(
       });
     }
 
-    // CRITICAL: Validate token is for current tenant
-    if (payload.tenantId !== currentTenantId) {
-      throw new InvalidTokenError("Token tenant mismatch", {
-        tokenTenantId: payload.tenantId,
-        currentTenantId: currentTenantId
+    // CRITICAL: Validate token is for current workspace
+    if (payload.workspaceId !== currentWorkspaceId) {
+      throw new InvalidTokenError("Token workspace mismatch", {
+        tokenWorkspaceId: payload.workspaceId,
+        currentWorkspaceId: currentWorkspaceId
       });
     }
 
@@ -164,12 +164,12 @@ export async function verifyEmailConfirmToken(
 /**
  * Verify password reset token
  * @param token - JWT token to verify
- * @param currentTenantId - Current tenant ID from context (for validation)
+ * @param currentWorkspaceId - Current workspace ID from context (for validation)
  * @param event - H3 event for config access
  */
 export async function verifyPasswordResetToken(
   token: string,
-  currentTenantId: string,
+  currentWorkspaceId: string,
   event?: H3Event
 ): Promise<PasswordResetTokenPayload> {
   try {
@@ -186,11 +186,11 @@ export async function verifyPasswordResetToken(
       });
     }
 
-    // CRITICAL: Validate token is for current tenant
-    if (payload.tenantId !== currentTenantId) {
-      throw new InvalidTokenError("Token tenant mismatch", {
-        tokenTenantId: payload.tenantId,
-        currentTenantId: currentTenantId
+    // CRITICAL: Validate token is for current workspace
+    if (payload.workspaceId !== currentWorkspaceId) {
+      throw new InvalidTokenError("Token workspace mismatch", {
+        tokenWorkspaceId: payload.workspaceId,
+        currentWorkspaceId: currentWorkspaceId
       });
     }
 

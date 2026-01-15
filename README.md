@@ -7,8 +7,8 @@ A production-ready full-stack web application template built on Cloudflare Worke
 - **⚡ Cloudflare Workers** - Edge computing with global distribution
 - **🗄️ Cloudflare D1** - Serverless SQLite database with atomic batch operations
 - **🔐 Authentication** - Secure session-based auth with nuxt-auth-utils
-- **🏢 Multi-tenancy** - Configurable per-tenant database isolation (defaults to single-tenant)
-- **🛡️ Security** - Session-tenant binding, JWT token isolation, cross-tenant protection
+- **🏢 Multi-workspace** - Configurable multi-workspace support (defaults to single-workspace)
+- **🛡️ Security** - Session-workspace binding, JWT token isolation, cross-workspace protection
 - **⚖️ RBAC** - Enterprise-grade role-based access control with wildcards
 - **📊 Database ORM** - Drizzle ORM with TypeScript
 - **✅ Validation** - Shared Zod schemas for FE/BE consistency with vee-validate
@@ -95,23 +95,23 @@ npm run deploy
 
 ## 📋 Architecture
 
-Modern serverless architecture with configurable multi-tenancy:
+Modern serverless architecture with configurable multi-workspace support:
 
 ```
 API Routes (server/api/)
     ↓
-Middleware (request context, tenant resolution)
+Middleware (request context, workspace resolution)
     ↓
 Services (request-scoped, factory functions)
     ↓
 Repositories (database-scoped CRUD with batch operations)
     ↓
-Drizzle ORM → D1 Database (single or multi-tenant)
+Drizzle ORM → D1 Database (single or multi-workspace)
 ```
 
 ### Key Features
 
-- **Configurable tenancy** - Single-tenant by default, multi-tenant opt-in via configuration
+- **Configurable workspaces** - Single-workspace by default, multi-workspace opt-in via configuration
 - **Atomic operations** - Batch operations using D1's native batch API for data consistency
 - **Request-scoped services** - No singletons, fresh instances per request
 - **RBAC system** - Enterprise-grade role-based access control with wildcards
@@ -119,64 +119,64 @@ Drizzle ORM → D1 Database (single or multi-tenant)
 - **Type-safe** - End-to-end TypeScript with Drizzle schema
 - **Graceful degradation** - RBAC can be toggled on/off via configuration
 
-### Multi-Tenancy Options
+### Multi-Workspace Options
 
-**Single-Tenant (Default):**
+**Single-Workspace (Default):**
 - One database for the entire application
 - Simplest setup, best for most use cases
 - Set `NUXT_MULTITENANCY_ENABLED=false` in runtime config
 
-**Multi-Tenant (Optional):**
-- Separate D1 database per tenant via manual provisioning
-- Each tenant requires a `DB_<TENANT>` binding in wrangler config
-- Requires tenant provisioning workflow (see [docs/TEMPLATE_SETUP.md](docs/TEMPLATE_SETUP.md))
+**Multi-Workspace (Optional):**
+- Separate D1 database per workspace via manual provisioning
+- Each workspace requires a `DB_<WORKSPACE>` binding in wrangler config
+- Requires workspace provisioning workflow (see [docs/TEMPLATE_SETUP.md](docs/TEMPLATE_SETUP.md))
 
-**⚠️ Important:** You cannot switch between single-tenant and multi-tenant mode without data migration. Sessions from one mode won't work in the other. Choose your mode carefully before deploying to production.
+**⚠️ Important:** You cannot switch between single-workspace and multi-workspace mode without data migration. Sessions from one mode won't work in the other. Choose your mode carefully before deploying to production.
 
 ## 🛡️ Security Features
 
-### Session-Tenant Binding
-Sessions are cryptographically bound to tenant context to prevent cross-tenant access:
-- **Automatic Protection**: Sessions created in Tenant A cannot be used in Tenant B
-- **Mode-Agnostic**: Works in both single-tenant (`tenantId="default"`) and multi-tenant modes
-- **JWT Token Isolation**: Email confirmation and password reset tokens include tenant validation
+### Session-Workspace Binding
+Sessions are cryptographically bound to workspace context to prevent cross-workspace access:
+- **Automatic Protection**: Sessions created in Workspace A cannot be used in Workspace B
+- **Mode-Agnostic**: Works in both single-workspace (`workspaceId="default"`) and multi-workspace modes
+- **JWT Token Isolation**: Email confirmation and password reset tokens include workspace validation
 - **Zero Configuration**: Security enforcement is built-in and always active
 
-### Cross-Tenant Protection
+### Cross-Workspace Protection
 The template automatically prevents:
-- ✅ Session reuse across different tenants
-- ✅ JWT token replay attacks across tenants
-- ✅ Unauthorized database access via tenant manipulation
-- ✅ Cross-tenant data leakage through middleware validation
+- ✅ Session reuse across different workspaces
+- ✅ JWT token replay attacks across workspaces
+- ✅ Unauthorized database access via workspace manipulation
+- ✅ Cross-workspace data leakage through middleware validation
 
 See [server/CLAUDE.md](server/CLAUDE.md) for security implementation details.
 
-## ⚙️ Multitenancy & RBAC Configuration
+## ⚙️ Multi-Workspace & RBAC Configuration
 
-### Multitenancy Modes
+### Workspace Modes
 
-**Single-Tenant Mode (Default)**
+**Single-Workspace Mode (Default)**
 - ✅ One organization per deployment
 - ✅ One D1 database for all data
-- ✅ No tenant headers required
+- ✅ No workspace headers required
 - ✅ Perfect for internal tools or dedicated deployments
 - ✅ Zero configuration required
 
-**Multi-Tenant Mode (Optional)**
-- ⚙️ Separate D1 database per tenant (manual provisioning required)
-- ⚙️ Each tenant requires wrangler binding: `DB_<TENANT>`
-- ⚙️ Tenant ID passed via `x-tenant-id` header
+**Multi-Workspace Mode (Optional)**
+- ⚙️ Separate D1 database per workspace (manual provisioning required)
+- ⚙️ Each workspace requires wrangler binding: `DB_<WORKSPACE>`
+- ⚙️ Workspace ID passed via `x-workspace-id` header
 - 📚 See [docs/TEMPLATE_SETUP.md](docs/TEMPLATE_SETUP.md) for provisioning guide
 
-**Enable Multi-Tenant Mode:**
+**Enable Multi-Workspace Mode:**
 ```bash
 # In .dev.vars or runtime config
 NUXT_MULTITENANCY_ENABLED=true
 
-# Each tenant needs a D1 binding in wrangler config:
+# Each workspace needs a D1 binding in wrangler config:
 # [[d1_databases]]
-# binding = "DB_TENANT1"
-# database_name = "tenant1-db"
+# binding = "DB_WORKSPACE1"
+# database_name = "workspace1-db"
 # database_id = "xxx-yyy-zzz"
 ```
 

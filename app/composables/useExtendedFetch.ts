@@ -37,20 +37,20 @@ interface ExtendedFetchOptions {
 
 /**
  * A composable for making API requests with extended functionality.
- * It includes request ID and tenant ID headers and centralized error handling.
+ * It includes request ID and workspace ID headers and centralized error handling.
  * Authentication is handled automatically by nuxt-auth-utils via session cookies.
  * It also provides a simple fetch that does not handle errors.
  *
  * @module useExtendedFetch
  * @requires handleApiError - For centralized error handling
- * @requires useSubdomain - For tenant identification
+ * @requires useSubdomain - For workspace identification
  * @requires useRuntimeConfig - For accessing runtime configuration like API URL
  */
 export function useExtendedFetch() {
   const baseUrl = useRuntimeConfig().public.apiUrl;
 
   /**
-   * A simple $fetch wrapper that includes request ID and tenant ID headers.
+   * A simple $fetch wrapper that includes request ID and workspace ID headers.
    * It does NOT handle errors.
    *
    * @param path - The API endpoint to fetch
@@ -68,7 +68,7 @@ export function useExtendedFetch() {
     const headers: Record<string, string> = {
       "Content-Type": "application/json",
       "X-Request-Id": requestId,
-      "X-Tenant-Id": subdomain || "",
+      "X-Workspace-Id": subdomain || "",
       ...options.headers,
     };
 

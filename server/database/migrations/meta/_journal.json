@@ -5,22 +5,8 @@
     {
       "idx": 0,
       "version": "6",
-      "when": 1764840386223,
-      "tag": "0000_big_namor",
-      "breakpoints": true
-    },
-    {
-      "idx": 1,
-      "version": "6",
-      "when": 1768395694728,
-      "tag": "0001_chief_wolverine",
-      "breakpoints": true
-    },
-    {
-      "idx": 2,
-      "version": "6",
-      "when": 1768400090381,
-      "tag": "0002_clear_rictor",
+      "when": 1768461656313,
+      "tag": "0000_mixed_marvex",
       "breakpoints": true
     }
   ]

@@ -6,7 +6,6 @@ import { Conditions, combineConditions } from "#server/repositories/helpers/cond
 // Mock table for testing
 const mockTable = sqliteTable("test_table", {
   id: text("id").primaryKey(),
-  tenantId: text("tenant_id").notNull(),
   workspaceId: text("workspace_id").notNull(),
   userId: text("user_id").notNull(),
   name: text("name"),
@@ -25,14 +24,14 @@ describe("Conditions.notDeleted", () => {
   });
 });
 
-describe("Conditions.tenantScoped", () => {
-  it("returns SQL condition for tenantId equality", () => {
-    const condition = Conditions.tenantScoped(mockTable, "tenant-123");
+describe("Conditions.workspaceScoped", () => {
+  it("returns SQL condition for workspaceId equality", () => {
+    const condition = Conditions.workspaceScoped(mockTable, "workspace-123");
     expect(condition).toBeDefined();
   });
 
-  it("uses the provided tenantId value", () => {
-    const condition = Conditions.tenantScoped(mockTable, "my-tenant");
+  it("uses the provided workspaceId value", () => {
+    const condition = Conditions.workspaceScoped(mockTable, "my-tenant");
     expect(condition).toBeDefined();
   });
 });
@@ -148,7 +147,7 @@ describe("Conditions.all", () => {
   it("combines multiple valid conditions", () => {
     const condition = Conditions.all(
       Conditions.notDeleted(mockTable),
-      Conditions.tenantScoped(mockTable, "tenant-1")
+      Conditions.workspaceScoped(mockTable, "workspace-1")
     );
     expect(condition).toBeDefined();
   });
@@ -173,8 +172,8 @@ describe("Conditions.any", () => {
 
   it("combines multiple valid conditions with OR", () => {
     const condition = Conditions.any(
-      Conditions.tenantScoped(mockTable, "tenant-1"),
-      Conditions.tenantScoped(mockTable, "tenant-2")
+      Conditions.workspaceScoped(mockTable, "workspace-1"),
+      Conditions.workspaceScoped(mockTable, "workspace-2")
     );
     expect(condition).toBeDefined();
   });
@@ -194,7 +193,7 @@ describe("combineConditions", () => {
   it("combines valid conditions", () => {
     const conditions = [
       Conditions.notDeleted(mockTable),
-      Conditions.tenantScoped(mockTable, "tenant-1"),
+      Conditions.workspaceScoped(mockTable, "workspace-1"),
       undefined, // Should be filtered out
     ];
     const condition = combineConditions(conditions);
@@ -204,7 +203,7 @@ describe("combineConditions", () => {
   it("is equivalent to Conditions.all", () => {
     const conditions = [
       Conditions.notDeleted(mockTable),
-      Conditions.tenantScoped(mockTable, "tenant-1"),
+      Conditions.workspaceScoped(mockTable, "workspace-1"),
     ];
     const combined = combineConditions(conditions);
     const all = Conditions.all(...conditions);

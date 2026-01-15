@@ -4,7 +4,7 @@ import { getRequestIP, getHeader } from 'h3';
 // REQUEST CONTEXT MIDDLEWARE
 // ========================================
 // Captures request metadata for audit logging and tracking
-// Runs before tenant and auth middleware (00 prefix)
+// Runs before workspace and auth middleware (00 prefix)
 // ========================================
 
 /**

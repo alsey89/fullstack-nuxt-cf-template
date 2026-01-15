@@ -129,7 +129,7 @@ describe("IdentityService", () => {
         })
       );
       expect(mockAuditLogRepo.log).toHaveBeenCalledWith(
-        "test-tenant", // tenantId (null for tenant-agnostic signup)
+        "test-workspace", // workspaceId (null for tenant-agnostic signup)
         "user-1",
         "USER_SIGNED_UP",
         "User",
@@ -190,7 +190,7 @@ describe("IdentityService", () => {
 
       expect(result.user.id).toBe("user-1");
       expect(mockAuditLogRepo.log).toHaveBeenCalledWith(
-        "test-tenant", // tenantId from mock event context
+        "test-workspace", // workspaceId from mock event context
         "user-1",
         "USER_SIGNED_IN",
         "User",
@@ -269,7 +269,7 @@ describe("IdentityService", () => {
       expect(result.isEmailVerified).toBe(true);
       expect(mockUserRepo.confirmEmail).toHaveBeenCalledWith("user-1");
       expect(mockAuditLogRepo.log).toHaveBeenCalledWith(
-        "test-tenant", // tenantId from mock event context
+        "test-workspace", // workspaceId from mock event context
         "user-1",
         "EMAIL_CONFIRMED",
         "User",
@@ -327,7 +327,7 @@ describe("IdentityService", () => {
 
       expect(result.resetToken).toBe("reset-token");
       expect(mockAuditLogRepo.log).toHaveBeenCalledWith(
-        "test-tenant", // tenantId from mock event context
+        "test-workspace", // workspaceId from mock event context
         "user-1",
         "PASSWORD_RESET_REQUESTED",
         "User",
@@ -375,7 +375,7 @@ describe("IdentityService", () => {
       expect(result.id).toBe("user-1");
       expect(mockUserRepo.updatePassword).toHaveBeenCalled();
       expect(mockAuditLogRepo.log).toHaveBeenCalledWith(
-        "test-tenant", // tenantId from mock event context
+        "test-workspace", // workspaceId from mock event context
         "user-1",
         "PASSWORD_RESET",
         "User",
@@ -464,7 +464,7 @@ describe("IdentityService", () => {
 
       expect(result.firstName).toBe("Jane");
       expect(mockAuditLogRepo.log).toHaveBeenCalledWith(
-        "test-tenant", // tenantId from mock event context
+        "test-workspace", // workspaceId from mock event context
         "test-user-id",
         "USER_UPDATED",
         "User",

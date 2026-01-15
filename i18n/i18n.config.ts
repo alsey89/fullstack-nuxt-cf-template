@@ -133,9 +133,9 @@ export default defineI18nConfig(() => ({
           title: "Session Expired",
           description: "Your session has expired. Please sign in again.",
         },
-        TENANT_MISMATCH: {
-          title: "Tenant Mismatch",
-          description: "You are not authorized to access this tenant.",
+        WORKSPACE_MISMATCH: {
+          title: "Workspace Mismatch",
+          description: "You are not authorized to access this workspace.",
         },
         EMAIL_NOT_CONFIRMED: {
           title: "Email Not Confirmed",
@@ -238,10 +238,10 @@ export default defineI18nConfig(() => ({
           description: "An account with this email address already exists.",
           action: { label: "Sign In" },
         },
-        TENANT_ID_TAKEN: {
-          title: "Tenant ID Taken",
+        WORKSPACE_ID_TAKEN: {
+          title: "Workspace ID Taken",
           description:
-            "This tenant ID is already in use. Please choose another.",
+            "This workspace ID is already in use. Please choose another.",
         },
 
         // Rate Limit Errors (429)
@@ -411,9 +411,9 @@ export default defineI18nConfig(() => ({
           title: "会话已过期",
           description: "您的会话已过期。请重新登录。",
         },
-        TENANT_MISMATCH: {
-          title: "租户不匹配",
-          description: "您无权访问此租户。",
+        WORKSPACE_MISMATCH: {
+          title: "工作区不匹配",
+          description: "您无权访问此工作区。",
         },
         EMAIL_NOT_CONFIRMED: {
           title: "邮箱未确认",
@@ -514,9 +514,9 @@ export default defineI18nConfig(() => ({
           description: "使用此邮箱地址的账户已存在。",
           action: { label: "登录" },
         },
-        TENANT_ID_TAKEN: {
-          title: "租户ID已被占用",
-          description: "此租户ID已在使用中。请选择其他ID。",
+        WORKSPACE_ID_TAKEN: {
+          title: "工作区ID已被占用",
+          description: "此工作区ID已在使用中。请选择其他ID。",
         },
 
         // 速率限制错误 (429)
@@ -683,9 +683,9 @@ export default defineI18nConfig(() => ({
           title: "會話已過期",
           description: "您的會話已過期。請重新登入。",
         },
-        TENANT_MISMATCH: {
-          title: "租戶不匹配",
-          description: "您無權存取此租戶。",
+        WORKSPACE_MISMATCH: {
+          title: "工作區不匹配",
+          description: "您無權存取此工作區。",
         },
         EMAIL_NOT_CONFIRMED: {
           title: "信箱未確認",
@@ -786,9 +786,9 @@ export default defineI18nConfig(() => ({
           description: "使用此信箱地址的帳戶已存在。",
           action: { label: "登入" },
         },
-        TENANT_ID_TAKEN: {
-          title: "租戶ID已被佔用",
-          description: "此租戶ID已在使用中。請選擇其他ID。",
+        WORKSPACE_ID_TAKEN: {
+          title: "工作區ID已被佔用",
+          description: "此工作區ID已在使用中。請選擇其他ID。",
         },
 
         // 速率限制錯誤 (429)

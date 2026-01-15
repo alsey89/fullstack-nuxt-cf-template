@@ -227,9 +227,9 @@ export const auditLogs = sqliteTable(
   {
     ...baseFields,
 
-    // Tenant isolation - which workspace this log belongs to
+    // Workspace isolation - which workspace this log belongs to
     // Nullable for system-level actions that aren't workspace-specific
-    tenantId: text("tenant_id").references(() => workspaces.id, {
+    workspaceId: text("workspace_id").references(() => workspaces.id, {
       onDelete: "cascade",
     }),
 
@@ -266,7 +266,7 @@ export const auditLogs = sqliteTable(
     userAgent: text("user_agent"),
   },
   (table) => ({
-    tenantIdx: index("audit_logs_tenant_idx").on(table.tenantId),
+    workspaceIdx: index("audit_logs_workspace_idx").on(table.workspaceId),
     userIdx: index("audit_logs_user_idx").on(table.userId),
     actionIdx: index("audit_logs_action_idx").on(table.action),
     entityIdx: index("audit_logs_entity_idx").on(
@@ -326,8 +326,8 @@ export const workspaceInvitesRelations = relations(workspaceInvites, ({ one }) =
 }));
 
 export const auditLogsRelations = relations(auditLogs, ({ one }) => ({
-  tenant: one(workspaces, {
-    fields: [auditLogs.tenantId],
+  workspace: one(workspaces, {
+    fields: [auditLogs.workspaceId],
     references: [workspaces.id],
   }),
   user: one(users, {

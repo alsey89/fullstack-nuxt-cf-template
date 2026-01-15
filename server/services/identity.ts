@@ -52,7 +52,7 @@ export class IdentityService {
 
   /**
    * Helper to log audit events with request context
-   * Note: tenantId can be null for tenant-agnostic actions like signup
+   * Note: workspaceId can be null for workspace-agnostic actions like signup
    */
   private async logAudit(
     userId: string | null,
@@ -66,10 +66,10 @@ export class IdentityService {
       stateAfter?: Record<string, any>;
     }
   ) {
-    // Get tenantId from context (may be null for tenant-agnostic actions)
-    const tenantId = this.event.context.tenantId || null;
+    // Get workspaceId from context (may be null for workspace-agnostic actions)
+    const workspaceId = this.event.context.workspaceId || null;
 
-    return this.auditLogRepo.log(tenantId, userId, action, entityType, entityId, {
+    return this.auditLogRepo.log(workspaceId, userId, action, entityType, entityId, {
       requestId: this.event.context.requestId,
       endpoint: this.event.context.endpoint,
       method: this.event.context.method,
@@ -88,7 +88,7 @@ export class IdentityService {
 
   /**
    * Sign up a new user
-   * Note: Signup is tenant-agnostic - users are global entities
+   * Note: Signup is workspace-agnostic - users are global entities
    */
   async signUp(data: {
     email: string;
@@ -141,7 +141,7 @@ export class IdentityService {
     }
 
     // Generate email confirmation token
-    // Use "global" as tenantId since signup is tenant-agnostic
+    // Use "global" as workspaceId since signup is workspace-agnostic
     const confirmToken = await generateEmailConfirmToken(
       user.id,
       user.email,
@@ -299,14 +299,14 @@ export class IdentityService {
    * Confirm email address
    */
   async confirmEmail(token: string) {
-    const tenantId = this.event.context.tenantId;
-    if (!tenantId) {
-      throw new InternalServerError("Tenant context not available");
+    const workspaceId = this.event.context.workspaceId;
+    if (!workspaceId) {
+      throw new InternalServerError("Workspace context not available");
     }
 
     const { userId, email } = await verifyEmailConfirmToken(
       token,
-      tenantId,
+      workspaceId,
       this.event
     );
 
@@ -341,15 +341,15 @@ export class IdentityService {
       return { resetToken: null };
     }
 
-    const tenantId = this.event.context.tenantId;
-    if (!tenantId) {
-      throw new InternalServerError("Tenant context not available");
+    const workspaceId = this.event.context.workspaceId;
+    if (!workspaceId) {
+      throw new InternalServerError("Workspace context not available");
     }
 
     const resetToken = await generatePasswordResetToken(
       user.id,
       user.email,
-      tenantId,
+      workspaceId,
       this.event
     );
 
@@ -367,14 +367,14 @@ export class IdentityService {
    * Reset password with token
    */
   async resetPassword(token: string, newPassword: string) {
-    const tenantId = this.event.context.tenantId;
-    if (!tenantId) {
-      throw new InternalServerError("Tenant context not available");
+    const workspaceId = this.event.context.workspaceId;
+    if (!workspaceId) {
+      throw new InternalServerError("Workspace context not available");
     }
 
     const { userId, email } = await verifyPasswordResetToken(
       token,
-      tenantId,
+      workspaceId,
       this.event
     );
 

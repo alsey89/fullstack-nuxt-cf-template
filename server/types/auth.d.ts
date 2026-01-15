@@ -12,7 +12,7 @@ declare module '#auth-utils' {
   }
 
   interface UserSession {
-    tenantId: string // Tenant ID bound to session (prevents cross-tenant access)
+    workspaceId: string // Workspace ID bound to session (prevents cross-workspace access)
     permissions: PermissionCode[]
     permissionVersion: number // Version for permission cache invalidation
     loggedInAt: number

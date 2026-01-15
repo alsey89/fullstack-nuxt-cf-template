@@ -260,8 +260,8 @@ export class UserSettingsRepository extends BaseRepository {
 /**
  * Audit Log Repository
  *
- * Audit logs are tenant-scoped for multi-tenant isolation.
- * Use tenantId parameter for all queries.
+ * Audit logs are workspace-scoped for multi-workspace isolation.
+ * Use workspaceId parameter for all queries.
  */
 export class AuditLogRepository extends BaseRepository {
   constructor(db: D1Database) {
@@ -272,7 +272,7 @@ export class AuditLogRepository extends BaseRepository {
    * Log an action
    */
   async log(
-    tenantId: string | null,
+    workspaceId: string | null,
     userId: string | null,
     action: string,
     entityType: string | null,
@@ -292,7 +292,7 @@ export class AuditLogRepository extends BaseRepository {
     const [log] = await this.drizzle
       .insert(schema.auditLogs)
       .values({
-        tenantId,
+        workspaceId,
         userId,
         action,
         entityType,
@@ -313,17 +313,17 @@ export class AuditLogRepository extends BaseRepository {
   }
 
   /**
-   * Get audit logs for entity (tenant-scoped)
+   * Get audit logs for entity (workspace-scoped)
    */
   async getLogsForEntity(
-    tenantId: string,
+    workspaceId: string,
     entityType: string,
     entityId: string,
     limit = 50
   ): Promise<AuditLog[]> {
     const conditions = [
       Conditions.notDeleted(schema.auditLogs),
-      Conditions.tenantScoped(schema.auditLogs, tenantId),
+      Conditions.workspaceScoped(schema.auditLogs, workspaceId),
       eq(schema.auditLogs.entityType, entityType),
       eq(schema.auditLogs.entityId, entityId),
     ];
@@ -337,12 +337,12 @@ export class AuditLogRepository extends BaseRepository {
   }
 
   /**
-   * Get recent audit logs (tenant-scoped)
+   * Get recent audit logs (workspace-scoped)
    */
-  async getRecentLogs(tenantId: string, limit = 100): Promise<AuditLog[]> {
+  async getRecentLogs(workspaceId: string, limit = 100): Promise<AuditLog[]> {
     const conditions = [
       Conditions.notDeleted(schema.auditLogs),
-      Conditions.tenantScoped(schema.auditLogs, tenantId),
+      Conditions.workspaceScoped(schema.auditLogs, workspaceId),
     ];
 
     return this.drizzle

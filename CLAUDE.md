@@ -23,7 +23,7 @@ Full-stack template for Nuxt 4 on Cloudflare Workers with authentication, RBAC, 
 ```
 API Routes (server/api/**/*.ts)
     ↓
-Middleware (tenant context, auth, rate limiting)
+Middleware (workspace context, auth, rate limiting)
     ↓
 Service Layer (business logic, request-scoped)
     ↓
@@ -32,22 +32,13 @@ Repository Layer (data access)
 Database (Drizzle ORM → D1)
 ```
 
-### Terminology
+### Multi-Workspace Model
 
-| Term | Usage |
-|------|-------|
-| **tenant / tenantId** | Backend isolation context - used in middleware, session, service layer |
-| **workspace** | User-facing entity - the `workspaces` table that users see and manage |
-
-The same backend `tenantId` maps to a user-facing "workspace" (or could be branded as "organization", "team", etc.).
-
-### Multi-Tenancy Model
-
-**Single-database architecture** with tenant isolation:
-- One D1 database for all tenants
-- `tenantId` column on tenant-scoped tables (references `workspaces.id`)
+**Single-database architecture** with workspace isolation:
+- One D1 database for all workspaces
+- `workspaceId` column on workspace-scoped tables (references `workspaces.id`)
 - Users are global (can belong to multiple workspaces)
-- Tenant context stored in session as `session.tenantId`
+- Workspace context stored in session as `session.workspaceId`
 
 ### RBAC Model
 
@@ -94,28 +85,28 @@ if (!workspace?.members) {
 }
 ```
 
-### Tenant Scoping
-All tenant-scoped queries MUST include `tenantId`:
+### Workspace Scoping
+All workspace-scoped queries MUST include `workspaceId`:
 
 ```typescript
 import { Conditions } from "#server/repositories/helpers/conditions";
 
-// ✅ Correct - tenant scoped
+// ✅ Correct - workspace scoped
 const conditions = [
   Conditions.notDeleted(schema.projects),
-  Conditions.tenantScoped(schema.projects, tenantId),
+  Conditions.workspaceScoped(schema.projects, workspaceId),
   eq(schema.projects.id, projectId),
 ];
 
-// ❌ Wrong - no tenant filter (data leakage!)
+// ❌ Wrong - no workspace filter (data leakage!)
 const conditions = [
   Conditions.notDeleted(schema.projects),
   eq(schema.projects.id, projectId),
 ];
 ```
 
-**Global entities (no tenantId):** `users`
-**Tenant-scoped entities:** `workspaces`, `workspace_members`, `workspace_invites`, `audit_logs`, and your domain tables
+**Global entities (no workspaceId):** `users`
+**Workspace-scoped entities:** `workspaces`, `workspace_members`, `workspace_invites`, `audit_logs`, and your domain tables
 
 ## Git Conventions
 

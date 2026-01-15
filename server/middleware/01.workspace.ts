@@ -4,12 +4,12 @@ import { InternalServerError } from "#server/error/errors";
 // DATABASE CONTEXT MIDDLEWARE
 // ========================================
 // Sets up database binding for all API requests.
-// Uses single-database architecture with tenantId for isolation.
+// Uses single-database architecture with workspaceId for isolation.
 //
 // Context variable set:
 // - event.context.db: D1 database instance
 //
-// Note: tenantId is set by auth middleware (02) from session.
+// Note: workspaceId is set by auth middleware (02) from session.
 // This middleware only handles database binding.
 //
 // Runs before auth middleware (01 prefix)
@@ -19,7 +19,7 @@ import { InternalServerError } from "#server/error/errors";
  * Database Context Middleware (Single-Database Architecture)
  *
  * Sets up D1 database binding for all API requests.
- * Tenant context (tenantId) is handled by auth middleware from session.
+ * Workspace context (workspaceId) is handled by auth middleware from session.
  */
 export default defineEventHandler(async (event) => {
   // Only apply to API routes
@@ -27,7 +27,7 @@ export default defineEventHandler(async (event) => {
     return;
   }
 
-  // Set up database (single database for all tenants)
+  // Set up database (single database for all workspaces)
   const db = event.context.cloudflare?.env?.DB as D1Database;
 
   if (!db) {

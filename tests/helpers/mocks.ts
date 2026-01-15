@@ -41,7 +41,7 @@ export function createMockH3Event(overrides?: {
       companyId: overrides?.companyId || 'test-company-id',
       userId: overrides?.userId || 'test-user-id',
       db: db, // Add db directly to context (required by getDatabase utility)
-      tenantId: 'test-tenant',
+      workspaceId: 'test-workspace',
       cloudflare: {
         env: {
           DB: db,

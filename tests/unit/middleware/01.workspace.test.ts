@@ -6,8 +6,8 @@ import { InternalServerError } from "../../../server/error/errors";
 // DATABASE CONTEXT MIDDLEWARE TESTS
 // ========================================
 // This middleware sets up D1 database binding for API requests.
-// Uses single-database architecture (one DB for all tenants).
-// Tenant context is handled by auth middleware from session.
+// Uses single-database architecture (one DB for all workspaces).
+// Workspace context is handled by auth middleware from session.
 // ========================================
 
 describe("Database Context Middleware (01.workspace)", () => {

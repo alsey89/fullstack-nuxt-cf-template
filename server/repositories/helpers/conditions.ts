@@ -18,7 +18,7 @@ import type { SQLiteColumn } from "drizzle-orm/sqlite-core";
  * @example
  * const conditions = [
  *   Conditions.notDeleted(schema.projects),
- *   Conditions.tenantScoped(schema.projects, tenantId),
+ *   Conditions.workspaceScoped(schema.projects, workspaceId),
  *   Conditions.search([schema.projects.name], searchTerm),
  *   status ? eq(schema.projects.status, status) : undefined,
  * ];
@@ -47,17 +47,17 @@ export const Conditions = {
   },
 
   /**
-   * Tenant isolation - REQUIRED for all tenant-scoped queries
-   * Returns: tenantId = :tenantId
+   * Workspace isolation - REQUIRED for all workspace-scoped queries
+   * Returns: workspaceId = :workspaceId
    *
    * @example
-   * Conditions.tenantScoped(schema.projects, tenantId)
+   * Conditions.workspaceScoped(schema.projects, workspaceId)
    */
-  tenantScoped<T extends { tenantId: SQLiteColumn }>(
+  workspaceScoped<T extends { workspaceId: SQLiteColumn }>(
     table: T,
-    tenantId: string
+    workspaceId: string
   ): SQL {
-    return eq(table.tenantId, tenantId);
+    return eq(table.workspaceId, workspaceId);
   },
 
   /**
@@ -132,7 +132,7 @@ export const Conditions = {
    * @example
    * Conditions.all(
    *   Conditions.notDeleted(schema.users),
-   *   Conditions.tenantScoped(schema.users, tenantId),
+   *   Conditions.workspaceScoped(schema.users, workspaceId),
    *   maybeCondition
    * )
    */

@@ -8,7 +8,7 @@ import { isPublicRoute } from "#server/config/routes";
 //
 // Context variables set:
 // - event.context.userId: Authenticated user's ID
-// - event.context.tenantId: Current tenant/workspace ID (from session)
+// - event.context.workspaceId: Current workspace ID (from session)
 //
 // Public routes are defined in server/config/routes.ts
 // Runs after workspace middleware (01 prefix)
@@ -17,8 +17,8 @@ import { isPublicRoute } from "#server/config/routes";
 /**
  * Authentication Middleware
  *
- * Validates session and sets user + tenant context.
- * In single-database architecture, tenantId from session defines
+ * Validates session and sets user + workspace context.
+ * In single-database architecture, workspaceId from session defines
  * which workspace the user is currently operating in.
  */
 export default defineEventHandler(async (event) => {
@@ -39,8 +39,8 @@ export default defineEventHandler(async (event) => {
     throw new AuthenticationError("Invalid or missing authentication session.");
   }
 
-  // Set user and tenant context for downstream handlers
-  // tenantId defines which workspace the user is operating in
+  // Set user and workspace context for downstream handlers
+  // workspaceId defines which workspace the user is operating in
   event.context.userId = session.user.id as string;
-  event.context.tenantId = session.tenantId as string | undefined;
+  event.context.workspaceId = session.workspaceId as string | undefined;
 });
